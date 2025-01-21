@@ -76,7 +76,7 @@ module Operations =
             |]
 
         member options.AddPreTriggers (triggers : string seq) =
-            if isNull triggers then
+            if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
             options.PreTriggers <- [|
                 if not <| isNull options.PreTriggers then
@@ -92,7 +92,7 @@ module Operations =
             |]
 
         member options.AddPostTriggers (triggers : string seq) =
-            if isNull triggers then
+            if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
             options.PostTriggers <- [|
                 yield! options.PostTriggers

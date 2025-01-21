@@ -12,7 +12,7 @@
     <PackageVersion Include="FSharp.Control.AsyncSeq" Version="2.0.24" />
     <PackageVersion Include="FSharp.Control.FusionTasks" Version="2.4.0" />
     <PackageVersion Include="FSharp.Control.TaskSeq" Version="0.4.0" />
-    <PackageVersion Include="FSharp.Core" Version="8.0.403" />
+    <PackageVersion Include="FSharp.Core" Version="9.0.202" />
     <PackageVersion Include="FsToolkit.ErrorHandling" Version="4.18.0" />
     <PackageVersion Include="FsToolkit.ErrorHandling.TaskSeq" Version="4.15.2" />
   </ItemGroup>

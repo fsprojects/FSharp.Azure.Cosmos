@@ -15,18 +15,9 @@ type CosmosResponse<'T> = {
     Exception : Exception voption
 } with
 
-    member this.RequestCharge =
-        match this.Headers with
-        | null -> 0.
-        | headers -> headers.RequestCharge
-    member this.ActivityId =
-        match this.Headers with
-        | null -> String.Empty
-        | headers -> headers.ActivityId
-    member this.ETag =
-        match this.Headers with
-        | null -> String.Empty
-        | headers -> headers.ETag
+    member this.RequestCharge = this.Headers.RequestCharge
+    member this.ActivityId = this.Headers.ActivityId
+    member this.ETag = this.Headers.ETag
 
 module CosmosResponse =
 

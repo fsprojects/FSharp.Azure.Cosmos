@@ -7,7 +7,7 @@ open Microsoft.Azure.Cosmos
 type ReadOperation<'T> = {
     Id : string
     PartitionKey : PartitionKey
-    RequestOptions : ItemRequestOptions
+    RequestOptions : ItemRequestOptions | null
 }
 
 open System
@@ -17,7 +17,7 @@ type ReadBuilder<'T> () =
         {
             Id = String.Empty
             PartitionKey = PartitionKey.None
-            RequestOptions = Unchecked.defaultof<_>
+            RequestOptions = null
         }
         : ReadOperation<'T>
 
@@ -43,29 +43,39 @@ type ReadBuilder<'T> () =
     /// <summary>Sets the eTag to <see cref="ItemRequestOptions.IfNotMatchEtag"/></summary>
     [<CustomOperation "eTag">]
     member _.ETag (state : ReadOperation<_>, eTag : string) =
-        if state.RequestOptions = Unchecked.defaultof<_> then
+        match state.RequestOptions with
+        | null ->
             let options = ItemRequestOptions (IfNoneMatchEtag = eTag)
-
             { state with RequestOptions = options }
-        else
-            state.RequestOptions.IfNoneMatchEtag <- eTag
-            state
+        | options -> options.IfNoneMatchEtag <- eTag; state
 
     // ------------------------------------------- Request options -------------------------------------------
     /// <summary>Sets the operation <see cref="ConsistencyLevel"/></summary>
     [<CustomOperation "consistencyLevel">]
     member _.ConsistencyLevel (state : ReadOperation<_>, consistencyLevel : ConsistencyLevel Nullable) =
-        state.RequestOptions.ConsistencyLevel <- consistencyLevel; state
+        match state.RequestOptions with
+        | null ->
+            let options = ItemRequestOptions (ConsistencyLevel = consistencyLevel)
+            { state with RequestOptions = options }
+        | options -> options.ConsistencyLevel <- consistencyLevel; state
 
     /// Sets the indexing directive
     [<CustomOperation "indexingDirective">]
     member _.IndexingDirective (state : ReadOperation<_>, indexingDirective : IndexingDirective Nullable) =
-        state.RequestOptions.IndexingDirective <- indexingDirective; state
+        match state.RequestOptions with
+        | null ->
+            let options = ItemRequestOptions (IndexingDirective = indexingDirective)
+            { state with RequestOptions = options }
+        | options -> options.IndexingDirective <- indexingDirective; state
 
     /// Sets the session token
     [<CustomOperation "sessionToken">]
     member _.SessionToken (state : ReadOperation<_>, sessionToken : string) =
-        state.RequestOptions.SessionToken <- sessionToken; state
+        match state.RequestOptions with
+        | null ->
+            let options = ItemRequestOptions (SessionToken = sessionToken)
+            { state with RequestOptions = options }
+        | options -> options.SessionToken <- sessionToken; state
 
 let read<'T> = ReadBuilder<'T> ()
 

@@ -8,14 +8,14 @@ open Microsoft.Azure.Cosmos
 [<Struct>]
 type ReadManyOperation<'T> = {
     Items : ValueTuple<string, PartitionKey> ImmutableArray
-    RequestOptions : ReadManyRequestOptions
+    RequestOptions : ReadManyRequestOptions | null
 }
 
 type ReadManyBuilder<'T> () =
     member _.Yield _ =
         {
             Items = ImmutableArray.Empty
-            RequestOptions = Unchecked.defaultof<_>
+            RequestOptions = null
         }
         : ReadManyOperation<'T>
 
@@ -55,25 +55,30 @@ type ReadManyBuilder<'T> () =
     /// <summary>Sets the eTag to <see cref="ReadManyRequestOptions.IfNotMatchEtag"/></summary>
     [<CustomOperation "eTag">]
     member _.ETag (state : ReadManyOperation<_>, eTag : string) =
-        if state.RequestOptions = Unchecked.defaultof<_> then
+        match state.RequestOptions with
+        | null ->
             let options = ReadManyRequestOptions (IfNoneMatchEtag = eTag)
             { state with RequestOptions = options }
-        else
-            state.RequestOptions.IfNoneMatchEtag <- eTag
-            state
+        | options -> options.IfNoneMatchEtag <- eTag; state
 
     // ------------------------------------------- Request options -------------------------------------------
     /// <summary>Sets the operation <see cref="ConsistencyLevel"/></summary>
     [<CustomOperation "consistencyLevel">]
     member _.ConsistencyLevel (state : ReadManyOperation<_>, consistencyLevel : ConsistencyLevel Nullable) =
-        state.RequestOptions.ConsistencyLevel <- consistencyLevel
-        state
+        match state.RequestOptions with
+        | null ->
+            let options = ReadManyRequestOptions (ConsistencyLevel = consistencyLevel)
+            { state with RequestOptions = options }
+        | options -> options.ConsistencyLevel <- consistencyLevel; state
 
     /// Sets the session token
     [<CustomOperation "sessionToken">]
     member _.SessionToken (state : ReadManyOperation<_>, sessionToken : string) =
-        state.RequestOptions.SessionToken <- sessionToken
-        state
+        match state.RequestOptions with
+        | null ->
+            let options = ReadManyRequestOptions (SessionToken = sessionToken)
+            { state with RequestOptions = options }
+        | options -> options.SessionToken <- sessionToken; state
 
 let readMany<'T> = ReadManyBuilder<'T> ()
 
