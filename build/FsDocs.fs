@@ -134,12 +134,13 @@ module Fsdocs =
 
     let internal buildBuildCommandParams (buildParams : BuildCommandParams) =
         let buildSubstitutionParameters (subParameters : seq<string * string>) =
-            let subParameters =
-                subParameters
-                |> Seq.map (fun (key, value) -> (sprintf "%s %s" key value))
-                |> String.concat " "
-
-            sprintf "--parameters %s" subParameters
+            seq {
+                yield "--parameters"
+                for (key, value) in subParameters do
+                    yield key
+                    yield value
+            }
+            |> String.concat " "
 
         System.Text.StringBuilder ()
         |> StringBuilder.appendIfSome buildParams.Input (sprintf "--input %s")
