@@ -200,7 +200,7 @@ module DocsTool =
                     "fsdocs-release-notes-link", quoted (CHANGELOGlink.ToString ())
                     "fsdocs-logo-src",
                     quoted (
-                        "https://raw.githubusercontent.com/fsprojects/FSharp.Azure.Cosmos/refs/heads/main/docsSrc/content/icon.png"
+                        "https://raw.githubusercontent.com/fsprojects/FSharp.Azure.Cosmos/refs/heads/main/docsSrc/content/logo.png"
                     )
                 ]
             Strict = Some true

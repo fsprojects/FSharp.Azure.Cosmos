@@ -5,15 +5,22 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
 
 <Project>
   <PropertyGroup>
-    <PackageTags>f#, fsharp</PackageTags>
+    <PackageTags>F#;FSharp;Cosmos;CosmosDB;Cosmos DB;Cosmos SQL;Core API</PackageTags>
     <PackageProjectUrl>https://github.com/fsprojects/FSharp.Azure.Cosmos</PackageProjectUrl>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>logo.png</PackageIcon>
     <!--https://docs.microsoft.com/en-gb/nuget/reference/msbuild-targets#packagereadmefile -->
     <RepositoryType>git</RepositoryType>
-    <Authors>fsprojects</Authors>
+    <Authors>fsprojects, XperiAndri, dim-37</Authors>
     <RepositoryUrl>https://github.com/fsprojects/FSharp.Azure.Cosmos</RepositoryUrl>
+    <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -28,6 +35,7 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/"/>
     <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="/"/>
+    <None Include="$(MSBuildThisFileDirectory)docsSrc\content\logo.png" Pack="true" PackagePath="/" />
   </ItemGroup>
 
   <ItemGroup>
