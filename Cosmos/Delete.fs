@@ -162,14 +162,17 @@ type DeleteResult<'t> =
 
 open System.Net
 
-let private toDeleteResult (ex : CosmosException) =
-    match ex.StatusCode with
-    | HttpStatusCode.NotFound -> DeleteResult.NotFound ex.ResponseBody
-    | _ -> raise ex
+module CosmosException =
+
+    let toDeleteResult (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.NotFound -> DeleteResult.NotFound ex.ResponseBody
+        | _ -> raise ex
 
 open System.Runtime.InteropServices
 open System.Threading
 open System.Threading.Tasks
+open CosmosException
 
 type Microsoft.Azure.Cosmos.Container with
 

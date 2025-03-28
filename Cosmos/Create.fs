@@ -102,18 +102,22 @@ type CreateResult<'T> =
     | TooManyRequests of ResponseBody : string * RetryAfter : TimeSpan voption // 429
 
 open System.Net
-let private toCreateResult (ex : CosmosException) =
-    match ex.StatusCode with
-    | HttpStatusCode.BadRequest -> CreateResult.BadRequest ex.ResponseBody
-    | HttpStatusCode.Forbidden -> CreateResult.PartitionStorageLimitReached ex.ResponseBody
-    | HttpStatusCode.Conflict -> CreateResult.IdAlreadyExists ex.ResponseBody
-    | HttpStatusCode.RequestEntityTooLarge -> CreateResult.EntityTooLarge ex.ResponseBody
-    | HttpStatusCode.TooManyRequests -> CreateResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
-    | _ -> raise ex
+
+module CosmosException =
+
+    let toCreateResult (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.BadRequest -> CreateResult.BadRequest ex.ResponseBody
+        | HttpStatusCode.Forbidden -> CreateResult.PartitionStorageLimitReached ex.ResponseBody
+        | HttpStatusCode.Conflict -> CreateResult.IdAlreadyExists ex.ResponseBody
+        | HttpStatusCode.RequestEntityTooLarge -> CreateResult.EntityTooLarge ex.ResponseBody
+        | HttpStatusCode.TooManyRequests -> CreateResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
+        | _ -> raise ex
 
 open System.Runtime.InteropServices
 open System.Threading
 open System.Threading.Tasks
+open CosmosException
 
 type Microsoft.Azure.Cosmos.Container with
 

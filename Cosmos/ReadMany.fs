@@ -88,15 +88,18 @@ type ReadManyResult<'t> =
 
 open System.Net
 
-let private toReadResult badRequestCtor notFoundResultCtor (ex : CosmosException) =
-    match ex.StatusCode with
-    | HttpStatusCode.BadRequest -> badRequestCtor ex.ResponseBody
-    | HttpStatusCode.NotFound -> notFoundResultCtor ex.ResponseBody
-    | _ -> raise ex
+module CosmosException =
+
+    let toReadResult badRequestCtor notFoundResultCtor (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.BadRequest -> badRequestCtor ex.ResponseBody
+        | HttpStatusCode.NotFound -> notFoundResultCtor ex.ResponseBody
+        | _ -> raise ex
 
 open System.Runtime.InteropServices
 open System.Threading
 open System.Threading.Tasks
+open CosmosException
 
 type Microsoft.Azure.Cosmos.Container with
 

@@ -122,17 +122,20 @@ type PatchResult<'t> =
 
 open System.Net
 
-let private toPatchResult (ex : CosmosException) =
-    match ex.StatusCode with
-    | HttpStatusCode.BadRequest -> PatchResult.BadRequest ex.ResponseBody
-    | HttpStatusCode.NotFound -> PatchResult.NotFound ex.ResponseBody
-    | HttpStatusCode.PreconditionFailed -> PatchResult.ModifiedBefore ex.ResponseBody
-    | HttpStatusCode.TooManyRequests -> PatchResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
-    | _ -> raise ex
+module CosmosException =
+
+    let toPatchResult (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.BadRequest -> PatchResult.BadRequest ex.ResponseBody
+        | HttpStatusCode.NotFound -> PatchResult.NotFound ex.ResponseBody
+        | HttpStatusCode.PreconditionFailed -> PatchResult.ModifiedBefore ex.ResponseBody
+        | HttpStatusCode.TooManyRequests -> PatchResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
+        | _ -> raise ex
 
 open System.Runtime.InteropServices
 open System.Threading
 open System.Threading.Tasks
+open CosmosException
 
 type Microsoft.Azure.Cosmos.Container with
 
@@ -152,20 +155,27 @@ type Microsoft.Azure.Cosmos.Container with
             cancellationToken = cancellationToken
         )
 
-    member private container.ExecuteCoreAsync<'T>
-        (operation : PatchOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
+    /// <summary>
+    /// Executes a patch operation, transforms success or failure, and returns <see cref="CosmosResponse{T}"/>.
+    /// </summary>
+    /// <param name="operation">Patch operation</param>
+    /// <param name="success">Result transform if success</param>
+    /// <param name="failure">Error transform if failure</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    member container.ExecuteOverwriteAsync<'T, 'Result>
+        (operation : PatchOperation<'T>, success, failure, [<Optional>] cancellationToken : CancellationToken)
+        : Task<CosmosResponse<'Result>>
         =
         task {
             try
                 let! response = container.PlainExecuteAsync<'T> (operation, cancellationToken)
-                return CosmosResponse.fromItemResponse PatchResult.Ok response
+                return CosmosResponse.fromItemResponse success response
             with HandleException ex ->
-                return CosmosResponse.fromException toPatchResult ex
+                return CosmosResponse.fromException failure ex
         }
 
     /// <summary>
     /// Executes a patch operation safely and returns <see cref="CosmosResponse{PatchResult{T}}"/>.
-    /// <para>
     /// Requires ETag to be set in <see cref="PatchItemRequestOptions"/>.
     /// </summary>
     /// <param name="operation">Patch operation.</param>
@@ -174,7 +184,7 @@ type Microsoft.Azure.Cosmos.Container with
         if String.IsNullOrEmpty operation.RequestOptions.IfMatchEtag then
             invalidArg "eTag" "Safe patch requires ETag"
 
-        container.ExecuteCoreAsync<'T> (operation, cancellationToken)
+        container.ExecuteOverwriteAsync (operation, PatchResult.Ok, toPatchResult, cancellationToken)
 
     /// <summary>
     /// Executes a patch operation and returns <see cref="CosmosResponse{PatchResult{T}}"/>.
@@ -184,4 +194,4 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteOverwriteAsync<'T>
         (operation : PatchOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
         =
-        container.ExecuteCoreAsync<'T> (operation, cancellationToken)
+        container.ExecuteOverwriteAsync (operation, PatchResult.Ok, toPatchResult, cancellationToken)

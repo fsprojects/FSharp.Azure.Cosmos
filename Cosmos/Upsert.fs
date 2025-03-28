@@ -212,24 +212,27 @@ type UpsertConcurrentResult<'t, 'E> =
 
 open System.Net
 
-let private toUpsertResult (ex : CosmosException) =
-    match ex.StatusCode with
-    | HttpStatusCode.BadRequest -> UpsertResult.BadRequest ex.ResponseBody
-    | HttpStatusCode.PreconditionFailed -> UpsertResult.ModifiedBefore ex.ResponseBody
-    | HttpStatusCode.RequestEntityTooLarge -> UpsertResult.EntityTooLarge ex.ResponseBody
-    | _ -> raise ex
+module CosmosException =
 
-let private toUpsertConcurrentlyErrorResult (ex : CosmosException) =
-    match ex.StatusCode with
-    | HttpStatusCode.BadRequest -> UpsertConcurrentResult.BadRequest ex.ResponseBody
-    | HttpStatusCode.PreconditionFailed -> UpsertConcurrentResult.ModifiedBefore ex.ResponseBody
-    | HttpStatusCode.RequestEntityTooLarge -> UpsertConcurrentResult.EntityTooLarge ex.ResponseBody
-    | HttpStatusCode.TooManyRequests ->
-        UpsertConcurrentResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
-    | _ -> raise ex
+    let toUpsertResult (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.BadRequest -> UpsertResult.BadRequest ex.ResponseBody
+        | HttpStatusCode.PreconditionFailed -> UpsertResult.ModifiedBefore ex.ResponseBody
+        | HttpStatusCode.RequestEntityTooLarge -> UpsertResult.EntityTooLarge ex.ResponseBody
+        | _ -> raise ex
+
+    let toUpsertConcurrentlyErrorResult (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.BadRequest -> UpsertConcurrentResult.BadRequest ex.ResponseBody
+        | HttpStatusCode.PreconditionFailed -> UpsertConcurrentResult.ModifiedBefore ex.ResponseBody
+        | HttpStatusCode.RequestEntityTooLarge -> UpsertConcurrentResult.EntityTooLarge ex.ResponseBody
+        | HttpStatusCode.TooManyRequests ->
+            UpsertConcurrentResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
+        | _ -> raise ex
 
 open System.Threading
 open System.Threading.Tasks
+open CosmosException
 
 let rec executeConcurrentlyAsync<'value, 'error>
     (ct : CancellationToken)
@@ -312,15 +315,23 @@ type Microsoft.Azure.Cosmos.Container with
             cancellationToken = cancellationToken
         )
 
-    member private container.ExecuteCoreAsync<'T>
-        (operation : UpsertOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
+    /// <summary>
+    /// Executes a upsert operation, transforms success or failure, and returns <see cref="CosmosResponse{T}"/>.
+    /// </summary>
+    /// <param name="operation">Upsert operation</param>
+    /// <param name="success">Result transform if success</param>
+    /// <param name="failure">Error transform if failure</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    member container.ExecuteOverwriteAsync<'T, 'Result>
+        (operation : UpsertOperation<'T>, succsess, failure, [<Optional>] cancellationToken : CancellationToken)
+        : Task<CosmosResponse<'Result>>
         =
         task {
             try
                 let! response = container.PlainExecuteAsync (operation, cancellationToken)
-                return CosmosResponse.fromItemResponse UpsertResult.Ok response
+                return CosmosResponse.fromItemResponse succsess response
             with HandleException ex ->
-                return CosmosResponse.fromException toUpsertResult ex
+                return CosmosResponse.fromException failure ex
         }
 
     /// <summary>
@@ -335,7 +346,7 @@ type Microsoft.Azure.Cosmos.Container with
         if String.IsNullOrEmpty operation.RequestOptions.IfMatchEtag then
             invalidArg "eTag" "Safe replace requires ETag"
 
-        container.ExecuteCoreAsync (operation, cancellationToken)
+        container.ExecuteOverwriteAsync (operation, UpsertResult.Ok, toUpsertResult, cancellationToken)
 
     /// <summary>
     /// Executes an upsert operation replacing existing item if it exists and returns <see cref="CosmosResponse{UpsertResult{T}}"/>.
@@ -345,7 +356,7 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteOverwriteAsync<'T>
         (operation : UpsertOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
         =
-        container.ExecuteCoreAsync (operation, cancellationToken)
+        container.ExecuteOverwriteAsync (operation, UpsertResult.Ok, toUpsertResult, cancellationToken)
 
     /// <summary>
     /// Executes an upsert operation by applying change to item if exists and returns <see cref="CosmosResponse{UpsertConcurrentResult{T, E}}"/>.

@@ -223,27 +223,30 @@ type ReplaceConcurrentResult<'T, 'E> =
 
 open System.Net
 
-let private toReplaceResult (ex : CosmosException) =
-    match ex.StatusCode with
-    | HttpStatusCode.BadRequest -> ReplaceResult.BadRequest ex.ResponseBody
-    | HttpStatusCode.NotFound -> ReplaceResult.NotFound ex.ResponseBody
-    | HttpStatusCode.PreconditionFailed -> ReplaceResult.ModifiedBefore ex.ResponseBody
-    | HttpStatusCode.RequestEntityTooLarge -> ReplaceResult.EntityTooLarge ex.ResponseBody
-    | HttpStatusCode.TooManyRequests -> ReplaceResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
-    | _ -> raise ex
+module CosmosException =
 
-let private toReplaceConcurrentlyErrorResult (ex : CosmosException) =
-    match ex.StatusCode with
-    | HttpStatusCode.NotFound -> ReplaceConcurrentResult.NotFound ex.ResponseBody
-    | HttpStatusCode.BadRequest -> ReplaceConcurrentResult.BadRequest ex.ResponseBody
-    | HttpStatusCode.PreconditionFailed -> ReplaceConcurrentResult.ModifiedBefore ex.ResponseBody
-    | HttpStatusCode.RequestEntityTooLarge -> ReplaceConcurrentResult.EntityTooLarge ex.ResponseBody
-    | HttpStatusCode.TooManyRequests ->
-        ReplaceConcurrentResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
-    | _ -> raise ex
+    let toReplaceResult (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.BadRequest -> ReplaceResult.BadRequest ex.ResponseBody
+        | HttpStatusCode.NotFound -> ReplaceResult.NotFound ex.ResponseBody
+        | HttpStatusCode.PreconditionFailed -> ReplaceResult.ModifiedBefore ex.ResponseBody
+        | HttpStatusCode.RequestEntityTooLarge -> ReplaceResult.EntityTooLarge ex.ResponseBody
+        | HttpStatusCode.TooManyRequests -> ReplaceResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
+        | _ -> raise ex
+
+    let toReplaceConcurrentlyErrorResult (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.NotFound -> ReplaceConcurrentResult.NotFound ex.ResponseBody
+        | HttpStatusCode.BadRequest -> ReplaceConcurrentResult.BadRequest ex.ResponseBody
+        | HttpStatusCode.PreconditionFailed -> ReplaceConcurrentResult.ModifiedBefore ex.ResponseBody
+        | HttpStatusCode.RequestEntityTooLarge -> ReplaceConcurrentResult.EntityTooLarge ex.ResponseBody
+        | HttpStatusCode.TooManyRequests ->
+            ReplaceConcurrentResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
+        | _ -> raise ex
 
 open System.Threading
 open System.Threading.Tasks
+open CosmosException
 
 let rec executeConcurrentlyAsync<'value, 'error>
     (ct : CancellationToken)
@@ -310,15 +313,23 @@ type Microsoft.Azure.Cosmos.Container with
             cancellationToken = cancellationToken
         )
 
-    member private container.ExecuteCoreAsync<'T>
-        (operation : ReplaceOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
+    /// <summary>
+    /// Executes a replace operation, transforms success or failure, and returns <see cref="CosmosResponse{T}"/>.
+    /// </summary>
+    /// <param name="operation">Replace operation</param>
+    /// <param name="success">Result transform if success</param>
+    /// <param name="failure">Error transform if failure</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    member container.ExecuteOverwriteAsync<'T, 'Result>
+        (operation : ReplaceOperation<'T>, success, failure, [<Optional>] cancellationToken : CancellationToken)
+        : Task<CosmosResponse<'Result>>
         =
         task {
             try
                 let! response = container.PlainExecuteAsync (operation, cancellationToken)
-                return CosmosResponse.fromItemResponse ReplaceResult.Ok response
+                return CosmosResponse.fromItemResponse success response
             with HandleException ex ->
-                return CosmosResponse.fromException toReplaceResult ex
+                return CosmosResponse.fromException failure ex
         }
 
     /// <summary>
@@ -333,7 +344,7 @@ type Microsoft.Azure.Cosmos.Container with
         if String.IsNullOrEmpty operation.RequestOptions.IfMatchEtag then
             invalidArg "eTag" "Safe replace requires ETag"
 
-        container.ExecuteCoreAsync (operation, cancellationToken)
+        container.ExecuteOverwriteAsync (operation, ReplaceResult.Ok, toReplaceResult, cancellationToken)
 
     /// <summary>
     /// Executes a replace operation replacing existing item if it exists and returns <see cref="CosmosResponse{UpsertResult{T}}"/>.
@@ -341,7 +352,7 @@ type Microsoft.Azure.Cosmos.Container with
     /// <param name="operation">Replace operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     member container.ExecuteOverwriteAsync<'T> (operation : ReplaceOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
-        container.ExecuteCoreAsync (operation, cancellationToken)
+        container.ExecuteOverwriteAsync (operation, ReplaceResult.Ok, toReplaceResult, cancellationToken)
 
     /// <summary>
     /// Executes a replace operation by applying change to item and returns <see cref="CosmosResponse{ReplaceConcurrentResult{T, E}}"/>.
