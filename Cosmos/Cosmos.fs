@@ -112,7 +112,7 @@ module Operations =
         /// <param name="cancellationToken">Cancellation token</param>
         member container.CountAsync (requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken) =
             container.GetItemQueryIterator<int> (countQuery, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
-            |> TaskSeq.ofFeedIteratorWithCancellation cancellationToken
+            |> CancellableTaskSeq.ofFeedIterator cancellationToken
             |> TaskSeq.tryHead
             |> Task.map (Option.defaultValue 0)
 
@@ -150,7 +150,7 @@ module Operations =
             (requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
             container.GetItemQueryIterator<int64> (countQuery, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
-            |> TaskSeq.ofFeedIteratorWithCancellation cancellationToken
+            |> CancellableTaskSeq.ofFeedIterator cancellationToken
             |> TaskSeq.tryHead
             |> Task.map (Option.defaultValue 0)
 
@@ -192,7 +192,7 @@ module Operations =
                         query,
                         requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions
                     )
-                    |> TaskSeq.ofFeedIteratorWithCancellation cancellationToken
+                    |> CancellableTaskSeq.ofFeedIterator cancellationToken
                     |> TaskSeq.tryHead
                     |> Task.map (Option.defaultValue 0)
                 return count = 1
@@ -232,7 +232,7 @@ module Operations =
                         query,
                         requestOptions = getRequestOptionsWithMaxItemCount1 requiestOptions
                     )
-                    |> TaskSeq.ofFeedIteratorWithCancellation cancellationToken
+                    |> CancellableTaskSeq.ofFeedIterator cancellationToken
                     |> TaskSeq.tryHead
                     |> Task.map (Option.defaultValue 0)
                 return count = 1
