@@ -21,9 +21,7 @@ An F# idiomatic wrapper for [Azure Cosmos DB SDK](https://github.com/Azure/azure
 - Query extensions that create `IAsyncEnumerable` (`TaskSeq`) from `FeedIterator`/`IQueryable`
 - `CancellableTaskSeq` module
 
-
 [Documentation](https://fsprojects.github.io/FSharp.Azure.Cosmos/)
-
 
 ---
 
