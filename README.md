@@ -1,6 +1,25 @@
 # FSharp.Azure.Cosmos
 
-Extensions and wrappers for using [R3](https://github.com/Cysharp/R3) with F#.
+An F# idiomatic wrapper for [Azure Cosmos DB SDK](https://github.com/Azure/azure-cosmos-dotnet-v3) that provides strongly-typed response handling and computation expressions for all Cosmos DB operations.
+
+## Features
+
+### F# Idiomatic Operations
+- Responds with discriminated unions for each Cosmos DB operation to handle status codes as values instead of exceptions
+- F# computation expressions for all Cosmos DB operations:
+  - Read
+  - ReadMany
+  - Create
+  - Replace
+  - Upsert
+  - Delete
+  - Patch
+- Unique key definition through computation expressions
+- Extension methods for executing operations defined with computation expressions
+
+### Modern Query Support
+- Query extensions that create `IAsyncEnumerable` (`TaskSeq`) from `FeedIterator`/`IQueryable`
+- `CancellableTaskSeq` module
 
 
 [Documentation](https://fsprojects.github.io/FSharp.Azure.Cosmos/)
@@ -27,7 +46,7 @@ FSharp.Azure.Cosmos | [![NuGet Badge](https://buildstats.info/nuget/FSharp.Azure
 
 Make sure the following **requirements** are installed on your system:
 
-- [dotnet SDK](https://www.microsoft.com/net/download/core) 6.0 or higher
+- [dotnet SDK](https://www.microsoft.com/net/download/core) 8.0 or higher
 
 or
 
@@ -47,27 +66,9 @@ or
 ---
 
 ### Building
-
-
-```sh
 > build.cmd <optional buildtarget> // on windows
-$ ./build.sh  <optional buildtarget>// on unix
-```
 
-The bin of your library should look similar to:
-
-```
-$ tree src/FSharp.Azure.Cosmos/bin/
-src/FSharp.Azure.Cosmos/bin/
-└── Debug
-    └── net8.0
-        ├── FSharp.Azure.Cosmos.deps.json
-        ├── FSharp.Azure.Cosmos.dll
-        ├── FSharp.Azure.Cosmos.pdb
-        └── FSharp.Azure.Cosmos.xml
-
-```
-
+> ./build.sh  <optional buildtarget>// on unix
 ---
 
 ### Build Targets
@@ -97,16 +98,12 @@ src/FSharp.Azure.Cosmos/bin/
 ### Releasing
 
 - [Start a git repo with a remote](https://help.github.com/articles/adding-an-existing-project-to-github-using-the-command-line/)
-
-```sh
 git init
 git add .
 git commit -m "Scaffold"
 git branch -M main
 git remote add origin https://github.com/fsprojects/FSharp.Azure.Cosmos.git
 git push -u origin main
-```
-
 - [Create an Environment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#creating-an-environment) on your repository named `nuget`.
 - [Create a NuGet API key](https://learn.microsoft.com/en-us/nuget/nuget-org/publish-a-package#create-an-api-key)
 - Add your `NUGET_TOKEN` to the [Environment Secrets](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#environment-secrets) of your newly created environment.
@@ -114,52 +111,7 @@ git push -u origin main
 
 NOTE: Its highly recommend to add a link to the Pull Request next to the release note that it affects. The reason for this is when the `RELEASE` target is run, it will add these new notes into the body of git commit. GitHub will notice the links and will update the Pull Request with what commit referenced it saying ["added a commit that referenced this pull request"](https://github.com/TheAngryByrd/MiniScaffold/pull/179#ref-commit-837ad59). Since the build script automates the commit message, it will say "Bump Version to x.y.z". The benefit of this is when users goto a Pull Request, it will be clear when and which version those code changes released. Also when reading the `CHANGELOG`, if someone is curious about how or why those changes were made, they can easily discover the work and discussions.
 
-Here's an example of adding an "Unreleased" section to a `CHANGELOG.md` with a `0.1.0` section already released.
-
-```markdown
-## [Unreleased]
-
-### Added
-- Does cool stuff!
-
-### Fixed
-- Fixes that silly oversight
-
-## [0.1.0] - 2017-03-17
-First release
-
-### Added
-- This release already has lots of features
-
-[Unreleased]: https://github.com/fsprojects/FSharp.Azure.Cosmos/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/fsprojects/FSharp.Azure.Cosmos/releases/tag/v0.1.0
-```
-
-- You can then use the `GitRelease` target, specifying the version number either in the `RELEASE_VERSION` environment
-  variable, or else as a parameter after the target name.  This will:
-  - update `CHANGELOG.md`, moving changes from the `Unreleased` section into a new `0.2.0` section
-    - if there were any prerelease versions of 0.2.0 in the changelog, it will also collect their changes into the final 0.2.0 entry
-  - make a commit bumping the version:  `Bump version to 0.2.0` and adds the new changelog section to the commit's body
-  - push a git tag
-
-macOS/Linux Parameter:
-
-```sh
-./build.sh Release 0.2.0
-```
-
-macOS/Linux Environment Variable:
-
-```sh
-RELEASE_VERSION=0.2.0 ./build.sh Release
-```
-
-- The [Github Action](https://github.com/fsprojects/FSharp.Azure.Cosmos/blob/main/.github/workflows/publish.yml) will handle the new tag:
-  - publish the package to NuGet
-  - create a GitHub release for that git tag, upload release notes and NuGet packages to GitHub
-
-
 ### Releasing Documentation
 
 - Set Source for "Build and deployment" on [GitHub Pages](https://github.com/fsprojects/FSharp.Azure.Cosmos/settings/pages) to `GitHub Actions`.
-- Documentation is auto-deployed via [Github Action](https://github.com/fsprojects/FSharp.Azure.Cosmos/blob/main/.github/workflows/fsdocs-gh-pages.yml) to [Your GitHub Page](https://fsprojects.github.io/FSharp.Azure.Cosmos/)
+- Documentation is auto-deployed via [GitHub Action](https://github.com/fsprojects/FSharp.Azure.Cosmos/blob/main/.github/workflows/fsdocs-gh-pages.yml) to [Your GitHub Page](https://fsprojects.github.io/FSharp.Azure.Cosmos/)

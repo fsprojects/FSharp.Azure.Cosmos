@@ -7,50 +7,62 @@ index: 1
 
 # Getting Started
 
-To use the raw R3 from F# you would add first the NuGet package to R3:
+## Installation
 
-    [lang=bash]
-    paket install R3
+First, add the NuGet package to your project:
+```
+dotnet add package FSharp.Azure.Cosmos
+```
+## Basic Setup
 
-Then, this is a working sample:
-
-```fsharp
-open System
-
-// Create a bus
-use r3Bus = new R3.Subject<int> ()
-
-// Filter events
-let interesting = R3.ObservableExtensions.Where (r3Bus, fun x -> x % 2 = 0)
-
-// Subscribe to events
-let subscription =
-    R3.ObservableExtensions.SubscribeAwait (
-        interesting,
-        fun i cancellationToken ->
-            task {
-                // Listen events
-                printfn "%i" i
-                return ()
-            }
-            |> System.Threading.Tasks.ValueTask
-    )
-
-// Publish some events
-[ 1..10 ] |> List.iter r3Bus.OnNext
+Here's a minimal example to get started:
+``` F#
+open Microsoft.Azure.Cosmos
+open FSharp.Azure.Cosmos
 ```
 
-As you can see, this is nice, but a little bit noisy.
-This package will come top help.
+``` F#
+// Create the client
+let client = CosmosClient(connectionString = "your_connection_string")
 
-Then you do:
+// Get database and container
+let database = client.GetDatabase("your_database")
+let container = database.GetContainer("your_container")
 
-    [lang=bash]
-    paket install FSharp.Azure.Cosmos
+// Define a simple record type
+type Person = {
+    TenantId : string
+    Id: string
+    Name: string
+    Age: int
+}
 
-Now you can use functions closer to the traditional F#-style, like:
+// Create an item using computation expression
+let createPerson = task {
+    let person = { TenantId = "Customer1"; Id = "1"; Name = "John"; Age = 30 }
+    let operation = create {
+        item person
+        partitionKey person.TenantId
+    }
+    match! container.ExecuteAsync operation with
+    | Created item -> printfn "Created: %A" item
+    | Conflict ->  printfn "Item already exists"
+    | _ -> ()
+}
 
-```fsharp
-// Filter events
-let interesting = r3Bus |> FSharp.Azure.Cosmos.Observable.filter (fun x -> x % 2 = 0)
+// Query items using TaskSeq
+let queryPeople = task {
+    let query = QueryDefinition "SELECT * FROM c WHERE c.age > 25"
+    let! results = 
+        container.GetItemQueryIterator<Person>(query)
+        |> TaskSeq.ofFeedIterator
+        |> TaskSeq.toArrayAsync
+    
+    printfn "Found people: %A" results
+}
 ```
+## Next Steps
+
+- Check out the [How-To Guides](../How_Tos/Doing_A_Thing.html) for common scenarios
+- Read the [Background](../Explanations/Background.html) for deeper understanding
+- Browse the [API Reference](../reference/index.html) for detailed documentation

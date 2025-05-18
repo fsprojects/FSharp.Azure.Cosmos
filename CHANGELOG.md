@@ -24,6 +24,5 @@ They allow to handle all the relevant status codes which can be considered as er
 ### Added extension methods to execute operations defined with computation expressions
 
 ### Added extension methods to perform queries on Cosmos DB
-* Create IAsyncEnumerable (TaskSeq) from a FeedIterator/IQueryable
-* Create IAsyncEnumerable (TaskSeq) from a FeedIterator/IQueryable with item mapping
-* Create IAsyncEnumerable (TaskSeq) from a FeedIterator/IQueryable with item mapping and intermediate state
+* Create `IAsyncEnumerable` (`TaskSeq`) from a `FeedIterator`/`IQueryable`
+* Provide `CancellationToken` to `TaskSeq` using `CancellableTaskSeq` module
