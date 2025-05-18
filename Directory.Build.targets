@@ -11,11 +11,31 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
     <_DotnetFantomasOutputFile>$(BaseIntermediateOutputPath)dotnet-fantomas-msbuild-$(NETCoreSdkVersion)-$(OS)</_DotnetFantomasOutputFile>
   </PropertyGroup>
 
+  <!-- Make sure that dotnet tools are up to date before restoring any project -->
+  <Target Name="ToolUpdate"
+          BeforeTargets="ResolveNuGetPackageAssets;BeforeCompile"
+          Condition=" '$(BuildingProject)' == 'false' OR '$(DesignTimeBuild)' == 'true' "
+          Inputs="$(_DotnetToolManifestFile)"
+          Outputs="$(_DotnetToolUpdateOutputFile)">
+    <Message Text="Updating dotnet tools..." Importance="High" />
+    <Exec Command="dotnet tool update --all" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="High" StandardErrorImportance="High" />
+    <MakeDir Directories="$(_BuildProjBaseIntermediateOutputPath)"/>
+    <Touch Files="$(_DotnetToolUpdateOutputFile)" AlwaysCreate="True" ForceTouch="True" />
+    <Message Text="All tools updated successfully. Updates marked as complete." Importance="High" />
+  </Target>
+
   <!-- Make sure that dotnet tools are restored before restoring any project -->
-  <Target Name="ToolRestore" BeforeTargets="Restore;CollectPackageReferences" Inputs="$(_DotnetToolManifestFile)" Outputs="$(_DotnetToolRestoreOutputFile)">
+  <Target Name="ToolRestore"
+          BeforeTargets="ResolveNuGetPackageAssets;BeforeCompile"
+          AfterTargets="ToolUpdate"
+          Condition=" '$(BuildingProject)' == 'false' OR '$(DesignTimeBuild)' == 'true' "
+          Inputs="$(_DotnetToolManifestFile)"
+          Outputs="$(_DotnetToolRestoreOutputFile)">
+    <Message Text="Restoring dotnet tools..." Importance="High" />
     <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="High" StandardErrorImportance="High" />
     <MakeDir Directories="$(_BuildProjBaseIntermediateOutputPath)"/>
     <Touch Files="$(_DotnetToolRestoreOutputFile)" AlwaysCreate="True" ForceTouch="True" />
+    <Message Text="All .NET tools restored successfully." Importance="High" />
   </Target>
 
   <!-- Make sure that files are formatted before building -->
