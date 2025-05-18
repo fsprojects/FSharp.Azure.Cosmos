@@ -1,14 +1,11 @@
 # FSharp.Azure.Cosmos
 
----
+F# idiomatic wrapper for [Azure Cosmos DB SDK](https://github.com/Azure/azure-cosmos-dotnet-v3) that provides strongly-typed responses and computation expressions for all Cosmos DB operations.
 
-FSharp.Azure.Cosmos provides F#-style modules and computation expressions for working with the [Microsoft.Azure.Cosmos](https://github.com/Azure/azure-cosmos-dotnet-v3).
+## Key Features
 
-The fundamental problem with AsyncSeq is that the subscriber cannot say, "I've had enough; unsubscribe me, please".
-
-The solution for this is [Reactive Extensions (Rx)](https://github.com/dotnet/reactive), which has an F# wrapper [FSharp.Control.Reactive](https://fsprojects.github.io/FSharp.Control.Reactive/).
-
-FSharp.Azure.Cosmos is a similar wrapper for [Microsoft.Azure.Cosmos](https://github.com/Azure/azure-cosmos-dotnet-v3), a Cosmos DB .NET SDK.
+- **Type-Safe Responses**: All Cosmos DB operations return discriminated unions for proper error handling
+- **F# Computation Expressions**: Fluent syntax for database operations
 
 ---
 
@@ -23,16 +20,17 @@ FSharp.Azure.Cosmos is a similar wrapper for [Microsoft.Azure.Cosmos](https://gi
   <div class="span1"></div>
 </div>
 
+---
 
 <div class="row row-cols-1 row-cols-md-2">
   <div class="col mb-4">
     <div class="card h-100">
       <div class="card-body">
         <h5 class="card-title">Tutorials</h5>
-        <p class="card-text">Takes you by the hand through a series of steps to create your first thing. </p>
+        <p class="card-text">Step-by-step guide to get started with FSharp.Azure.Cosmos.</p>
       </div>
-      <div class="card-footer text-right   border-top-0">
-        <a href="{{root}}Tutorials/Getting_Started.html" class="btn btn-primary">Get started</a>
+      <div class="card-footer text-right border-top-0">
+        <a href="{{root}}Tutorials/Getting_Started.html" class="btn btn-primary">Get Started</a>
       </div>
     </div>
   </div>
