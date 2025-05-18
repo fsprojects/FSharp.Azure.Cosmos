@@ -50,10 +50,9 @@ let distDir = rootDirectory </> "dist"
 
 let distGlob = distDir </> "*.nupkg"
 
-let coverageThresholdPercent = 0
+let testResultsDir = rootDirectory </> "TestResults"
 
 let coverageReportDir = rootDirectory </> "docs" </> "coverage"
-
 
 let docsDir = rootDirectory </> "docs"
 
@@ -244,7 +243,7 @@ let allPublishChecks () = failOnLocalBuild ()
 let disableBinLog (p : MSBuild.CliArguments) = { p with DisableInternalBinLog = true }
 
 let clean _ =
-    [ "bin"; "temp"; distDir; coverageReportDir ]
+    [ "bin"; "temp"; distDir; coverageReportDir; testResultsDir ]
     |> Shell.cleanDirs
 
     !!srcGlob ++ testsGlob
@@ -346,49 +345,42 @@ let fsharpAnalyzers _ =
     )
 
 let dotnetTest ctx =
-    let excludeCoverage =
-        !!testsGlob
-        |> Seq.map (IO.Path.GetFileNameWithoutExtension >> nonNull)
-        |> String.concat "|"
-
-    let isGenerateCoverageReport = ctx.Context.TryFindTarget("GenerateCoverageReport").IsSome
+    // Create test results directory if it doesn't exist
+    Directory.create testResultsDir
 
     let args = [
         "--no-build"
-        if enableCodeCoverage || isGenerateCoverageReport then
-            sprintf "/p:AltCover=true"
-
-            if not isGenerateCoverageReport then
-                sprintf "/p:AltCoverThreshold=%d" coverageThresholdPercent
-
-            sprintf "/p:AltCoverAssemblyExcludeFilter=%s" excludeCoverage
-            "/p:AltCoverLocalSource=true"
+        if enableCodeCoverage then
+            "--collect:\"Code Coverage\""
+            "--results-directory"
+            testResultsDir
+        "--logger:trx" // Enable TRX report generation
     ]
 
     DotNet.test
-        (fun c ->
-
-            {
-                c with
-                    MSBuildParams = disableBinLog c.MSBuildParams
-                    Configuration = configuration (ctx.Context.AllExecutingTargets)
-                    Common = c.Common |> DotNet.Options.withAdditionalArgs args
-            })
+        (fun c -> {
+            c with
+                MSBuildParams = disableBinLog c.MSBuildParams
+                Configuration = configuration (ctx.Context.AllExecutingTargets)
+                Common = c.Common |> DotNet.Options.withAdditionalArgs args
+        })
         sln
 
 let generateCoverageReport _ =
-    let coverageReports = !!"tests/**/coverage*.xml" |> String.concat ";"
+
+    let coverageFiles = !!(testResultsDir </> "*/coverage.cobertura.xml")
 
     let sourceDirs = !!srcGlob |> Seq.map Path.getDirectory |> String.concat ";"
 
     let independentArgs = [
-        sprintf "-reports:\"%s\"" coverageReports
+        sprintf "-reports:\"%s\"" (coverageFiles |> String.concat ";")
         sprintf "-targetdir:\"%s\"" coverageReportDir
         // Add source dir
         sprintf "-sourcedirs:\"%s\"" sourceDirs
-        // Ignore Tests and if AltCover.Recorder.g sneaks in
-        sprintf "-assemblyfilters:\"%s\"" "-*.Tests;-AltCover.Recorder.g"
-        sprintf "-Reporttypes:%s" "Html"
+        // Ignore test assemblies
+        sprintf "-assemblyfilters:\"%s\"" "-*.Tests"
+        // Generate HTML and Cobertura reports
+        sprintf "-reporttypes:%s" "Html;Cobertura"
     ]
 
     let args = independentArgs |> String.concat " "
