@@ -57,54 +57,64 @@ type PatchBuilder<'T> (enableContentResponseOnWrite : bool) =
     /// <summary>Sets the eTag to <see cref="PatchItemRequestOptions.IfMatchEtag"/></summary>
     [<CustomOperation "eTag">]
     member _.ETag (state : PatchOperation<'T>, eTag : string) =
-        state.RequestOptions.IfMatchEtag <- eTag; state
+        state.RequestOptions.IfMatchEtag <- eTag
+        state
 
     // ------------------------------------------- Patch request options -------------------------------------------
     /// Sets the filter predicate
     [<CustomOperation "filterPredicate">]
     member _.FilterPredicate (state : PatchOperation<'T>, filterPredicate : string) =
-        state.RequestOptions.FilterPredicate <- filterPredicate; state
+        state.RequestOptions.FilterPredicate <- filterPredicate
+        state
 
     // ------------------------------------------- Request options -------------------------------------------
     /// <summary>Sets the operation <see cref="ConsistencyLevel"/></summary>
     [<CustomOperation "consistencyLevel">]
     member _.ConsistencyLevel (state : PatchOperation<_>, consistencyLevel : ConsistencyLevel Nullable) =
-        state.RequestOptions.ConsistencyLevel <- consistencyLevel; state
+        state.RequestOptions.ConsistencyLevel <- consistencyLevel
+        state
 
     /// Sets if the response should include the content of the item after the operation
     [<CustomOperation "enableContentResponseOnWrite">]
     member _.EnableContentResponseOnWrite (state : PatchOperation<_>, enableContentResponseOnWrite : bool) =
-        state.RequestOptions.EnableContentResponseOnWrite <- enableContentResponseOnWrite; state
+        state.RequestOptions.EnableContentResponseOnWrite <- enableContentResponseOnWrite
+        state
 
     /// Sets the indexing directive
     [<CustomOperation "indexingDirective">]
     member _.IndexingDirective (state : PatchOperation<_>, indexingDirective : IndexingDirective Nullable) =
-        state.RequestOptions.IndexingDirective <- indexingDirective; state
+        state.RequestOptions.IndexingDirective <- indexingDirective
+        state
 
     /// Adds a trigger to be invoked before the operation
     [<CustomOperation "preTrigger">]
     member _.PreTrigger (state : PatchOperation<_>, trigger : string) =
-        state.RequestOptions.AddPreTrigger trigger; state
+        state.RequestOptions.AddPreTrigger trigger
+        state
 
     /// Adds triggers to be invoked before the operation
     [<CustomOperation "preTriggers">]
     member _.PreTriggers (state : PatchOperation<_>, triggers : seq<string>) =
-        state.RequestOptions.AddPreTriggers triggers; state
+        state.RequestOptions.AddPreTriggers triggers
+        state
 
     /// Adds a trigger to be invoked after the operation
     [<CustomOperation "postTrigger">]
     member _.PostTrigger (state : PatchOperation<_>, trigger : string) =
-        state.RequestOptions.AddPostTrigger trigger; state
+        state.RequestOptions.AddPostTrigger trigger
+        state
 
     /// Adds triggers to be invoked after the operation
     [<CustomOperation "postTriggers">]
     member _.PostTriggers (state : PatchOperation<_>, triggers : seq<string>) =
-        state.RequestOptions.AddPostTriggers triggers; state
+        state.RequestOptions.AddPostTriggers triggers
+        state
 
     /// Sets the session token
     [<CustomOperation "sessionToken">]
     member _.SessionToken (state : PatchOperation<_>, sessionToken : string) =
-        state.RequestOptions.SessionToken <- sessionToken; state
+        state.RequestOptions.SessionToken <- sessionToken
+        state
 
 let patch<'T> = PatchBuilder<'T> (false)
 let patchAndRead<'T> = PatchBuilder<'T> (true)
@@ -144,9 +154,7 @@ type Microsoft.Azure.Cosmos.Container with
     /// </summary>
     /// <param name="operation">Patch operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    member container.PlainExecuteAsync<'T>
-        (operation : PatchOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
-        =
+    member container.PlainExecuteAsync<'T> (operation : PatchOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
         container.PatchItemAsync<'T> (
             operation.Id,
             operation.PartitionKey,

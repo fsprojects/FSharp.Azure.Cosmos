@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cosmos\FSharp.Azure.Cosmos.fsproj" />
+    <ProjectReference Include="..\..\src\Cosmos\FSharp.Azure.Cosmos.fsproj" />
   </ItemGroup>
 
 </Project>

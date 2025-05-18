@@ -55,10 +55,7 @@ type ReplaceBuilder<'T> (enableContentResponseOnWrite : bool) =
 
     /// Sets the request options
     [<CustomOperation "requestOptions">]
-    member _.RequestOptions (state : ReplaceOperation<_>, options : ItemRequestOptions) = {
-        state with
-            RequestOptions = options
-    }
+    member _.RequestOptions (state : ReplaceOperation<_>, options : ItemRequestOptions) = { state with RequestOptions = options }
 
     /// <summary>Sets the eTag to <see cref="ItemRequestOptions.IfMatchEtag"/></summary>
     [<CustomOperation "eTag">]
@@ -70,42 +67,50 @@ type ReplaceBuilder<'T> (enableContentResponseOnWrite : bool) =
     /// <summary>Sets the operation <see cref="ConsistencyLevel"/></summary>
     [<CustomOperation "consistencyLevel">]
     member _.ConsistencyLevel (state : ReplaceOperation<_>, consistencyLevel : ConsistencyLevel Nullable) =
-        state.RequestOptions.ConsistencyLevel <- consistencyLevel; state
+        state.RequestOptions.ConsistencyLevel <- consistencyLevel
+        state
 
     /// Sets if the response should include the content of the item after the operation
     [<CustomOperation "enableContentResponseOnWrite">]
     member _.EnableContentResponseOnWrite (state : ReplaceOperation<_>, enableContentResponseOnWrite : bool) =
-        state.RequestOptions.EnableContentResponseOnWrite <- enableContentResponseOnWrite; state
+        state.RequestOptions.EnableContentResponseOnWrite <- enableContentResponseOnWrite
+        state
 
     /// Sets the indexing directive
     [<CustomOperation "indexingDirective">]
     member _.IndexingDirective (state : ReplaceOperation<_>, indexingDirective : IndexingDirective Nullable) =
-        state.RequestOptions.IndexingDirective <- indexingDirective; state
+        state.RequestOptions.IndexingDirective <- indexingDirective
+        state
 
     /// Adds a trigger to be invoked before the operation
     [<CustomOperation "preTrigger">]
     member _.PreTrigger (state : ReplaceOperation<_>, trigger : string) =
-        state.RequestOptions.AddPreTrigger trigger; state
+        state.RequestOptions.AddPreTrigger trigger
+        state
 
     /// Adds triggers to be invoked before the operation
     [<CustomOperation "preTriggers">]
     member _.PreTriggers (state : ReplaceOperation<_>, triggers : seq<string>) =
-        state.RequestOptions.AddPreTriggers triggers; state
+        state.RequestOptions.AddPreTriggers triggers
+        state
 
     /// Adds a trigger to be invoked after the operation
     [<CustomOperation "postTrigger">]
     member _.PostTrigger (state : ReplaceOperation<_>, trigger : string) =
-        state.RequestOptions.AddPostTrigger trigger; state
+        state.RequestOptions.AddPostTrigger trigger
+        state
 
     /// Adds triggers to be invoked after the operation
     [<CustomOperation "postTriggers">]
     member _.PostTriggers (state : ReplaceOperation<_>, triggers : seq<string>) =
-        state.RequestOptions.AddPostTriggers triggers; state
+        state.RequestOptions.AddPostTriggers triggers
+        state
 
     /// Sets the session token
     [<CustomOperation "sessionToken">]
     member _.SessionToken (state : ReplaceOperation<_>, sessionToken : string) =
-        state.RequestOptions.SessionToken <- sessionToken; state
+        state.RequestOptions.SessionToken <- sessionToken
+        state
 
 type ReplaceConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
     member _.Yield _ =
@@ -155,42 +160,50 @@ type ReplaceConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
     /// <summary>Sets the operation <see cref="ConsistencyLevel"/></summary>
     [<CustomOperation "consistencyLevel">]
     member _.ConsistencyLevel (state : ReplaceConcurrentlyOperation<_, _>, consistencyLevel : ConsistencyLevel Nullable) =
-        state.RequestOptions.ConsistencyLevel <- consistencyLevel; state
+        state.RequestOptions.ConsistencyLevel <- consistencyLevel
+        state
 
     /// Sets if the response should include the content of the item after the operation
     [<CustomOperation "enableContentResponseOnWrite">]
     member _.EnableContentResponseOnWrite (state : ReplaceConcurrentlyOperation<_, _>, enableContentResponseOnWrite : bool) =
-        state.RequestOptions.EnableContentResponseOnWrite <- enableContentResponseOnWrite; state
+        state.RequestOptions.EnableContentResponseOnWrite <- enableContentResponseOnWrite
+        state
 
     /// Sets the indexing directive
     [<CustomOperation "indexingDirective">]
     member _.IndexingDirective (state : ReplaceConcurrentlyOperation<_, _>, indexingDirective : IndexingDirective Nullable) =
-        state.RequestOptions.IndexingDirective <- indexingDirective; state
+        state.RequestOptions.IndexingDirective <- indexingDirective
+        state
 
     /// Adds a trigger to be invoked before the operation
     [<CustomOperation "preTrigger">]
     member _.PreTrigger (state : ReplaceConcurrentlyOperation<_, _>, trigger : string) =
-        state.RequestOptions.AddPreTrigger trigger; state
+        state.RequestOptions.AddPreTrigger trigger
+        state
 
     /// Adds triggers to be invoked before the operation
     [<CustomOperation "preTriggers">]
     member _.PreTriggers (state : ReplaceConcurrentlyOperation<_, _>, triggers : seq<string>) =
-        state.RequestOptions.AddPreTriggers triggers; state
+        state.RequestOptions.AddPreTriggers triggers
+        state
 
     /// Adds a trigger to be invoked after the operation
     [<CustomOperation "postTrigger">]
     member _.PostTrigger (state : ReplaceConcurrentlyOperation<_, _>, trigger : string) =
-        state.RequestOptions.AddPostTrigger trigger; state
+        state.RequestOptions.AddPostTrigger trigger
+        state
 
     /// Adds triggers to be invoked after the operation
     [<CustomOperation "postTriggers">]
     member _.PostTriggers (state : ReplaceConcurrentlyOperation<_, _>, triggers : seq<string>) =
-        state.RequestOptions.AddPostTriggers triggers; state
+        state.RequestOptions.AddPostTriggers triggers
+        state
 
     /// Sets the session token
     [<CustomOperation "sessionToken">]
     member _.SessionToken (state : ReplaceConcurrentlyOperation<_, _>, sessionToken : string) =
-        state.RequestOptions.SessionToken <- sessionToken; state
+        state.RequestOptions.SessionToken <- sessionToken
+        state
 
 let replace<'T> = ReplaceBuilder<'T> (false)
 let replaceAndRead<'T> = ReplaceBuilder<'T> (true)
@@ -231,7 +244,8 @@ module CosmosException =
         | HttpStatusCode.NotFound -> ReplaceResult.NotFound ex.ResponseBody
         | HttpStatusCode.PreconditionFailed -> ReplaceResult.ModifiedBefore ex.ResponseBody
         | HttpStatusCode.RequestEntityTooLarge -> ReplaceResult.EntityTooLarge ex.ResponseBody
-        | HttpStatusCode.TooManyRequests -> ReplaceResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
+        | HttpStatusCode.TooManyRequests ->
+            ReplaceResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
         | _ -> raise ex
 
     let toReplaceConcurrentlyErrorResult (ex : CosmosException) =
@@ -351,7 +365,9 @@ type Microsoft.Azure.Cosmos.Container with
     /// </summary>
     /// <param name="operation">Replace operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    member container.ExecuteOverwriteAsync<'T> (operation : ReplaceOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
+    member container.ExecuteOverwriteAsync<'T>
+        (operation : ReplaceOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
+        =
         container.ExecuteOverwriteAsync (operation, ReplaceResult.Ok, toReplaceResult, cancellationToken)
 
     /// <summary>

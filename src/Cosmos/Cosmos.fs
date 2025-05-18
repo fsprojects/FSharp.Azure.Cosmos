@@ -94,10 +94,7 @@ module Operations =
         member options.AddPostTriggers (triggers : string seq) =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
-            options.PostTriggers <- [|
-                yield! options.PostTriggers
-                yield! triggers
-            |]
+            options.PostTriggers <- [| yield! options.PostTriggers; yield! triggers |]
 
     let internal countQuery = QueryDefinition ("SELECT VALUE COUNT(1)")
     let internal existsQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM item WHERE item.id = @Id")

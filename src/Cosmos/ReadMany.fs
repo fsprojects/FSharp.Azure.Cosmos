@@ -12,12 +12,7 @@ type ReadManyOperation<'T> = {
 }
 
 type ReadManyBuilder<'T> () =
-    member _.Yield _ =
-        {
-            Items = ImmutableArray.Empty
-            RequestOptions = null
-        }
-        : ReadManyOperation<'T>
+    member _.Yield _ = { Items = ImmutableArray.Empty; RequestOptions = null } : ReadManyOperation<'T>
 
     /// Sets the item being created
     [<CustomOperation "item">]
@@ -59,7 +54,9 @@ type ReadManyBuilder<'T> () =
         | null ->
             let options = ReadManyRequestOptions (IfNoneMatchEtag = eTag)
             { state with RequestOptions = options }
-        | options -> options.IfNoneMatchEtag <- eTag; state
+        | options ->
+            options.IfNoneMatchEtag <- eTag
+            state
 
     // ------------------------------------------- Request options -------------------------------------------
     /// <summary>Sets the operation <see cref="ConsistencyLevel"/></summary>
@@ -69,7 +66,9 @@ type ReadManyBuilder<'T> () =
         | null ->
             let options = ReadManyRequestOptions (ConsistencyLevel = consistencyLevel)
             { state with RequestOptions = options }
-        | options -> options.ConsistencyLevel <- consistencyLevel; state
+        | options ->
+            options.ConsistencyLevel <- consistencyLevel
+            state
 
     /// Sets the session token
     [<CustomOperation "sessionToken">]
@@ -78,7 +77,9 @@ type ReadManyBuilder<'T> () =
         | null ->
             let options = ReadManyRequestOptions (SessionToken = sessionToken)
             { state with RequestOptions = options }
-        | options -> options.SessionToken <- sessionToken; state
+        | options ->
+            options.SessionToken <- sessionToken
+            state
 
 let readMany<'T> = ReadManyBuilder<'T> ()
 

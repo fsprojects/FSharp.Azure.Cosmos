@@ -28,10 +28,7 @@ type DeleteBuilder () =
 
     /// Sets the partition key
     [<CustomOperation "partitionKey">]
-    member _.PartitionKey (state : DeleteOperation, partitionKey : PartitionKey) = {
-        state with
-            PartitionKey = partitionKey
-    }
+    member _.PartitionKey (state : DeleteOperation, partitionKey : PartitionKey) = { state with PartitionKey = partitionKey }
 
     /// Sets the partition key
     [<CustomOperation "partitionKey">]

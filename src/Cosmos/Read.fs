@@ -14,12 +14,7 @@ open System
 
 type ReadBuilder<'T> () =
     member _.Yield _ =
-        {
-            Id = String.Empty
-            PartitionKey = PartitionKey.None
-            RequestOptions = null
-        }
-        : ReadOperation<'T>
+        { Id = String.Empty; PartitionKey = PartitionKey.None; RequestOptions = null } : ReadOperation<'T>
 
     /// Sets the item being created
     [<CustomOperation "id">]
@@ -47,7 +42,9 @@ type ReadBuilder<'T> () =
         | null ->
             let options = ItemRequestOptions (IfNoneMatchEtag = eTag)
             { state with RequestOptions = options }
-        | options -> options.IfNoneMatchEtag <- eTag; state
+        | options ->
+            options.IfNoneMatchEtag <- eTag
+            state
 
     // ------------------------------------------- Request options -------------------------------------------
     /// <summary>Sets the operation <see cref="ConsistencyLevel"/></summary>
@@ -57,7 +54,9 @@ type ReadBuilder<'T> () =
         | null ->
             let options = ItemRequestOptions (ConsistencyLevel = consistencyLevel)
             { state with RequestOptions = options }
-        | options -> options.ConsistencyLevel <- consistencyLevel; state
+        | options ->
+            options.ConsistencyLevel <- consistencyLevel
+            state
 
     /// Sets the indexing directive
     [<CustomOperation "indexingDirective">]
@@ -66,7 +65,9 @@ type ReadBuilder<'T> () =
         | null ->
             let options = ItemRequestOptions (IndexingDirective = indexingDirective)
             { state with RequestOptions = options }
-        | options -> options.IndexingDirective <- indexingDirective; state
+        | options ->
+            options.IndexingDirective <- indexingDirective
+            state
 
     /// Sets the session token
     [<CustomOperation "sessionToken">]
@@ -75,7 +76,9 @@ type ReadBuilder<'T> () =
         | null ->
             let options = ItemRequestOptions (SessionToken = sessionToken)
             { state with RequestOptions = options }
-        | options -> options.SessionToken <- sessionToken; state
+        | options ->
+            options.SessionToken <- sessionToken
+            state
 
 let read<'T> = ReadBuilder<'T> ()
 
