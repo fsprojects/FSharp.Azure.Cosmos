@@ -13,7 +13,7 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
     <PackageIcon>logo.png</PackageIcon>
     <!--https://docs.microsoft.com/en-gb/nuget/reference/msbuild-targets#packagereadmefile -->
     <RepositoryType>git</RepositoryType>
-    <Authors>fsprojects, XperiAndri, dim-37</Authors>
+    <Authors>fsprojects, XperiAndri, dim-37, mariianazarova</Authors>
     <RepositoryUrl>https://github.com/fsprojects/FSharp.Azure.Cosmos</RepositoryUrl>
     <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
