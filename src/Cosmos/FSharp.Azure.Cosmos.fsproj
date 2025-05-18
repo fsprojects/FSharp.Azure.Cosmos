@@ -3,25 +3,21 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>$(AssemblyBaseName)</AssemblyName>
-    <PackageId>FSharp.Azure.Cosmos</PackageId>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Deterministic>true</Deterministic>
     <AzureCosmosDisableNewtonsoftJsonCheck>True</AzureCosmosDisableNewtonsoftJsonCheck>
+  </PropertyGroup>
 
+  <PropertyGroup Label="NuGet">
     <PackageId>FSharp.Azure.Cosmos</PackageId>
+    <Title>FSharp.Azure.Cosmos</Title>
     <Summary>F# API for using Microsoft Azure Cosmos DB service via NoSQL API</Summary>
     <Description>Provides extension methods for the FeedIterator and computation expressions to build operations</Description>
-    <Copyright>Copyright 2025</Copyright>
+  </PropertyGroup>
 
-    <!-- Read Release Notes from RELEASE_NOTES.md (cref https://dev.to/j_sakamoto/writing-a-nuget-package-release-notes-in-an-outside-of-a-csproj-file-3f94) -->
-    <!--<Target Name="PreparePackageReleaseNotesFromFile" BeforeTargets="GenerateNuspec">
-      <ReadLinesFromFile File="..\..\RELEASE_NOTES.md">
-        <Output TaskParameter="Lines" ItemName="ReleaseNoteLines" />
-      </ReadLinesFromFile>
-      <PropertyGroup>
-        <PackageReleaseNotes>@(ReleaseNoteLines, '%0a')</PackageReleaseNotes>
-      </PropertyGroup>
-    </Target>-->
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,6 +39,10 @@
     <PackageReference Include="FSharp.Control.TaskSeq" />
     <PackageReference Include="FsToolkit.ErrorHandling" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>

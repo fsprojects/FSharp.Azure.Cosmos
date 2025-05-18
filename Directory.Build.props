@@ -42,8 +42,8 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
     <PackageReference Include="FSharp.Core" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+  <!--<ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <PackageReference Include="BinaryDefense.FSharp.Analyzers.Hashing" PrivateAssets="all" />
     <PackageReference Include="FSharp.Compiler.Service" PrivateAssets="all" />
-  </ItemGroup>
+  </ItemGroup>-->
 </Project>
