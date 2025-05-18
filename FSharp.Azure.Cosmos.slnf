@@ -1,6 +1,6 @@
 {
   "solution": {
-    "path": "FSharp.Azure.Cosmos.sln",
+    "path": "FSharp.Azure.Cosmos.slnx",
     "projects": [
       "src\\Cosmos\\FSharp.Azure.Cosmos.fsproj",
       "tests\\Cosmos.Tests\\FSharp.Azure.Cosmos.Tests.fsproj"
