@@ -21,6 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="IterationExtensions.fs" />
     <Compile Include="TaskSeq.fs" />
     <Compile Include="CosmosResponse.fs" />
