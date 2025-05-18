@@ -25,7 +25,7 @@ jobs:
         with:
           global-json-file: global.json
           dotnet-version: |
-            8.x
+            9.x
 
       - name: Add the GitHub source
         run: dotnet nuget add source --name "github.com" "https://nuget.pkg.github.com/fsprojects/index.json"
