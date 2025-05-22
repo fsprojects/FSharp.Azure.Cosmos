@@ -1,11 +1,49 @@
+<!--
+This file allows overriding of properties for all projects in the directory.
+See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory?view=vs-2022#directorybuildprops-and-directorybuildtargets
+ -->
+
 <Project>
+  <PropertyGroup>
+    <PackageTags>F#;FSharp;Cosmos;CosmosDB;Cosmos DB;Cosmos SQL;Core API</PackageTags>
+    <PackageProjectUrl>https://github.com/fsprojects/FSharp.Azure.Cosmos</PackageProjectUrl>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>logo.png</PackageIcon>
+    <!--https://docs.microsoft.com/en-gb/nuget/reference/msbuild-targets#packagereadmefile -->
+    <RepositoryType>git</RepositoryType>
+    <Authors>fsprojects, XperiAndri, dim-37, mariianazarova</Authors>
+    <RepositoryUrl>https://github.com/fsprojects/FSharp.Azure.Cosmos</RepositoryUrl>
+    <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
   <PropertyGroup>
     <AssemblyBaseName>FSharp.Azure.Cosmos</AssemblyBaseName>
     <LangVersion>9.0</LangVersion>
     <Nullable>enable</Nullable>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AzureCosmosDisableNewtonsoftJsonCheck>true</AzureCosmosDisableNewtonsoftJsonCheck>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="/"/>
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="/"/>
+    <None Include="$(MSBuildThisFileDirectory)docsSrc\content\logo.png" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="FSharp.Core" />
   </ItemGroup>
+
+  <!--<ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="BinaryDefense.FSharp.Analyzers.Hashing" PrivateAssets="all" />
+    <PackageReference Include="FSharp.Compiler.Service" PrivateAssets="all" />
+  </ItemGroup>-->
 </Project>

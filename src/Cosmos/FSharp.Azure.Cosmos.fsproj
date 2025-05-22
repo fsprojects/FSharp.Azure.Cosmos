@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName)</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+    <AzureCosmosDisableNewtonsoftJsonCheck>True</AzureCosmosDisableNewtonsoftJsonCheck>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet">
+    <PackageId>FSharp.Azure.Cosmos</PackageId>
+    <Title>FSharp.Azure.Cosmos</Title>
+    <Summary>F# API for using Microsoft Azure Cosmos DB service via NoSQL API</Summary>
+    <Description>Provides extension methods for the FeedIterator and computation expressions to build operations</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="IterationExtensions.fs" />
+    <Compile Include="TaskSeq.fs" />
+    <Compile Include="CosmosResponse.fs" />
+    <Compile Include="Cosmos.fs" />
+    <Compile Include="Create.fs" />
+    <Compile Include="Upsert.fs" />
+    <Compile Include="Replace.fs" />
+    <Compile Include="Patch.fs" />
+    <Compile Include="Delete.fs" />
+    <Compile Include="Read.fs" />
+    <Compile Include="ReadMany.fs" />
+    <Compile Include="UniqueKey.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FSharp.Control.TaskSeq" />
+    <PackageReference Include="FsToolkit.ErrorHandling" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
