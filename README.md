@@ -1,4 +1,4 @@
-# FSharp.Azure.Cosmos
+# FSharp.Azure.Cosmos [![NuGet Status](https://img.shields.io/nuget/v/FSharp.Azure.Cosmos.svg?style=flat)](https://www.nuget.org/packages/FSharp.Azure.Cosmos/) [![GitHub Actions](https://github.com/fsprojects/FSharp.Azure.Cosmos/workflows/Build%20main/badge.svg)](https://github.com/fsprojects/FSharp.Azure.Cosmos/actions?query=branch%3Amain)
 
 An F# idiomatic wrapper for [Azure Cosmos DB SDK](https://github.com/Azure/azure-cosmos-dotnet-v3) that provides strongly-typed response handling and computation expressions for all Cosmos DB operations.
 
@@ -30,13 +30,12 @@ An F# idiomatic wrapper for [Azure Cosmos DB SDK](https://github.com/Azure/azure
 GitHub Actions |
 :---: |
 [![GitHub Actions](https://github.com/fsprojects/FSharp.Azure.Cosmos/workflows/Build%20main/badge.svg)](https://github.com/fsprojects/FSharp.Azure.Cosmos/actions?query=branch%3Amain) |
-[![Build History](https://buildstats.info/github/chart/fsprojects/FSharp.Azure.Cosmos)](https://github.com/fsprojects/FSharp.Azure.Cosmos/actions?query=branch%3Amain) |
 
 ## NuGet
 
 Package | Stable | Prerelease
 --- | --- | ---
-FSharp.Azure.Cosmos | [![NuGet Badge](https://buildstats.info/nuget/FSharp.Azure.Cosmos)](https://www.nuget.org/packages/FSharp.Azure.Cosmos/) | [![NuGet Badge](https://buildstats.info/nuget/FSharp.Azure.Cosmos?includePreReleases=true)](https://www.nuget.org/packages/FSharp.Azure.Cosmos/)
+FSharp.Azure.Cosmos | [![NuGet Badge](https://img.shields.io/nuget/v/FSharp.Azure.Cosmos.svg)](https://www.nuget.org/packages/FSharp.Azure.Cosmos/) | [![NuGet Badge](https://img.shields.io/nuget/vpre/FSharp.Azure.Cosmos.svg)](https://www.nuget.org/packages/FSharp.Azure.Cosmos/)
 
 ---
 
