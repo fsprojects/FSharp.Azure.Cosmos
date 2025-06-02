@@ -112,3 +112,9 @@ NOTE: Its highly recommend to add a link to the Pull Request next to the release
 
 - Set Source for "Build and deployment" on [GitHub Pages](https://github.com/fsprojects/FSharp.Azure.Cosmos/settings/pages) to `GitHub Actions`.
 - Documentation is auto-deployed via [GitHub Action](https://github.com/fsprojects/FSharp.Azure.Cosmos/blob/main/.github/workflows/fsdocs-gh-pages.yml) to [Your GitHub Page](https://fsprojects.github.io/FSharp.Azure.Cosmos/)
+
+# Maintainer(s)
+
+- [@xperiandri](https://github.com/xperiandri)
+
+The default maintainer account for projects under "fsprojects" is [@fsprojectsgit](https://github.com/fsprojectsgit) - F# Community Project Incubation Space (repo management)
