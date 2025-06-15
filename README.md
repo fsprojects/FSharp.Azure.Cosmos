@@ -43,7 +43,7 @@ FSharp.Azure.Cosmos | [![NuGet Badge](https://img.shields.io/nuget/v/FSharp.Azur
 
 Make sure the following **requirements** are installed on your system:
 
-- [dotnet SDK](https://www.microsoft.com/net/download/core) 8.0 or higher
+- [dotnet SDK](https://www.microsoft.com/net/download/core) 9.0 or higher (uses F# 9)
 
 or
 
