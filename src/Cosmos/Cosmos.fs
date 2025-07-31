@@ -1,4 +1,4 @@
-﻿namespace FSharp.Azure.Cosmos
+namespace FSharp.Azure.Cosmos
 
 open System
 open System.Net
@@ -96,7 +96,7 @@ module Operations =
                 raise (ArgumentNullException (nameof triggers))
             options.PostTriggers <- [| yield! options.PostTriggers; yield! triggers |]
 
-    let internal countQuery = QueryDefinition ("SELECT VALUE COUNT(1)")
+    let internal countQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM c")
     let internal existsQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM item WHERE item.id = @Id")
     let internal getExistsQuery id = existsQuery.WithParameter ("@Id", id)
 
