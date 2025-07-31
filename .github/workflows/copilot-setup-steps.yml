@@ -38,13 +38,71 @@ jobs:
 
       - name: Install Azure Cosmos DB Emulator
         run: |
+          Write-Host "Downloading Azure Cosmos DB Emulator..."
           Invoke-WebRequest -Uri https://aka.ms/cosmosdb-emulator -OutFile CosmosDBEmulator.msi
+          Write-Host "Installing Azure Cosmos DB Emulator..."
           Start-Process msiexec.exe -Wait -ArgumentList '/I CosmosDBEmulator.msi /quiet /qn /norestart'
+          Write-Host "Installation completed."
         shell: pwsh
 
-      - name: Start Azure Cosmos DB Emulator using PowerShell module
+      - name: Start Azure Cosmos DB Emulator
         run: |
+          Write-Host "Importing Cosmos DB Emulator PowerShell module..."
           Import-Module "C:\Program Files\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
-          Start-CosmosDbEmulator -NoUI -AllowNetworkAccess
-          Start-Sleep -Seconds 20
+          
+          Write-Host "Starting Cosmos DB Emulator..."
+          Start-CosmosDbEmulator -NoUI -AllowNetworkAccess -Timeout 600
+          
+          Write-Host "Waiting for emulator to be ready..."
+          $maxAttempts = 30
+          $attempt = 0
+          $ready = $false
+          
+          while ($attempt -lt $maxAttempts -and -not $ready) {
+              $attempt++
+              Write-Host "Checking emulator status (attempt $attempt/$maxAttempts)..."
+              
+              try {
+                  $status = Get-CosmosDbEmulatorStatus
+                  Write-Host "Emulator status: $status"
+                  
+                  if ($status -eq "Running") {
+                      Write-Host "Emulator is running!"
+                      $ready = $true
+                  } else {
+                      Write-Host "Emulator not ready yet, waiting 10 seconds..."
+                      Start-Sleep -Seconds 10
+                  }
+              } catch {
+                  Write-Host "Error checking status: $($_.Exception.Message)"
+                  Write-Host "Waiting 10 seconds before retry..."
+                  Start-Sleep -Seconds 10
+              }
+          }
+          
+          if (-not $ready) {
+              Write-Error "Cosmos DB Emulator failed to start within timeout period"
+              exit 1
+          }
+          
+          Write-Host "Cosmos DB Emulator is ready!"
+        shell: pwsh
+
+      - name: Verify Cosmos DB Emulator Connection
+        run: |
+          Write-Host "Testing Cosmos DB Emulator connection..."
+          try {
+              $response = Invoke-WebRequest -Uri "https://localhost:8081/_explorer/emulator.js" -SkipCertificateCheck -TimeoutSec 30
+              if ($response.StatusCode -eq 200) {
+                  Write-Host "? Cosmos DB Emulator is accessible on https://localhost:8081"
+              } else {
+                  Write-Warning "Cosmos DB Emulator responded with status code: $($response.StatusCode)"
+              }
+          } catch {
+              Write-Warning "Could not verify emulator web interface: $($_.Exception.Message)"
+          }
+          
+          # Display emulator information
+          $emulatorInfo = Get-CosmosDbEmulatorStatus
+          Write-Host "Final emulator status: $emulatorInfo"
         shell: pwsh
