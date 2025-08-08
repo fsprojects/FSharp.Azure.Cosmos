@@ -18,7 +18,7 @@
     },
     "Release": {
       "commandName": "Project",
-      "commandLineArgs": "--target Release 0.1.0"
+      "commandLineArgs": "--target Release 1.0.1"
     }
   }
 }
