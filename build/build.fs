@@ -533,7 +533,7 @@ let gitRelease _ =
     ++ (rootDirectory </> "tests/**/AssemblyInfo.fs")
     |> Seq.iter (Git.Staging.stageFile "" >> ignore)
 
-    let msg = $"Bump version to `%s{latestEntry.NuGetVersion}`\n\n%s{releaseNotesGitCommitFormat}"
+    let msg = $"release: bump version to `%s{latestEntry.NuGetVersion}`\n\n%s{releaseNotesGitCommitFormat}"
 
     Git.Commit.exec "" msg
 
