@@ -145,12 +145,12 @@ let failOnWrongBranch () =
 
 
 module dotnet =
-    let watch cmdParam program args = DotNet.exec cmdParam (sprintf "watch %s" program) args
+    let watch cmdParam program args = DotNet.exec cmdParam $"watch %s{program}" args
 
     let run cmdParam args = DotNet.exec cmdParam "run" args
 
-    let tool optionConfig command args =
-        DotNet.exec optionConfig (sprintf "%s" command) args
+    let tool optionConfig (command : string) args =
+        DotNet.exec optionConfig command args
         |> failOnBadExitAndPrint
 
     let reportgenerator optionConfig args = tool optionConfig "reportgenerator" args
@@ -439,7 +439,7 @@ let generateAssemblyInfo _ =
         | f when f.EndsWith ("fsproj") -> Fsproj
         | f when f.EndsWith ("csproj") -> Csproj
         | f when f.EndsWith ("vbproj") -> Vbproj
-        | _ -> failwith (sprintf "Project file %s not supported. Unknown project type." projFileName)
+        | _ -> failwithf "Project file %s not supported. Unknown project type." projFileName
 
     let releaseChannel =
         match latestEntry.SemVer.PreRelease with
