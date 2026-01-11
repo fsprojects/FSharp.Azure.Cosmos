@@ -34,21 +34,23 @@ module Operations =
 
     let internal unwrapCosmosException (ex : Exception) =
         match ex with
-        | :? CosmosException as ex -> Some ex
+        | :? CosmosException as ex -> ValueSome ex
         | :? AggregateException as ex ->
             match ex.InnerException with
-            | :? CosmosException as cex -> Some cex
-            | _ -> None
-        | _ -> None
+            | :? CosmosException as cex -> ValueSome cex
+            | _ -> ValueNone
+        | _ -> ValueNone
 
     let internal handleException (ex : Exception) =
         let cosmosException = unwrapCosmosException ex
         match cosmosException with
-        | Some ex when canHandleStatusCode ex.StatusCode -> Some ex
-        | _ -> None
+        | ValueSome ex when canHandleStatusCode ex.StatusCode -> ValueSome ex
+        | _ -> ValueNone
 
+    [<return : Struct>]
     let (|CosmosException|_|) (ex : Exception) = unwrapCosmosException ex
 
+    [<return : Struct>]
     let (|HandleException|_|) (ex : Exception) = handleException ex
 
     let internal retryUpdate toErrorResult executeConcurrentlyAsync maxRetryCount currentAttemptCount (e : CosmosException) =
