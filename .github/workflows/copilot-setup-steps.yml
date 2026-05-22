@@ -1,0 +1,163 @@
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: windows-2025
+
+    # Set the permissions to the lowest permissions possible needed for your steps.
+    # Copilot will be given its own token for its operations.
+    permissions:
+      # If you want to clone the repository as part of your setup steps, for example to install dependencies, you'll need the `contents: read` permission. If you don't clone the repository in your setup steps, Copilot will do this for you automatically after the steps complete.
+      contents: read
+
+    # You can define any steps you want, and they will run before the agent starts.
+    # If you do not check out your code, Copilot will do this for you.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup necessary dotnet SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: |
+            9.x
+            8.x
+
+      - name: Install Azure Cosmos DB Emulator
+        run: |
+          Write-Host "Downloading Azure Cosmos DB Emulator..."
+          Invoke-WebRequest -Uri https://aka.ms/cosmosdb-emulator -OutFile CosmosDBEmulator.msi
+          Write-Host "Installing Azure Cosmos DB Emulator..."
+          Start-Process msiexec.exe -Wait -ArgumentList '/I CosmosDBEmulator.msi /quiet /qn /norestart'
+          Write-Host "Installation completed."
+        shell: pwsh
+
+      - name: Start Azure Cosmos DB Emulator using direct executable
+        run: |
+          Write-Host "Starting Cosmos DB Emulator using direct executable approach..."
+
+          # Define emulator path
+          $emulatorPath = "C:\Program Files\Azure Cosmos DB Emulator\CosmosDB.Emulator.exe"
+
+          # Start emulator process directly with optimized settings
+          Write-Host "Starting emulator process..."
+          $processArgs = @(
+              "/NoUI"
+              "/NoExplorer"
+              "/DisableRateLimiting"
+              "/PartitionCount=25"
+              "/Consistency=Session"
+          )
+
+          $process = Start-Process -FilePath $emulatorPath -ArgumentList $processArgs -PassThru -WindowStyle Hidden
+          Write-Host "Emulator process started with PID: $($process.Id)"
+
+          # Wait for emulator to become responsive
+          Write-Host "Waiting for emulator to become ready..."
+          $maxWaitMinutes = 15
+          $checkIntervalSeconds = 15
+          $maxAttempts = [math]::Floor(($maxWaitMinutes * 60) / $checkIntervalSeconds)
+          $attempt = 0
+          $emulatorReady = $false
+
+          while ($attempt -lt $maxAttempts -and -not $emulatorReady) {
+              $attempt++
+              $elapsedMinutes = [math]::Round(($attempt * $checkIntervalSeconds) / 60, 1)
+              Write-Host "Checking emulator readiness (attempt $attempt/$maxAttempts, $elapsedMinutes min elapsed)..."
+
+              try {
+                  # Check if the emulator endpoint is responding
+                  # A 401 Unauthorized response actually means the service is up and running!
+                  $response = Invoke-WebRequest -Uri "https://127.0.0.1:8081/" -UseBasicParsing -TimeoutSec 10 -SkipCertificateCheck
+                  if ($response.StatusCode -eq 200) {
+                      Write-Host "? Emulator is responding on HTTPS endpoint!"
+                      $emulatorReady = $true
+                  }
+              } catch {
+                  # Check if we got a 401 Unauthorized - this actually means the service is ready!
+                  if ($_.Exception.Response.StatusCode -eq 401) {
+                      Write-Host "? Emulator is responding with 401 Unauthorized - service is ready!"
+                      $emulatorReady = $true
+                  } elseif ($_.Exception.Message -like "*401*" -or $_.Exception.Message -like "*Unauthorized*") {
+                      Write-Host "? Emulator is responding with authentication error - service is ready!"
+                      $emulatorReady = $true
+                  } else {
+                      Write-Host "Emulator not ready yet (HTTPS check failed): $($_.Exception.Message)"
+                  }
+              }
+
+              if (-not $emulatorReady) {
+                  # Also try to check if the process is still running
+                  try {
+                      $runningProcess = Get-Process -Id $process.Id -ErrorAction Stop
+                      Write-Host "Emulator process is still running (CPU: $($runningProcess.CPU), Memory: $([math]::Round($runningProcess.WorkingSet64/1MB))MB)"
+                  } catch {
+                      Write-Warning "Emulator process appears to have crashed!"
+                      break
+                  }
+
+                  Write-Host "Waiting $checkIntervalSeconds seconds before next check..."
+                  Start-Sleep -Seconds $checkIntervalSeconds
+              }
+          }
+
+          if (-not $emulatorReady) {
+              Write-Error "Cosmos DB Emulator failed to become ready within $maxWaitMinutes minutes"
+
+              # Try to get some diagnostic information
+              try {
+                  Write-Host "Checking for any emulator processes..."
+                  Get-Process -Name "*Cosmos*" -ErrorAction SilentlyContinue | ForEach-Object {
+                      Write-Host "Found process: $($_.ProcessName) (PID: $($_.Id))"
+                  }
+              } catch {
+                  Write-Host "Could not enumerate emulator processes"
+              }
+
+              exit 1
+          }
+
+          Write-Host "? Cosmos DB Emulator is ready and responding!"
+        shell: pwsh
+
+      - name: Verify Cosmos DB Emulator Connection
+        run: |
+          Write-Host "Final verification of Cosmos DB Emulator..."
+
+          # Test HTTPS endpoint - 401 is expected and means the service is working
+          try {
+              $response = Invoke-WebRequest -Uri "https://127.0.0.1:8081/" -UseBasicParsing -SkipCertificateCheck -TimeoutSec 30
+              Write-Host "? HTTPS endpoint accessible (Status: $($response.StatusCode))"
+          } catch {
+              if ($_.Exception.Response.StatusCode -eq 401 -or $_.Exception.Message -like "*401*" -or $_.Exception.Message -like "*Unauthorized*") {
+                  Write-Host "? HTTPS endpoint accessible (Status: 401 Unauthorized - this is expected and correct)"
+              } else {
+                  Write-Warning "HTTPS endpoint test failed: $($_.Exception.Message)"
+              }
+          }
+
+          # Test the data explorer endpoint
+          try {
+              $response = Invoke-WebRequest -Uri "https://127.0.0.1:8081/_explorer/emulator.js" -UseBasicParsing -SkipCertificateCheck -TimeoutSec 30
+              Write-Host "? Data Explorer endpoint accessible (Status: $($response.StatusCode))"
+          } catch {
+              Write-Warning "Data Explorer endpoint test failed: $($_.Exception.Message)"
+          }
+
+          # Display emulator info
+          Write-Host "Emulator should be accessible at: https://127.0.0.1:8081"
+          Write-Host "Primary Key: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
+        shell: pwsh
