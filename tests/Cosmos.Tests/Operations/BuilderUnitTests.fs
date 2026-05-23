@@ -633,13 +633,13 @@ type BuilderUnitTests () =
     member _.``Replace and upsert concurrently builders set throughput bucket`` () =
         let replaceConcurrentlyOperation = replaceConcurrenly<string, string> {
             id "id"
-            update (fun item -> async.Return (Result.Ok item))
+            update (fun item -> async { return Result.Ok item })
             throughputBucket 4
         }
 
         let upsertConcurrentlyOperation = upsertConcurrenly<string, string> {
             id "id"
-            updateOrCreate (fun item -> async.Return (Result.Ok (defaultArg item "item")))
+            updateOrCreate (fun item -> async { return Result.Ok (defaultArg item "item") })
             throughputBucket 5
         }
 
