@@ -40,6 +40,14 @@ type JsonConverterTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "JSON converter" |] :> IList<string>
 
+/// <summary>
+/// Categorizes a test of <see cref="Microsoft.Azure.Cosmos.LinqTranslation"/>, which rewrites F# constructs in LINQ
+/// expressions before the Cosmos DB LINQ provider translates them.
+/// </summary>
+type LinqTranslationTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "LINQ translation" |] :> IList<string>
+
 type PatchTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Patch" |] :> IList<string>
