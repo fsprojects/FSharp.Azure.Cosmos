@@ -16,20 +16,38 @@ type TestBase () =
     member this.CancellationToken = this.TestContext.CancellationTokenSource.Token
 
 type DatabaseTestApplicationFactory(testContext : TestContext) =
+    [<Literal>]
+    let defaultClassName = "CosmosTests"
+
+    [<Literal>]
     let endpoint = "https://127.0.0.1:8081"
 
+    [<Literal>]
     let primaryKey =
         "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
+
+    [<Literal>]
+    let maxClassNameLength = 40
 
     let buildDatabaseId () =
         let className =
             match testContext.FullyQualifiedTestClassName with
-            | null -> "CosmosTests"
-            | fullyQualifiedTestClassName when String.IsNullOrWhiteSpace fullyQualifiedTestClassName -> "CosmosTests"
-            | fullyQualifiedTestClassName -> fullyQualifiedTestClassName
+            | null -> defaultClassName
+            | fullyQualifiedTestClassName ->
+                if fullyQualifiedTestClassName.Trim().Length = 0 then
+                    defaultClassName
+                else
+                    fullyQualifiedTestClassName
 
         let sanitizedClassName = Regex.Replace(className, "[^a-zA-Z0-9-_]", "-")
-        let shortClassName = sanitizedClassName[..(min 40 (sanitizedClassName.Length - 1))]
+        let validClassName =
+            if String.IsNullOrWhiteSpace sanitizedClassName then
+                defaultClassName
+            else
+                sanitizedClassName
+
+        let maxAllowedIndex = min (maxClassNameLength - 1) (validClassName.Length - 1)
+        let shortClassName = validClassName[..maxAllowedIndex]
         $"{shortClassName}-{Guid.NewGuid():N}"
 
     let databaseId = buildDatabaseId ()
@@ -55,8 +73,8 @@ type DatabaseTestApplicationFactory(testContext : TestContext) =
                 database <- ValueNone
         }
 
-    abstract SeedDataAsync : CancellationToken -> Task
-    default _.SeedDataAsync(_ : CancellationToken) = Task.CompletedTask
+    abstract SeedDataAsync : cancellationToken : CancellationToken -> Task
+    default _.SeedDataAsync(cancellationToken : CancellationToken) = Task.CompletedTask
 
     interface IAsyncDisposable with
         member this.DisposeAsync() =
@@ -70,12 +88,11 @@ type DatabaseTestApplicationFactory(testContext : TestContext) =
 type IntegrationTestBase () =
     inherit TestBase()
 
-    [<DefaultValue false>]
-    val mutable private application : DatabaseTestApplicationFactory voption
+    member val private application : DatabaseTestApplicationFactory voption = ValueNone with get, set
 
     member this.Application =
         match this.application with
-        | ValueNone -> invalidOp "Integration test application is not initialized."
+        | ValueNone -> invalidOp "Application not initialized. Ensure test runs within TestInitialize/TestCleanup lifecycle."
         | ValueSome application -> application
 
     abstract CreateApplication : TestContext -> DatabaseTestApplicationFactory
