@@ -52,7 +52,7 @@ jobs:
           attempt=1
 
           while [ "$attempt" -le "$max_attempts" ]; do
-            if curl --silent --fail http://127.0.0.1:8080/ready > /dev/null; then
+            if curl --silent --fail --connect-timeout 2 --max-time 5 http://127.0.0.1:8080/ready > /dev/null; then
               echo "Cosmos DB Emulator is ready."
               exit 0
             fi
@@ -68,7 +68,10 @@ jobs:
 
       - name: Trust Azure Cosmos DB Emulator certificate
         run: |
-          openssl s_client -connect localhost:8081 </dev/null 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > "$HOME/emulatorcert.crt"
+          if ! timeout 20s openssl s_client -connect localhost:8081 -showcerts </dev/null 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > "$HOME/emulatorcert.crt"; then
+            echo "Failed to export emulator certificate from endpoint."
+            exit 1
+          fi
 
           if [ ! -s "$HOME/emulatorcert.crt" ]; then
             echo "Failed to export emulator certificate."
