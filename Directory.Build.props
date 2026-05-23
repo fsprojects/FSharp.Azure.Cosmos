@@ -25,7 +25,7 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
 
   <PropertyGroup>
     <AssemblyBaseName>FSharp.Azure.Cosmos</AssemblyBaseName>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
