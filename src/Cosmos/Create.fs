@@ -93,6 +93,12 @@ type CreateBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : CreateOperation<_>, throughputBucket : int) =
+        RequestOptions.setThroughputBucket (Nullable throughputBucket) state.RequestOptions
+        state
+
 let create<'T> = CreateBuilder<'T> (false)
 let createAndRead<'T> = CreateBuilder<'T> (true)
 

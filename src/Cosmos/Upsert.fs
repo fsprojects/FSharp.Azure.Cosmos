@@ -108,6 +108,12 @@ type UpsertBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : UpsertOperation<_>, throughputBucket : int) =
+        RequestOptions.setThroughputBucket (Nullable throughputBucket) state.RequestOptions
+        state
+
 type UpsertConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
     member _.Yield _ =
         {
@@ -200,6 +206,12 @@ type UpsertConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
     [<CustomOperation "sessionToken">]
     member _.SessionToken (state : UpsertConcurrentlyOperation<_, _>, sessionToken : string) =
         state.RequestOptions.SessionToken <- sessionToken
+        state
+
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : UpsertConcurrentlyOperation<_, _>, throughputBucket : int) =
+        RequestOptions.setThroughputBucket (Nullable throughputBucket) state.RequestOptions
         state
 
 let upsert<'T> = UpsertBuilder<'T> (false)

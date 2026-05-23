@@ -112,6 +112,12 @@ type ReplaceBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : ReplaceOperation<_>, throughputBucket : int) =
+        RequestOptions.setThroughputBucket (Nullable throughputBucket) state.RequestOptions
+        state
+
 type ReplaceConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
     member _.Yield _ =
         {
@@ -203,6 +209,12 @@ type ReplaceConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
     [<CustomOperation "sessionToken">]
     member _.SessionToken (state : ReplaceConcurrentlyOperation<_, _>, sessionToken : string) =
         state.RequestOptions.SessionToken <- sessionToken
+        state
+
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : ReplaceConcurrentlyOperation<_, _>, throughputBucket : int) =
+        RequestOptions.setThroughputBucket (Nullable throughputBucket) state.RequestOptions
         state
 
 let replace<'T> = ReplaceBuilder<'T> (false)

@@ -116,6 +116,12 @@ type PatchBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : PatchOperation<_>, throughputBucket : int) =
+        RequestOptions.setThroughputBucket (Nullable throughputBucket) state.RequestOptions
+        state
+
 let patch<'T> = PatchBuilder<'T> (false)
 let patchAndRead<'T> = PatchBuilder<'T> (true)
 
