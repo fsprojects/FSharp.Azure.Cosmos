@@ -81,6 +81,18 @@ type ReadManyBuilder<'T> () =
             options.SessionToken <- sessionToken
             state
 
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : ReadManyOperation<_>, throughputBucket : int) =
+        match state.RequestOptions with
+        | null ->
+            let options = ReadManyRequestOptions ()
+            RequestOptions.setThroughputBucket (Nullable throughputBucket) options
+            { state with RequestOptions = options }
+        | options ->
+            RequestOptions.setThroughputBucket (Nullable throughputBucket) options
+            state
+
 let readMany<'T> = ReadManyBuilder<'T> ()
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb

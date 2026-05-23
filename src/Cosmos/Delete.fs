@@ -148,6 +148,18 @@ type DeleteBuilder () =
             let options = ItemRequestOptions (SessionToken = sessionToken)
             { state with RequestOptions = ValueSome options }
 
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : DeleteOperation, throughputBucket : int) =
+        match state.RequestOptions with
+        | ValueSome requestOptions ->
+            RequestOptions.setThroughputBucket (Nullable throughputBucket) requestOptions
+            state
+        | ValueNone ->
+            let options = ItemRequestOptions ()
+            RequestOptions.setThroughputBucket (Nullable throughputBucket) options
+            { state with RequestOptions = ValueSome options }
+
 let delete = DeleteBuilder ()
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
