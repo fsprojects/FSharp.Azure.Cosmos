@@ -4,6 +4,7 @@ open System
 open System.Collections.Generic
 open System.Linq
 open System.Linq.Expressions
+open System.Reflection
 open System.Runtime.CompilerServices
 open System.Runtime.InteropServices
 open System.Threading
@@ -43,7 +44,9 @@ module LinqTranslation =
 
     let private containsMethodDefinition =
         typeof<Enumerable>.GetMethods ()
-        |> Array.find (fun methodInfo -> methodInfo.Name = "Contains" && methodInfo.GetParameters().Length = 2)
+        |> Array.tryFind (fun methodInfo -> methodInfo.Name = "Contains" && methodInfo.GetParameters().Length = 2)
+        |> ValueOption.ofOption
+        |> ValueOption.defaultWith (fun () -> invalidOp "System.Linq.Enumerable.Contains method is not available.")
 
     let private replaceParameters (replacements : (ParameterExpression * Expression) seq) (expressionToReplace : Expression) =
         let replacementMap = Dictionary<ParameterExpression, Expression> ()
@@ -140,7 +143,10 @@ module LinqTranslation =
                     match call.Method.Invoke (null, arguments) with
                     | :? Expression as translated -> ValueSome translated
                     | _ -> ValueNone
-                with _ ->
+                with
+                | :? ArgumentException
+                | :? InvalidOperationException
+                | :? TargetInvocationException ->
                     ValueNone
             | _ ->
                 ValueNone
@@ -278,6 +284,12 @@ module LinqTranslation =
     let private defaultExpressionTranslators : ExpressionTranslator list =
         [ quotationTranslator; functionalOperatorTranslator; optionTranslator; collectionContainsTranslator ]
 
+    // Guards against accidental translator cycles where translation rules keep rewriting the same node.
+    // 16 is intentionally conservative for deeply nested combinations (pipes/compositions/options) while
+    // still preventing runaway recursion from cyclic translator configurations.
+    // When the limit is reached, translation stops and the current expression is returned as-is.
+    let private maxTranslationDepth = 16
+
     let private gate = obj ()
     let mutable private customExpressionTranslators : ExpressionTranslator list = []
 
@@ -288,12 +300,14 @@ module LinqTranslation =
             let visited = base.Visit expression
 
             let rec apply expressionToTranslate depth =
-                if depth > 16 || isNull expressionToTranslate then
+                if depth >= maxTranslationDepth || isNull expressionToTranslate then
                     expressionToTranslate
                 else
                     let translated =
                         translators
                         |> Seq.tryPick (fun translator ->
+                            // Translators are expected to return a new expression instance when they apply.
+                            // Returning the original instance signals "no translation" for that pass.
                             match translator expressionToTranslate with
                             | ValueSome result when not (obj.ReferenceEquals (result, expressionToTranslate)) -> Some result
                             | _ -> None)
@@ -304,38 +318,42 @@ module LinqTranslation =
             apply visited 0
 
     let registerExpressionTranslator (translator : ExpressionTranslator) =
-        if isNull (box translator) then
-            raise (ArgumentNullException (nameof translator))
-        lock gate (fun () -> customExpressionTranslators <- customExpressionTranslators @ [ translator ])
+        lock gate (fun () -> customExpressionTranslators <- translator :: customExpressionTranslators)
 
     let clearCustomExpressionTranslators () = lock gate (fun () -> customExpressionTranslators <- [])
 
     let translateExpression (expression : Expression) =
-        if isNull expression then
-            raise (ArgumentNullException (nameof expression))
-
-        let translators =
-            lock gate (fun () -> defaultExpressionTranslators @ customExpressionTranslators)
-        let visitor = TranslationVisitor translators
-        visitor.Visit expression
+        match expression with
+        | null -> raise (ArgumentNullException (nameof expression))
+        | expression ->
+            let translators =
+                lock gate (fun () -> defaultExpressionTranslators @ List.rev customExpressionTranslators)
+            let visitor = TranslationVisitor translators
+            visitor.Visit expression
 
     let translateQueryable<'T> (query : IQueryable<'T>) =
-        if obj.ReferenceEquals (query, null) then
-            raise (ArgumentNullException (nameof query))
-
-        let translatedExpression = translateExpression query.Expression
-        if obj.ReferenceEquals (translatedExpression, query.Expression) then
-            query
-        else
-            query.Provider.CreateQuery<'T> (translatedExpression)
+        match query with
+        | null -> raise (ArgumentNullException (nameof query))
+        | query ->
+            let translatedExpression = translateExpression query.Expression
+            if obj.ReferenceEquals (translatedExpression, query.Expression) then
+                query
+            else
+                query.Provider.CreateQuery<'T> (translatedExpression)
 
 [<AutoOpen>]
 module QueryableExtensions =
 
     type IQueryable<'T> with
 
+        /// <summary>
+        /// Translates F#-specific LINQ constructs in this query to Cosmos-compatible expression forms.
+        /// </summary>
         member query.TranslateForCosmosLinq () : IQueryable<'T> = LinqTranslation.translateQueryable query
 
+        /// <summary>
+        /// Translates F#-specific LINQ constructs and creates Cosmos DB <see cref="FeedIterator{T}" />.
+        /// </summary>
         member query.ToTranslatedFeedIterator () : FeedIterator<'T> = query.TranslateForCosmosLinq().ToFeedIterator()
 
         member inline query.AsAsyncEnumerable<'T> ([<Optional; EnumeratorCancellation>] cancellationToken : CancellationToken) =
