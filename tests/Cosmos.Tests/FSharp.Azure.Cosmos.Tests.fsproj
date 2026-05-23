@@ -17,6 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="IntegrationInfrastructure.fs" />
+    <Compile Include="IntegrationTestPlan.fs" />
     <Compile Include="Tests.fs" />
   </ItemGroup>
 
