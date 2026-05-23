@@ -362,7 +362,8 @@ let dotnetTest ctx =
     let args = [
         "--no-build"
         if enableCodeCoverage then
-            "--collect:\"Code Coverage\""
+            "--collect"
+            "Code Coverage"
             "--results-directory"
             testResultsDir
         "--logger:trx" // Enable TRX report generation
@@ -708,7 +709,8 @@ let initTargets (ctx : Context.FakeExecutionContext) =
 
     "DotnetRestore" ==>! "WatchTests"
 
-    //"DotnetToolRestore" ?=>! "DotnetRestore"
+    "DotnetRestore" ==>! "DotnetToolRestore"
+    "DotnetToolRestore" ==>! "DotnetBuild"
     "DotnetToolRestore" ==>! "BuildDocs"
     "DotnetToolRestore" ?=>! "CheckFormatCode"
     "DotnetToolRestore" ?=>! "FormatCode"
