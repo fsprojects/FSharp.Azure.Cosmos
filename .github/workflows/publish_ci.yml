@@ -1,4 +1,4 @@
-name: Publish to GitHub
+﻿name: Publish to GitHub
 
 on:
   push:
@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Setup necessary dotnet SDKs
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
           dotnet-version: |
