@@ -1,7 +1,6 @@
 namespace Tests.Integration
 
 open System
-open System.Text.RegularExpressions
 open System.Threading
 open System.Threading.Tasks
 
@@ -15,7 +14,7 @@ type TestBase () =
 
     member this.CancellationToken = this.TestContext.CancellationTokenSource.Token
 
-type DatabaseTestApplicationFactory(testContext : TestContext) =
+type DatabaseTestApplicationFactory (testContext : TestContext) =
     [<Literal>]
     let defaultClassName = "CosmosTests"
 
@@ -26,11 +25,8 @@ type DatabaseTestApplicationFactory(testContext : TestContext) =
     let primaryKey =
         "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
 
-    [<Literal>]
-    let maxClassNameLength = 40
-
     let buildDatabaseId () =
-        let className =
+        let testClassName =
             match testContext.FullyQualifiedTestClassName with
             | null -> defaultClassName
             | fullyQualifiedTestClassName ->
@@ -39,54 +35,44 @@ type DatabaseTestApplicationFactory(testContext : TestContext) =
                 else
                     fullyQualifiedTestClassName
 
-        let sanitizedClassName = Regex.Replace(className, "[^a-zA-Z0-9-_]", "-")
-        let validClassName =
-            if String.IsNullOrWhiteSpace sanitizedClassName then
-                defaultClassName
-            else
-                sanitizedClassName
-
-        let maxAllowedIndex = min (maxClassNameLength - 1) (validClassName.Length - 1)
-        let shortClassName = validClassName[..maxAllowedIndex]
-        $"{shortClassName}-{Guid.NewGuid():N}"
+        $"{testClassName}-{Guid.NewGuid ():N}"
 
     let databaseId = buildDatabaseId ()
-    let client = new CosmosClient(endpoint, primaryKey, CosmosClientOptions(ConnectionMode = ConnectionMode.Gateway))
+    let client =
+        new CosmosClient (endpoint, primaryKey, CosmosClientOptions (ConnectionMode = ConnectionMode.Gateway))
     let mutable database = ValueNone
 
     member _.Client = client
     member _.DatabaseId = databaseId
     member _.Database = database
 
-    member _.InitializeAsync(cancellationToken : CancellationToken) : Task =
-        task {
-            let! createdDatabase = client.CreateDatabaseIfNotExistsAsync(databaseId, cancellationToken = cancellationToken)
-            database <- ValueSome createdDatabase.Database
-        }
+    member _.InitializeAsync (cancellationToken : CancellationToken) : Task = task {
+        let! createdDatabase = client.CreateDatabaseIfNotExistsAsync (databaseId, cancellationToken = cancellationToken)
+        database <- ValueSome createdDatabase.Database
+    }
 
-    member _.CleanupAsync(cancellationToken : CancellationToken) : Task =
-        task {
-            match database with
-            | ValueNone -> ()
-            | ValueSome existingDatabase ->
-                let! _ = existingDatabase.DeleteAsync(cancellationToken = cancellationToken)
-                database <- ValueNone
-        }
+    member _.CleanupAsync (cancellationToken : CancellationToken) : Task = task {
+        match database with
+        | ValueNone -> ()
+        | ValueSome existingDatabase ->
+            let! _ = existingDatabase.DeleteAsync (cancellationToken = cancellationToken)
+            database <- ValueNone
+    }
 
     abstract SeedDataAsync : cancellationToken : CancellationToken -> Task
-    default _.SeedDataAsync(cancellationToken : CancellationToken) = Task.CompletedTask
+    default _.SeedDataAsync (cancellationToken : CancellationToken) = Task.CompletedTask
 
     interface IAsyncDisposable with
-        member this.DisposeAsync() =
+        member this.DisposeAsync () =
             task {
-                do! this.CleanupAsync(CancellationToken.None)
-                client.Dispose()
+                do! this.CleanupAsync (CancellationToken.None)
+                client.Dispose ()
             }
             |> ValueTask
 
 [<AbstractClass; TestClass; TestCategory "Cosmos DB Emulator">]
 type IntegrationTestBase () =
-    inherit TestBase()
+    inherit TestBase ()
 
     member val private application : DatabaseTestApplicationFactory voption = ValueNone with get, set
 
@@ -96,23 +82,21 @@ type IntegrationTestBase () =
         | ValueSome application -> application
 
     abstract CreateApplication : TestContext -> DatabaseTestApplicationFactory
-    default _.CreateApplication context = DatabaseTestApplicationFactory(context)
+    default _.CreateApplication context = DatabaseTestApplicationFactory (context)
 
     [<TestInitialize>]
-    member this.Initialize() : Task =
-        task {
-            let application = this.CreateApplication(this.TestContext)
-            this.application <- ValueSome application
-            do! application.InitializeAsync(this.CancellationToken)
-            do! application.SeedDataAsync(this.CancellationToken)
-        }
+    member this.Initialize () : Task = task {
+        let application = this.CreateApplication (this.TestContext)
+        this.application <- ValueSome application
+        do! application.InitializeAsync (this.CancellationToken)
+        do! application.SeedDataAsync (this.CancellationToken)
+    }
 
     [<TestCleanup>]
-    member this.Cleanup() : Task =
-        task {
-            match this.application with
-            | ValueNone -> ()
-            | ValueSome application ->
-                do! (application :> IAsyncDisposable).DisposeAsync().AsTask()
-                this.application <- ValueNone
-        }
+    member this.Cleanup () : Task = task {
+        match this.application with
+        | ValueNone -> ()
+        | ValueSome application ->
+            do! (application :> IAsyncDisposable).DisposeAsync().AsTask ()
+            this.application <- ValueNone
+    }
