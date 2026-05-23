@@ -91,8 +91,14 @@ jobs:
             exit 1
           fi
 
-          curl --silent --show-error --fail https://localhost:8081/_explorer/emulator.js > /dev/null
-          echo "Data Explorer endpoint is accessible."
+          explorer_status_code="$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" http://localhost:1234/)"
+          if [ "$explorer_status_code" = "200" ]; then
+            echo "Data Explorer endpoint is accessible (status: $explorer_status_code)."
+          else
+            echo "Unexpected Data Explorer endpoint status: $explorer_status_code"
+            exit 1
+          fi
+
           echo "Emulator should be accessible at: https://localhost:8081"
           echo "Primary Key: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
         shell: bash
