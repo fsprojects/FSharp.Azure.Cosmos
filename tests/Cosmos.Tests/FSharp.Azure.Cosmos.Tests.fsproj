@@ -6,15 +6,21 @@
 
     <OutputType>Exe</OutputType>
     <EnableMSTestRunner>true</EnableMSTestRunner>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Tests.fs" />
-    <Compile Include="Attributes.fs" />
+    <Content Include="testconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <Compile Include="Tests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MSTest" />
     <PackageReference Include="Unquote" />
   </ItemGroup>

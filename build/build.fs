@@ -359,28 +359,33 @@ let dotnetTest ctx =
     // Create test results directory if it doesn't exist
     Directory.create testResultsDir
 
+    let dotnetConfiguration = configuration (ctx.Context.AllExecutingTargets) |> string
+
     let args = [
         "--no-build"
+        "--configuration"
+        dotnetConfiguration
         if enableCodeCoverage then
-            "--collect"
-            "Code Coverage"
+            "--coverage"
+            "--coverage-output-format"
+            "cobertura"
             "--results-directory"
             testResultsDir
-        "--logger:trx" // Enable TRX report generation
     ]
 
-    DotNet.test
-        (fun c -> {
-            c with
-                MSBuildParams = disableBinLog c.MSBuildParams
-                Configuration = configuration (ctx.Context.AllExecutingTargets)
-                Common = c.Common |> DotNet.Options.withAdditionalArgs args
-        })
-        sln
+    !!testsGlob
+    |> Seq.iter (fun testProject ->
+        [ "--project"; testProject; yield! args ]
+        |> String.concat " "
+        |> DotNet.exec id "test"
+        |> failOnBadExitAndPrint
+    )
 
 let generateCoverageReport _ =
 
-    let coverageFiles = !!(testResultsDir </> "*/coverage.cobertura.xml")
+    let coverageFiles =
+        !!(testResultsDir </> "*.cobertura.xml")
+        ++ (testResultsDir </> "*/coverage.cobertura.xml")
 
     let sourceDirs = !!srcGlob |> Seq.map Path.getDirectory |> String.concat ";"
 
