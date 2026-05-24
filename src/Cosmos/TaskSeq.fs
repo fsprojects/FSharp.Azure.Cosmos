@@ -18,7 +18,7 @@ module TaskSeq =
     /// and asynchronously iterates it.
     /// </summary>
     /// <param name="query">Cosmos DB queryable</param>
-    let ofCosmosDbQueryable<'T> (query : IQueryable<'T>) = query.ToFeedIterator().AsAsyncEnumerable<'T> ()
+    let ofCosmosDbQueryable<'T> (query : IQueryable<'T>) = query.ToTranslatedFeedIterator().AsAsyncEnumerable<'T> ()
 
 module CancellableTaskSeq =
 
@@ -37,4 +37,4 @@ module CancellableTaskSeq =
     /// <param name="cancellationToken">Cancellation token</param>
     /// <param name="query">Cosmos DB queryable</param>
     let ofCosmosDbQueryable<'T> (cancellationToken : CancellationToken) (query : IQueryable<'T>) =
-        query.ToFeedIterator().AsAsyncEnumerable<'T> (cancellationToken)
+        query.ToTranslatedFeedIterator().AsAsyncEnumerable<'T> (cancellationToken)
