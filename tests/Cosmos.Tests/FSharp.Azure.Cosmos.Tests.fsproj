@@ -24,7 +24,6 @@
     <Compile Include="CosmosAssert.fs" />
     <Compile Include="OperationTestInfrastructure.fs" />
     <Compile Include="IntegrationTestPlan.fs" />
-    <Compile Include="Tests.fs" />
     <Compile Include="CreateOperationTests.fs" />
     <Compile Include="ReadOperationTests.fs" />
     <Compile Include="UpsertOperationTests.fs" />
@@ -35,7 +34,6 @@
     <Compile Include="CosmosReadExtensionsTests.fs" />
     <Compile Include="IterationExtensionsTests.fs" />
     <Compile Include="BuilderUnitTests.fs" />
-    <Compile Include="Attributes.fs" />
   </ItemGroup>
 
   <ItemGroup>
