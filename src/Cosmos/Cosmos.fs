@@ -215,14 +215,22 @@ module Operations =
         /// <param name="partitionKey">Partition key</param>
         /// <param name="cancellationToken">Cancellation token</param>
         member container.IsNotDeletedAsync
-            deletedFieldName
+            (deletedFieldName : string | null)
             (id : string, [<Optional>] requiestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
             task {
+                let isAsciiLetter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+                let isAsciiDigit c = '0' <= c && c <= '9'
+
                 let isValidDeletedFieldName =
-                    not (String.IsNullOrWhiteSpace deletedFieldName)
-                    && (deletedFieldName[0] = '_' || Char.IsLetter deletedFieldName[0])
-                    && deletedFieldName |> Seq.forall (fun c -> c = '_' || Char.IsLetterOrDigit c)
+                    match deletedFieldName with
+                    | null -> false
+                    | name when String.IsNullOrWhiteSpace name -> false
+                    | name ->
+                        let firstCharacter = name[0]
+                        let hasValidStart = firstCharacter = '_' || isAsciiLetter firstCharacter
+                        let hasValidBody = name |> Seq.forall (fun c -> c = '_' || isAsciiLetter c || isAsciiDigit c)
+                        hasValidStart && hasValidBody
 
                 if not isValidDeletedFieldName then
                     invalidArg
