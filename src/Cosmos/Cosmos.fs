@@ -219,6 +219,16 @@ module Operations =
             (id : string, [<Optional>] requiestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
             task {
+                let isValidDeletedFieldName =
+                    not (String.IsNullOrWhiteSpace deletedFieldName)
+                    && (deletedFieldName[0] = '_' || Char.IsLetter deletedFieldName[0])
+                    && deletedFieldName |> Seq.forall (fun c -> c = '_' || Char.IsLetterOrDigit c)
+
+                if not isValidDeletedFieldName then
+                    invalidArg
+                       (nameof deletedFieldName)
+                       "Deleted field name must start with a letter or underscore and contain only letters, digits, or underscores."
+
                 let query =
                     QueryDefinition(
                        $"""SELECT VALUE COUNT(1)
