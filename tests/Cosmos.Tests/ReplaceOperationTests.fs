@@ -10,7 +10,7 @@ type ReplaceOperationIntegrationTests () =
     inherit OperationTestBase ()
 
     [<TestMethod>]
-    member this.Replace_execute_overwrite_replaces_existing_item () : Task = task {
+    member this.``Replace execute overwrite replaces existing item`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "replace"
 
@@ -55,7 +55,7 @@ type ReplaceOperationIntegrationTests () =
     }
 
     [<TestMethod>]
-    member this.ReplaceAndRead_execute_overwrite_returns_replaced_item () : Task = task {
+    member this.``ReplaceAndRead execute overwrite returns replaced item`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "replace-and-read"
 
@@ -87,4 +87,63 @@ type ReplaceOperationIntegrationTests () =
         Assert.IsTrue (replacement.name = replaced.name, "ReplaceAndRead should return replacement name.")
         Assert.IsTrue (replacement.quantity = replaced.quantity, "ReplaceAndRead should return replacement quantity.")
         Assert.IsTrue (replaceResponse.HttpStatusCode = HttpStatusCode.OK, "ReplaceAndRead should return HTTP 200.")
+    }
+
+    [<TestMethod>]
+    member this.``Replace concurrently retries and applies update`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "replace-concurrent"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let mutable conflictInjected = false
+
+        let operation = replaceConcurrenly<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            update (fun current -> async {
+                if not conflictInjected then
+                    conflictInjected <- true
+
+                    let competingUpdate = { current with name = "competing-update" }
+
+                    let! _ =
+                        container.ExecuteOverwriteAsync (
+                            replace {
+                                id competingUpdate.id
+                                item competingUpdate
+                                partitionKey competingUpdate.partitionKey
+                            },
+                            this.CancellationToken
+                        )
+                        |> Async.AwaitTask
+
+                    ()
+
+                return
+                    Result.Ok {
+                        current with
+                            name = "replace-concurrent-updated"
+                            quantity = current.quantity + 10
+                    }
+            })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
+        match concurrentResponse.Result with
+        | ReplaceConcurrentResult.Ok updated ->
+            Assert.IsTrue (conflictInjected, "Replace concurrently test should inject a conflicting update at least once.")
+            Assert.IsTrue (updated.name = "replace-concurrent-updated", "Replace concurrently should persist updated name.")
+            Assert.IsTrue (updated.quantity = original.quantity + 10, "Replace concurrently should persist updated quantity.")
+        | result -> Assert.Fail ($"Expected replace concurrently success after retry, got {result}.")
     }

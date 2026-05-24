@@ -11,7 +11,7 @@ type ReadManyOperationIntegrationTests () =
     inherit OperationTestBase ()
 
     [<TestMethod>]
-    member this.ReadMany_execute_returns_matching_items () : Task = task {
+    member this.``ReadMany execute returns matching items`` () : Task = task {
         let! container = this.GetContainer ()
         let firstItem = this.NewItem "readmany-1"
         let secondItem = this.NewItem "readmany-2"

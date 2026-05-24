@@ -11,7 +11,7 @@ type PatchOperationIntegrationTests () =
     inherit OperationTestBase ()
 
     [<TestMethod>]
-    member this.Patch_execute_overwrite_updates_item () : Task = task {
+    member this.``Patch execute overwrite updates item`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "patch"
 
@@ -61,7 +61,7 @@ type PatchOperationIntegrationTests () =
     }
 
     [<TestMethod>]
-    member this.PatchAndRead_execute_overwrite_returns_updated_item () : Task = task {
+    member this.``PatchAndRead execute overwrite returns updated item`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "patch-and-read"
 

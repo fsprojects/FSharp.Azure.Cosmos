@@ -10,7 +10,7 @@ type DeleteOperationIntegrationTests () =
     inherit OperationTestBase ()
 
     [<TestMethod>]
-    member this.Delete_execute_removes_item_and_subsequent_read_is_not_found () : Task = task {
+    member this.``Delete execute removes item and subsequent read is not found`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "delete"
 

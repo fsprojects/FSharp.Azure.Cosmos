@@ -10,7 +10,7 @@ type CreateOperationIntegrationTests () =
     inherit OperationTestBase ()
 
     [<TestMethod>]
-    member this.Create_execute_persists_item () : Task = task {
+    member this.``Create execute persists item`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "create"
 
@@ -41,7 +41,7 @@ type CreateOperationIntegrationTests () =
     }
 
     [<TestMethod>]
-    member this.CreateAndRead_execute_returns_created_resource () : Task = task {
+    member this.``CreateAndRead execute returns created resource`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "create-and-read"
 

@@ -29,6 +29,9 @@
     <Compile Include="PatchOperationTests.fs" />
     <Compile Include="DeleteOperationTests.fs" />
     <Compile Include="ReadManyOperationTests.fs" />
+    <Compile Include="CosmosReadExtensionsTests.fs" />
+    <Compile Include="IterationExtensionsTests.fs" />
+    <Compile Include="BuilderUnitTests.fs" />
     <Compile Include="Attributes.fs" />
   </ItemGroup>
 
