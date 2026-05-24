@@ -28,6 +28,7 @@ module TestContextExtensions =
                             HashCode.Combine (acc, itemHash)
                         )
                         0
+                    |> int64
                     |> abs
 
                 $"{ctx.TestName}_{dataHash}"
