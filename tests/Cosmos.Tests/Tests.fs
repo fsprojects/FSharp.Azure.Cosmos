@@ -51,13 +51,11 @@ type OperationIntegrationTests () =
                 this.CancellationToken
             )
 
-        match response.Result with
-        | CreateResult.Ok created ->
-            Assert.IsTrue (testItem.id = created.id, "Create should persist the item id.")
-            Assert.IsTrue (testItem.partitionKey = created.partitionKey, "Create should persist the item partition key.")
-            Assert.IsFalse (String.IsNullOrWhiteSpace response.ActivityId, "Create should return a valid activity id.")
-            Assert.IsTrue (response.RequestCharge > 0.0, "Create should report positive request charge.")
-        | result -> Assert.Fail ($"Expected create success but received {result}.")
+        let created = CosmosAssert.WantOk (response.Result, "Create should return CreateResult.Ok.")
+        Assert.IsTrue (testItem.id = created.id, "Create should persist the item id.")
+        Assert.IsTrue (testItem.partitionKey = created.partitionKey, "Create should persist the item partition key.")
+        Assert.IsFalse (String.IsNullOrWhiteSpace response.ActivityId, "Create should return a valid activity id.")
+        Assert.IsTrue (response.RequestCharge > 0.0, "Create should report positive request charge.")
     }
 
     [<TestMethod>]
@@ -65,7 +63,7 @@ type OperationIntegrationTests () =
         let! container = this.GetContainerAsync ()
         let testItem = this.NewItem "read"
 
-        let! _ =
+        let! createdResponse =
             container.ExecuteAsync (
                 create {
                     item testItem
@@ -73,6 +71,7 @@ type OperationIntegrationTests () =
                 },
                 this.CancellationToken
             )
+        CosmosAssert.IsOk (createdResponse.Result, "Seed create should succeed.")
 
         let! foundResponse =
             container.ExecuteAsync (
@@ -83,11 +82,10 @@ type OperationIntegrationTests () =
                 this.CancellationToken
             )
 
-        match foundResponse.Result with
-        | ReadResult.Ok found ->
-            Assert.IsTrue (testItem.id = found.id, "Read should return the item that was created.")
-            Assert.IsTrue (foundResponse.HttpStatusCode = HttpStatusCode.OK, "Read success should return HTTP 200.")
-        | result -> Assert.Fail ($"Expected successful read but received {result}.")
+        let found =
+            CosmosAssert.WantOk (foundResponse.Result, "Read should return ReadResult.Ok for existing item.")
+        Assert.IsTrue (testItem.id = found.id, "Read should return the item that was created.")
+        Assert.IsTrue (foundResponse.HttpStatusCode = HttpStatusCode.OK, "Read success should return HTTP 200.")
 
         let missingId = $"{testItem.id}-missing"
 
@@ -100,13 +98,8 @@ type OperationIntegrationTests () =
                 this.CancellationToken
             )
 
-        match missingResponse.Result with
-        | ReadResult.NotFound _ ->
-            Assert.IsTrue (
-                missingResponse.HttpStatusCode = HttpStatusCode.NotFound,
-                "Read of missing item should return HTTP 404."
-            )
-        | result -> Assert.Fail ($"Expected read not found for missing item but received {result}.")
+        CosmosAssert.IsNotFound (missingResponse.Result, "Read of missing item should return ReadResult.NotFound.")
+        Assert.IsTrue (missingResponse.HttpStatusCode = HttpStatusCode.NotFound, "Read of missing item should return HTTP 404.")
     }
 
     [<TestMethod>]
@@ -153,7 +146,7 @@ type OperationIntegrationTests () =
         let! container = this.GetContainerAsync ()
         let testItem = this.NewItem "replace"
 
-        let! _ =
+        let! createdResponse =
             container.ExecuteAsync (
                 create {
                     item testItem
@@ -161,6 +154,7 @@ type OperationIntegrationTests () =
                 },
                 this.CancellationToken
             )
+        CosmosAssert.IsOk (createdResponse.Result, "Seed create should succeed.")
 
         let replacement = { testItem with name = "item-replaced"; quantity = 3 }
 
@@ -174,12 +168,10 @@ type OperationIntegrationTests () =
                 this.CancellationToken
             )
 
-        match replaceResponse.Result with
-        | ReplaceResult.Ok replaced ->
-            Assert.IsTrue (replacement.name = replaced.name, "Replace should persist replacement name.")
-            Assert.IsTrue (replacement.quantity = replaced.quantity, "Replace should persist replacement quantity.")
-            Assert.IsTrue (replaceResponse.HttpStatusCode = HttpStatusCode.OK, "Replace should return HTTP 200.")
-        | result -> Assert.Fail ($"Expected replace success but received {result}.")
+        let replaced = CosmosAssert.WantOk (replaceResponse.Result, "Replace should return ReplaceResult.Ok.")
+        Assert.IsTrue (replacement.name = replaced.name, "Replace should persist replacement name.")
+        Assert.IsTrue (replacement.quantity = replaced.quantity, "Replace should persist replacement quantity.")
+        Assert.IsTrue (replaceResponse.HttpStatusCode = HttpStatusCode.OK, "Replace should return HTTP 200.")
     }
 
     [<TestMethod>]
@@ -189,7 +181,7 @@ type OperationIntegrationTests () =
         let patchedName = "item-patched"
         let patchedQuantity = 9
 
-        let! _ =
+        let! createdResponse =
             container.ExecuteAsync (
                 create {
                     item testItem
@@ -197,6 +189,7 @@ type OperationIntegrationTests () =
                 },
                 this.CancellationToken
             )
+        CosmosAssert.IsOk (createdResponse.Result, "Seed create should succeed.")
 
         let! patchResponse =
             container.ExecuteOverwriteAsync (
@@ -224,7 +217,7 @@ type OperationIntegrationTests () =
         let! container = this.GetContainerAsync ()
         let testItem = this.NewItem "delete"
 
-        let! _ =
+        let! createdResponse =
             container.ExecuteAsync (
                 create {
                     item testItem
@@ -232,6 +225,7 @@ type OperationIntegrationTests () =
                 },
                 this.CancellationToken
             )
+        CosmosAssert.IsOk (createdResponse.Result, "Seed create should succeed.")
 
         let! deleteResponse =
             container.ExecuteAsync (
@@ -242,10 +236,8 @@ type OperationIntegrationTests () =
                 this.CancellationToken
             )
 
-        match deleteResponse.Result with
-        | DeleteResult.Ok _ ->
-            Assert.IsTrue (deleteResponse.HttpStatusCode = HttpStatusCode.NoContent, "Delete should return HTTP 204.")
-        | result -> Assert.Fail ($"Expected delete success but received {result}.")
+        CosmosAssert.IsOk (deleteResponse.Result, "Delete should return DeleteResult.Ok.")
+        Assert.IsTrue (deleteResponse.HttpStatusCode = HttpStatusCode.NoContent, "Delete should return HTTP 204.")
 
         let! missingResponse =
             container.ExecuteAsync (
@@ -256,10 +248,8 @@ type OperationIntegrationTests () =
                 this.CancellationToken
             )
 
-        match missingResponse.Result with
-        | ReadResult.NotFound _ ->
-            Assert.IsTrue (missingResponse.HttpStatusCode = HttpStatusCode.NotFound, "Read after delete should return HTTP 404.")
-        | result -> Assert.Fail ($"Expected read not found after delete but received {result}.")
+        CosmosAssert.IsNotFound (missingResponse.Result, "Read after delete should return ReadResult.NotFound.")
+        Assert.IsTrue (missingResponse.HttpStatusCode = HttpStatusCode.NotFound, "Read after delete should return HTTP 404.")
     }
 
     [<TestMethod>]
@@ -268,7 +258,7 @@ type OperationIntegrationTests () =
         let firstItem = this.NewItem "readmany-1"
         let secondItem = this.NewItem "readmany-2"
 
-        let! _ =
+        let! firstCreatedResponse =
             container.ExecuteAsync (
                 create {
                     item firstItem
@@ -276,8 +266,9 @@ type OperationIntegrationTests () =
                 },
                 this.CancellationToken
             )
+        CosmosAssert.IsOk (firstCreatedResponse.Result, "First seed create should succeed.")
 
-        let! _ =
+        let! secondCreatedResponse =
             container.ExecuteAsync (
                 create {
                     item secondItem
@@ -285,6 +276,7 @@ type OperationIntegrationTests () =
                 },
                 this.CancellationToken
             )
+        CosmosAssert.IsOk (secondCreatedResponse.Result, "Second seed create should succeed.")
 
         let! readManyResponse =
             container.ExecuteAsync (

@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Compile Include="IntegrationInfrastructure.fs" />
+    <Compile Include="CosmosAssert.fs" />
     <Compile Include="IntegrationTestPlan.fs" />
     <Compile Include="Tests.fs" />
   </ItemGroup>
