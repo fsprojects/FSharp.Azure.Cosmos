@@ -13,7 +13,6 @@ type private TestItem = { id : string; partitionKey : string; name : string; qua
 type OperationIntegrationTests () =
     inherit IntegrationTestBase ()
 
-    [<Literal>]
     let containerId = "operation-tests"
 
     member private this.GetContainerAsync () : Task<Container> = task {
@@ -187,6 +186,8 @@ type OperationIntegrationTests () =
     member this.Patch_execute_overwrite_updates_targeted_field () : Task = task {
         let! container = this.GetContainerAsync ()
         let testItem = this.NewItem "patch"
+        let patchedName = "item-patched"
+        let patchedQuantity = 9
 
         let! _ =
             container.ExecuteAsync (
@@ -202,16 +203,18 @@ type OperationIntegrationTests () =
                 patchAndRead {
                     id testItem.id
                     partitionKey testItem.partitionKey
-                    operation (Microsoft.Azure.Cosmos.PatchOperation.Replace ("/name", "item-patched"))
-                    operation (Microsoft.Azure.Cosmos.PatchOperation.Replace ("/quantity", 9))
+                    operation (Microsoft.Azure.Cosmos.PatchOperation.Replace ("/name", patchedName))
+                    operation (Microsoft.Azure.Cosmos.PatchOperation.Replace ("/quantity", patchedQuantity))
                 },
                 this.CancellationToken
             )
 
         match patchResponse.Result with
         | PatchResult.Ok patched ->
-            Assert.IsTrue ("item-patched" = patched.name, "Patch should update the name field.")
-            Assert.IsTrue (9 = patched.quantity, "Patch should update the quantity field.")
+            let isNamePatched = patchedName = patched.name
+            let isQuantityPatched = patchedQuantity = patched.quantity
+            Assert.IsTrue (isNamePatched, "Patch should update the name field.")
+            Assert.IsTrue (isQuantityPatched, "Patch should update the quantity field.")
             Assert.IsTrue (patchResponse.HttpStatusCode = HttpStatusCode.OK, "Patch should return HTTP 200.")
         | result -> Assert.Fail ($"Expected patch success but received {result}.")
     }
