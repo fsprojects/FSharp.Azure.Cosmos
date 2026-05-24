@@ -17,7 +17,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Tests.fs" />
+    <Compile Include="IntegrationInfrastructure.fs" />
+    <Compile Include="Assert.fs" />
+    <Compile Include="CosmosAssert.fs" />
+    <Compile Include="TestCategories.fs" />
+    <Compile Include="OperationTestInfrastructure.fs" />
+    <Compile Include="CreateOperationTests.fs" />
+    <Compile Include="ReadOperationTests.fs" />
+    <Compile Include="UpsertOperationTests.fs" />
+    <Compile Include="ReplaceOperationTests.fs" />
+    <Compile Include="PatchOperationTests.fs" />
+    <Compile Include="DeleteOperationTests.fs" />
+    <Compile Include="ReadManyOperationTests.fs" />
+    <Compile Include="ReadExtensionsTests.fs" />
+    <Compile Include="IterationExtensionsTests.fs" />
+    <Compile Include="BuilderUnitTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
