@@ -9,7 +9,7 @@ open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
 [<TestClass; TestCategory(TestCategories.ReadExtensions)>]
-type CosmosReadExtensionsIntegrationTests () =
+type ReadExtensionsIntegrationTests () =
     inherit OperationTestBase ()
 
     [<TestMethod>]
