@@ -20,6 +20,7 @@
     <Compile Include="TestCategories.fs" />
     <Compile Include="IterationExtensionsUnitTests.fs" />
     <Compile Include="IntegrationInfrastructure.fs" />
+    <Compile Include="Assert.fs" />
     <Compile Include="CosmosAssert.fs" />
     <Compile Include="OperationTestInfrastructure.fs" />
     <Compile Include="IntegrationTestPlan.fs" />

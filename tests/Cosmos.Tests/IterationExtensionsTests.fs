@@ -1,4 +1,4 @@
-namespace Tests.Integration
+namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System.Threading.Tasks
 open FSharp.Control
