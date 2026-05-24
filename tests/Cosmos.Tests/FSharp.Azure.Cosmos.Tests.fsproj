@@ -19,8 +19,17 @@
   <ItemGroup>
     <Compile Include="IntegrationInfrastructure.fs" />
     <Compile Include="CosmosAssert.fs" />
+    <Compile Include="OperationTestInfrastructure.fs" />
     <Compile Include="IntegrationTestPlan.fs" />
     <Compile Include="Tests.fs" />
+    <Compile Include="CreateOperationTests.fs" />
+    <Compile Include="ReadOperationTests.fs" />
+    <Compile Include="UpsertOperationTests.fs" />
+    <Compile Include="ReplaceOperationTests.fs" />
+    <Compile Include="PatchOperationTests.fs" />
+    <Compile Include="DeleteOperationTests.fs" />
+    <Compile Include="ReadManyOperationTests.fs" />
+    <Compile Include="Attributes.fs" />
   </ItemGroup>
 
   <ItemGroup>
