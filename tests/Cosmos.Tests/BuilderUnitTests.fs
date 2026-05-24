@@ -1,4 +1,4 @@
-namespace Tests.Unit
+namespace FSharp.Azure.Cosmos.Tests
 
 open System
 open FSharp.Azure.Cosmos
@@ -26,7 +26,7 @@ type BuilderUnitTests () =
             sessionToken "create-and-read-session"
         }
 
-        Assert.IsTrue (createOperation.PartitionKey |> ValueOption.isSome, "Create builder should set partition key.")
+        Assert.IsValueSome (createOperation.PartitionKey, "Create builder should set partition key.")
         Assert.IsTrue (createOperation.RequestOptions.SessionToken = "create-session", "Create builder should set session token.")
         Assert.IsFalse (
             createOperation.RequestOptions.EnableContentResponseOnWrite,
@@ -110,7 +110,7 @@ type BuilderUnitTests () =
             |> Async.RunSynchronously
 
         Assert.IsTrue (replaceConcurrentlyOperation.Id = "replace-concurrent-id", "Replace concurrently builder should set id.")
-        Assert.IsTrue (Result.isOk updateResult, "Replace concurrently builder should set update function.")
+        Assert.IsOk (updateResult, "Replace concurrently builder should set update function.")
         Assert.IsFalse (
             replaceConcurrentlyOperation.RequestOptions.EnableContentResponseOnWrite,
             "Replace concurrently builder should disable content response."
@@ -135,7 +135,7 @@ type BuilderUnitTests () =
             partitionKey upsertItem.partitionKey
         }
 
-        Assert.IsTrue (upsertOperation.PartitionKey |> ValueOption.isSome, "Upsert builder should set partition key.")
+        Assert.IsValueSome (upsertOperation.PartitionKey, "Upsert builder should set partition key.")
         Assert.IsTrue (upsertOperation.RequestOptions.IfMatchEtag = "upsert-etag", "Upsert builder should set eTag.")
         Assert.IsFalse (
             upsertOperation.RequestOptions.EnableContentResponseOnWrite,
@@ -169,7 +169,7 @@ type BuilderUnitTests () =
             |> Async.RunSynchronously
 
         Assert.IsTrue (upsertConcurrentlyOperation.Id = "upsert-concurrent-id", "Upsert concurrently builder should set id.")
-        Assert.IsTrue (Result.isOk updateResult, "Upsert concurrently builder should set updateOrCreate function.")
+        Assert.IsOk (updateResult, "Upsert concurrently builder should set updateOrCreate function.")
         Assert.IsFalse (
             upsertConcurrentlyOperation.RequestOptions.EnableContentResponseOnWrite,
             "Upsert concurrently builder should disable content response."
@@ -219,9 +219,8 @@ type BuilderUnitTests () =
         }
 
         Assert.IsTrue (operation.Id = "delete-id", "Delete builder should set id.")
-        Assert.IsTrue (operation.RequestOptions |> ValueOption.isSome, "Delete builder should initialize request options.")
-
-        let options = operation.RequestOptions |> ValueOption.get
+        let options =
+            Assert.WantValueSome (operation.RequestOptions, "Delete builder should initialize request options.")
         Assert.IsTrue (options.IfNoneMatchEtag = "delete-etag", "Delete builder should set eTag.")
         Assert.IsTrue (options.SessionToken = "delete-session", "Delete builder should set session token.")
 
