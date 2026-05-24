@@ -236,7 +236,7 @@ module Operations =
         /// </exception>
         member container.IsNotDeletedAsync
             (deletedFieldName : string)
-            (id : string, [<Optional>] requiestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
+            (id : string, [<Optional>] requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
             if obj.ReferenceEquals (deletedFieldName, null) then
                 nullArg (nameof deletedFieldName)
@@ -273,7 +273,7 @@ module Operations =
                 let! count =
                     container.GetItemQueryIterator<int> (
                         query,
-                        requestOptions = getRequestOptionsWithMaxItemCount1 requiestOptions
+                        requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions
                     )
                     |> CancellableTaskSeq.ofFeedIterator cancellationToken
                     |> TaskSeq.tryHead

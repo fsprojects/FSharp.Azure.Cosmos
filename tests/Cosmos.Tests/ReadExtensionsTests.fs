@@ -95,7 +95,10 @@ type ReadExtensionsIntegrationTests () =
 
         let! _ =
             Assert.ThrowsExactlyAsync<ArgumentNullException> (
-                invokeIsNotDeleted Unchecked.defaultof<string>,
+                Func<Task> (fun () -> task {
+                    let! _ = container.IsNotDeletedAsync Unchecked.defaultof<string> testItem.id
+                    return ()
+                }),
                 "IsNotDeletedAsync should throw ArgumentNullException when deleted field name is null."
             )
 
