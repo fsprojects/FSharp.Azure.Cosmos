@@ -1,6 +1,9 @@
 namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System
+open System.Net
+open System.Net.Http
+open System.Net.Security
 open System.Threading
 open System.Threading.Tasks
 
@@ -51,8 +54,30 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
     let buildDatabaseId () = testContext.GetTestDatabaseIdentifier ()
 
     let databaseId = buildDatabaseId ()
+
+    let isLocalEmulatorHost (uri : Uri) =
+        uri.Host.Equals ("localhost", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.Equals ("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+
+    let createHttpClient () =
+        let handler = new HttpClientHandler ()
+
+        handler.ServerCertificateCustomValidationCallback <-
+            (fun request _ _ errors ->
+                match request.RequestUri with
+                | null -> errors = SslPolicyErrors.None
+                | requestUri when errors = SslPolicyErrors.None -> true
+                | requestUri -> isLocalEmulatorHost requestUri
+            )
+
+        new HttpClient (handler, true)
+
     let client =
-        new CosmosClient (endpoint, primaryKey, CosmosClientOptions (ConnectionMode = ConnectionMode.Gateway))
+        new CosmosClient (
+            endpoint,
+            primaryKey,
+            CosmosClientOptions (ConnectionMode = ConnectionMode.Gateway, HttpClientFactory = Func<HttpClient> createHttpClient)
+        )
     let mutable database = ValueNone
 
     member _.Client = client
