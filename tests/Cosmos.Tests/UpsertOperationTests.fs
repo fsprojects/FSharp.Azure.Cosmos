@@ -10,7 +10,7 @@ type UpsertOperationIntegrationTests () =
     inherit OperationTestBase ()
 
     [<TestMethod>]
-    member this.Upsert_execute_overwrite_creates_then_updates_item () : Task = task {
+    member this.``Upsert execute overwrite creates then updates item`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "upsert"
 
@@ -59,7 +59,7 @@ type UpsertOperationIntegrationTests () =
     }
 
     [<TestMethod>]
-    member this.UpsertAndRead_execute_overwrite_returns_updated_item () : Task = task {
+    member this.``UpsertAndRead execute overwrite returns updated item`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "upsert-and-read"
 
@@ -98,4 +98,65 @@ type UpsertOperationIntegrationTests () =
             Assert.IsTrue (updated.quantity = upserted.quantity, "UpsertAndRead update should return updated quantity.")
             Assert.IsTrue (updatedResponse.HttpStatusCode = HttpStatusCode.OK, "UpsertAndRead update should return HTTP 200.")
         | result -> Assert.Fail ($"Expected upsertAndRead update success, got {result}.")
+    }
+
+    [<TestMethod>]
+    member this.``Upsert concurrently retries and applies update`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "upsert-concurrent"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let mutable conflictInjected = false
+
+        let operation = upsertConcurrenly<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            updateOrCreate (fun maybeCurrent -> async {
+                match maybeCurrent with
+                | Some current ->
+                    if not conflictInjected then
+                        conflictInjected <- true
+
+                        let competingUpdate = { current with name = "competing-upsert-update" }
+
+                        let! _ =
+                            container.ExecuteOverwriteAsync (
+                                upsert {
+                                    item competingUpdate
+                                    partitionKey competingUpdate.partitionKey
+                                },
+                                this.CancellationToken
+                            )
+                            |> Async.AwaitTask
+
+                        ()
+
+                    return
+                        Result.Ok {
+                            current with
+                                name = "upsert-concurrent-updated"
+                                quantity = current.quantity + 7
+                        }
+                | None -> return Result.Error "Expected existing item for concurrent upsert test."
+            })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
+        match concurrentResponse.Result with
+        | UpsertConcurrentResult.Ok updated ->
+            Assert.IsTrue (conflictInjected, "Upsert concurrently test should inject a conflicting update at least once.")
+            Assert.IsTrue (updated.name = "upsert-concurrent-updated", "Upsert concurrently should persist updated name.")
+            Assert.IsTrue (updated.quantity = original.quantity + 7, "Upsert concurrently should persist updated quantity.")
+        | result -> Assert.Fail ($"Expected upsert concurrently success after retry, got {result}.")
     }

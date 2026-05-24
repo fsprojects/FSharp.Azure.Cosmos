@@ -10,7 +10,7 @@ type ReadOperationIntegrationTests () =
     inherit OperationTestBase ()
 
     [<TestMethod>]
-    member this.Read_execute_returns_existing_and_not_found_states () : Task = task {
+    member this.``Read execute returns existing and not found states`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "read"
 

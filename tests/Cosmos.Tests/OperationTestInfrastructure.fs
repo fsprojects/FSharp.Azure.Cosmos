@@ -2,6 +2,7 @@ namespace Tests.Integration
 
 open System
 open System.Threading.Tasks
+open FSharp.Azure.Cosmos
 open Microsoft.Azure.Cosmos
 
 type internal TestItem = { id : string; partitionKey : string; name : string; quantity : int }
@@ -34,4 +35,18 @@ type OperationTestBase () =
         partitionKey = "integration"
         name = $"item-{suffix}"
         quantity = 1
+    }
+
+    member internal this.SeedItemsAsync (container : Container, items : TestItem seq) : Task = task {
+        for seedItem in items do
+            let! createResponse =
+                container.ExecuteAsync (
+                    create {
+                        item seedItem
+                        partitionKey seedItem.partitionKey
+                    },
+                    this.CancellationToken
+                )
+
+            CosmosAssert.IsOk (createResponse.Result, $"Seed create should succeed for item '{seedItem.id}'.")
     }
