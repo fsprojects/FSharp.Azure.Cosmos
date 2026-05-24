@@ -26,8 +26,28 @@ jobs:
             10.x
             8.x
 
-      - name: Build via Bash
-        if: runner.os != 'Windows'
+      - name: Install Azure Cosmos DB Emulator (Windows)
+        id: install_cosmos_windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./.github/scripts/windows/install-cosmos-emulator.ps1
+        continue-on-error: true
+
+      - name: Start Azure Cosmos DB Emulator (Windows)
+        if: runner.os == 'Windows' && steps.install_cosmos_windows.outputs.installed == 'true'
+        shell: pwsh
+        run: ./.github/scripts/windows/start-cosmos-emulator.ps1
+
+      - name: Start Azure Cosmos DB Emulator container
+        if: runner.os == 'Linux'
+        run: bash ./.github/scripts/linux/start-cosmos-emulator.sh
+
+      - name: Setup Azure Cosmos DB Emulator
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-cosmos-emulator
+
+      - name: Build and test via Bash (Linux)
+        if: runner.os == 'Linux'
         run: |
           chmod +x ./build.sh
           ./build.sh
@@ -35,13 +55,25 @@ jobs:
           CI: true
           CONFIGURATION: ${{ matrix.configuration }}
           ENABLE_COVERAGE: true
-      - name: Build via Windows
+
+      - name: Build via Windows (no integration tests)
         if: runner.os == 'Windows'
-        run: ./build.cmd
+        run: ./build.cmd DotnetBuild
         env:
           CI: true
           CONFIGURATION: ${{ matrix.configuration }}
-          ENABLE_COVERAGE: true
+          ENABLE_COVERAGE: false
+
+      - name: Build via Bash (macOS, no integration tests)
+        if: runner.os == 'macOS'
+        run: |
+          chmod +x ./build.sh
+          ./build.sh DotnetBuild
+        env:
+          CI: true
+          CONFIGURATION: ${{ matrix.configuration }}
+          ENABLE_COVERAGE: false
+
   # Builds the project in a dev container
   build-devcontainer:
     runs-on: ubuntu-latest

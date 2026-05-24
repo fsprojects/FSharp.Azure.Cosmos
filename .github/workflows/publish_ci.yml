@@ -17,6 +17,16 @@ jobs:
       name: nuget
     runs-on: ubuntu-latest
 
+    services:
+      cosmosdb:
+        image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+        ports:
+          - 8081:8081
+          - 8080:8080
+          - 1234:1234
+        env:
+          PROTOCOL: https
+
     steps:
       - uses: actions/checkout@v6
 
@@ -27,6 +37,9 @@ jobs:
           dotnet-version: |
             10.x
             8.x
+
+      - name: Setup Azure Cosmos DB Emulator
+        uses: ./.github/actions/setup-cosmos-emulator
 
       - name: Add the GitHub source
         run: dotnet nuget add source --name "github.com" "https://nuget.pkg.github.com/fsprojects/index.json"
