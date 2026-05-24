@@ -2,20 +2,24 @@ namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System.Threading.Tasks
 open FSharp.Control
+open FSharp.Azure.Cosmos.Tests
 open Microsoft.Azure.Cosmos
 open Microsoft.Azure.Cosmos.Linq
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
-[<TestClass>]
+[<TestClass; TestCategory(TestCategories.IterationExtensions)>]
 type IterationExtensionsIntegrationTests () =
-    inherit OperationTestBase ()
+    inherit OperationTestBase<MultipleItemsScenario> ()
+
+    override _.CreateApplication context = MultipleItemsScenario (context)
 
     [<TestMethod>]
     member this.``FeedIterator AsAsyncEnumerable iterates seeded items`` () : Task = task {
         let! container = this.GetContainer ()
-        let firstItem = this.NewItem "iterator-1"
-        let secondItem = this.NewItem "iterator-2"
-        do! this.SeedItemsAsync (container, [ firstItem; secondItem ])
+        let firstItem, secondItem =
+            match this.Application.SeededItems with
+            | [ firstItem; secondItem ] -> firstItem, secondItem
+            | seededItems -> failwith $"Expected exactly two seeded items but got {seededItems.Length}."
 
         let query =
             QueryDefinition("SELECT * FROM c WHERE c.partitionKey = @partitionKey").WithParameter ("@partitionKey", "integration")
@@ -35,9 +39,10 @@ type IterationExtensionsIntegrationTests () =
     [<TestMethod>]
     member this.``IQueryable AsAsyncEnumerable iterates seeded items`` () : Task = task {
         let! container = this.GetContainer ()
-        let firstItem = this.NewItem "queryable-1"
-        let secondItem = this.NewItem "queryable-2"
-        do! this.SeedItemsAsync (container, [ firstItem; secondItem ])
+        let firstItem, secondItem =
+            match this.Application.SeededItems with
+            | [ firstItem; secondItem ] -> firstItem, secondItem
+            | seededItems -> failwith $"Expected exactly two seeded items but got {seededItems.Length}."
 
         let queryable =
             container.GetItemLinqQueryable<TestItem> (

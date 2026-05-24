@@ -1,12 +1,14 @@
 namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System.Net
+open System
 open System.Threading.Tasks
 open FSharp.Azure.Cosmos
+open FSharp.Azure.Cosmos.Tests
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
-[<TestClass>]
+[<TestClass; TestCategory(TestCategories.ReadExtensions)>]
 type CosmosReadExtensionsIntegrationTests () =
     inherit OperationTestBase ()
 
@@ -48,6 +50,13 @@ type CosmosReadExtensionsIntegrationTests () =
 
         Assert.IsTrue (notDeletedBeforePatch, "IsNotDeletedAsync should return true before deleted marker is set.")
 
+        let! notDeletedWithUnderscoreFieldName = container.IsNotDeletedAsync "_deletedAt" secondItem.id
+
+        Assert.IsTrue (
+            notDeletedWithUnderscoreFieldName,
+            "IsNotDeletedAsync should support deleted field names starting with underscore."
+        )
+
         let! patchResponse =
             container.ExecuteOverwriteAsync (
                 patch {
@@ -65,4 +74,44 @@ type CosmosReadExtensionsIntegrationTests () =
         let! notDeletedAfterPatch = container.IsNotDeletedAsync "deletedAt" secondItem.id
 
         Assert.IsFalse (notDeletedAfterPatch, "IsNotDeletedAsync should return false after deleted marker is set.")
+    }
+
+    [<TestMethod>]
+    member this.``IsNotDeletedAsync throws for invalid deleted field names`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "invalid-deleted-field-name"
+        let invokeIsNotDeleted (deletedFieldName : string | null) =
+            Func<Task> (fun () ->
+                task {
+                    let! _ = container.IsNotDeletedAsync deletedFieldName testItem.id
+                    return ()
+                }
+                :> Task
+            )
+
+        let! _ =
+            Assert.ThrowsExactlyAsync<ArgumentNullException> (
+                invokeIsNotDeleted null,
+                "IsNotDeletedAsync should throw ArgumentNullException when deleted field name is null."
+            )
+
+        let! _ =
+            Assert.ThrowsExactlyAsync<ArgumentException> (
+                invokeIsNotDeleted " ",
+                "IsNotDeletedAsync should throw ArgumentException when deleted field name is whitespace."
+            )
+
+        let! _ =
+            Assert.ThrowsExactlyAsync<ArgumentException> (
+                invokeIsNotDeleted "1deletedAt",
+                "IsNotDeletedAsync should throw ArgumentException when deleted field name starts with a digit."
+            )
+
+        let! _ =
+            Assert.ThrowsExactlyAsync<ArgumentException> (
+                invokeIsNotDeleted "deleted-at",
+                "IsNotDeletedAsync should throw ArgumentException when deleted field name has unsupported characters."
+            )
+
+        return ()
     }

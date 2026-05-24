@@ -1,29 +1,51 @@
 namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System.Net
+open System.Threading
 open System.Threading.Tasks
 open FSharp.Azure.Cosmos
+open FSharp.Azure.Cosmos.Tests
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
-[<TestClass>]
-type ReadOperationIntegrationTests () =
-    inherit OperationTestBase ()
+type SingleItemScenario (testContext : TestContext) as this =
+    inherit DatabaseTestApplicationFactory (testContext)
 
-    [<TestMethod>]
-    member this.``Read execute returns existing and not found states`` () : Task = task {
-        let! container = this.GetContainer ()
-        let testItem = this.NewItem "read"
+    let containerId = "operation-tests"
+
+    let seededItem : TestItem = {
+        id = $"{testContext.TestName}-read"
+        partitionKey = "integration"
+        name = "item-read"
+        quantity = 1
+    }
+
+    member _.SeededItem = seededItem
+
+    override _.SeedDataAsync (cancellationToken : CancellationToken) : Task = task {
+        let! container = this.GetOrCreateContainerAsync (containerId, "/partitionKey", cancellationToken)
 
         let! createResponse =
             container.ExecuteAsync (
                 create {
-                    item testItem
-                    partitionKey testItem.partitionKey
+                    item seededItem
+                    partitionKey seededItem.partitionKey
                 },
-                this.CancellationToken
+                cancellationToken
             )
 
-        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+        CosmosAssert.IsOk (createResponse.Result, "Read scenario seed create should succeed.")
+    }
+
+[<TestClass; TestCategory(TestCategories.Read)>]
+type ReadOperationIntegrationTests () =
+    inherit OperationTestBase<SingleItemScenario> ()
+
+    override _.CreateApplication context = SingleItemScenario (context)
+
+    [<TestMethod>]
+    member this.``Read execute returns existing and not found states`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.Application.SeededItem
 
         let! foundResponse =
             container.ExecuteAsync (

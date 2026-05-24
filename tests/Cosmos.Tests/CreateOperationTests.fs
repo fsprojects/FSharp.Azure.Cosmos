@@ -3,9 +3,10 @@ namespace FSharp.Azure.Cosmos.Tests.Integration
 open System.Net
 open System.Threading.Tasks
 open FSharp.Azure.Cosmos
+open FSharp.Azure.Cosmos.Tests
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
-[<TestClass>]
+[<TestClass; TestCategory(TestCategories.Create)>]
 type CreateOperationIntegrationTests () =
     inherit OperationTestBase ()
 

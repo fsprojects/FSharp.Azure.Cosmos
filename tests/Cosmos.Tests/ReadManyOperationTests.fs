@@ -1,42 +1,63 @@
 namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System.Net
+open System.Threading
 open System.Threading.Tasks
 open FSharp.Azure.Cosmos
+open FSharp.Azure.Cosmos.Tests
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
-[<TestClass>]
+type MultipleItemsScenario (testContext : TestContext) as this =
+    inherit DatabaseTestApplicationFactory (testContext)
+
+    let containerId = "operation-tests"
+
+    let firstSeededItem : TestItem = {
+        id = $"{testContext.TestName}-readmany-1"
+        partitionKey = "integration"
+        name = "item-readmany-1"
+        quantity = 1
+    }
+
+    let secondSeededItem : TestItem = {
+        id = $"{testContext.TestName}-readmany-2"
+        partitionKey = "integration"
+        name = "item-readmany-2"
+        quantity = 2
+    }
+
+    member _.SeededItems = [ firstSeededItem; secondSeededItem ]
+
+    override _.SeedDataAsync (cancellationToken : CancellationToken) : Task = task {
+        let! container = this.GetOrCreateContainerAsync (containerId, "/partitionKey", cancellationToken)
+
+        for seededItem in this.SeededItems do
+            let! createResponse =
+                container.ExecuteAsync (
+                    create {
+                        item seededItem
+                        partitionKey seededItem.partitionKey
+                    },
+                    cancellationToken
+                )
+
+            CosmosAssert.IsOk (createResponse.Result, $"ReadMany scenario seed create should succeed for '{seededItem.id}'.")
+    }
+
+[<TestClass; TestCategory(TestCategories.ReadMany)>]
 type ReadManyOperationIntegrationTests () =
-    inherit OperationTestBase ()
+    inherit OperationTestBase<MultipleItemsScenario> ()
+
+    override _.CreateApplication context = MultipleItemsScenario (context)
 
     [<TestMethod>]
     member this.``ReadMany execute returns matching items`` () : Task = task {
         let! container = this.GetContainer ()
-        let firstItem = this.NewItem "readmany-1"
-        let secondItem = this.NewItem "readmany-2"
-
-        let! firstCreateResponse =
-            container.ExecuteAsync (
-                create {
-                    item firstItem
-                    partitionKey firstItem.partitionKey
-                },
-                this.CancellationToken
-            )
-
-        CosmosAssert.IsOk (firstCreateResponse.Result, "First seed create should succeed.")
-
-        let! secondCreateResponse =
-            container.ExecuteAsync (
-                create {
-                    item secondItem
-                    partitionKey secondItem.partitionKey
-                },
-                this.CancellationToken
-            )
-
-        CosmosAssert.IsOk (secondCreateResponse.Result, "Second seed create should succeed.")
+        let firstItem, secondItem =
+            match this.Application.SeededItems with
+            | [ firstItem; secondItem ] -> firstItem, secondItem
+            | seededItems -> failwith $"Expected exactly two seeded items but got {seededItems.Length}."
 
         let! readManyResponse =
             container.ExecuteAsync (
