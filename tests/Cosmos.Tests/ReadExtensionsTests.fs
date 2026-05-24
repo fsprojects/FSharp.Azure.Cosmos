@@ -67,6 +67,28 @@ type ReadExtensionsIntegrationTests () =
             "IsNotDeletedAsync should support deleted field names with digits after the first character."
         )
 
+        let! digitFieldPatchResponse =
+            container.ExecuteOverwriteAsync (
+                patch {
+                    id firstItem.id
+                    partitionKey firstItem.partitionKey
+                    operation (PatchOperation.Set ("/deletedAt1", "2026-05-24T00:00:00Z"))
+                },
+                this.CancellationToken
+            )
+
+        match digitFieldPatchResponse.Result with
+        | PatchResult.Ok _ ->
+            Assert.IsTrue (digitFieldPatchResponse.HttpStatusCode = HttpStatusCode.OK, "Patch should return HTTP 200.")
+        | result -> Assert.Fail ($"Expected patch success for digit-field marker, got {result}.")
+
+        let! notDeletedWithDigitAfterPatch = container.IsNotDeletedAsync "deletedAt1" firstItem.id
+
+        Assert.IsFalse (
+            notDeletedWithDigitAfterPatch,
+            "IsNotDeletedAsync should return false when a digit-containing deleted marker field is set."
+        )
+
         let! patchResponse =
             container.ExecuteOverwriteAsync (
                 patch {
@@ -127,6 +149,12 @@ type ReadExtensionsIntegrationTests () =
             Assert.ThrowsExactlyAsync<ArgumentException>(
                 invokeIsNotDeleted "deleted-at",
                 "IsNotDeletedAsync should throw ArgumentException when deleted field name has unsupported characters."
+            )
+
+        let! _ =
+            Assert.ThrowsExactlyAsync<ArgumentException>(
+                invokeIsNotDeleted "deleted-field",
+                "IsNotDeletedAsync should throw ArgumentException for field names with hyphens."
             )
 
         return ()
