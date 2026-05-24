@@ -5,7 +5,8 @@ open System.Threading.Tasks
 open FSharp.Azure.Cosmos
 open Microsoft.Azure.Cosmos
 
-type internal TestItem = { id : string; partitionKey : string; name : string; quantity : int }
+[<CLIMutable>]
+type TestItem = { id : string; partitionKey : string; name : string; quantity : int }
 
 [<AbstractClass>]
 type OperationTestBase () =

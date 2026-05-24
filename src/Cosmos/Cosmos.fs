@@ -223,7 +223,8 @@ module Operations =
                     QueryDefinition(
                         $"SELECT VALUE COUNT(1) \
                      FROM item \
-                     WHERE item.id = @Id AND IS_NULL(item.{deletedFieldName})"
+                     WHERE item.id = @Id \
+                     AND (NOT IS_DEFINED(item.{deletedFieldName}) OR IS_NULL(item.{deletedFieldName}))"
                     )
                         .WithParameter ("@Id", id)
                 let! count =
