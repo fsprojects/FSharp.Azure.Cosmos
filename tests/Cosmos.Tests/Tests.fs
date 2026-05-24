@@ -19,7 +19,7 @@ type TestClass () =
             translatedText.Contains ("op_PipeRight", StringComparison.Ordinal),
             $"Pipe-forward operator calls should be rewritten before Cosmos LINQ translation. Actual: {translatedText}"
         )
-        StringAssert.Contains (translatedText, "Where", "Translated expression should still contain the original query shape.")
+        StringAssert.Contains (translatedText, "Where", "Translated expression should still contain the original query shape.", StringComparison.Ordinal)
         let translatedQuery = query.Provider.CreateQuery<int> translated |> Seq.toArray
         CollectionAssert.AreEqual ([| 1; 2; 3; 4 |], translatedQuery, "Translated pipe query should filter values less than 5.")
     }
@@ -71,7 +71,7 @@ type TestClass () =
             translatedText.Contains ("SeqModule.Contains", StringComparison.Ordinal),
             "F# Seq.contains should be rewritten to LINQ Contains for Cosmos translation compatibility."
         )
-        StringAssert.Contains (translatedText, "Contains", "Translated expression should contain a LINQ Contains call.")
+        StringAssert.Contains (translatedText, "Contains", "Translated expression should contain a LINQ Contains call.", StringComparison.Ordinal)
         let translatedQuery = query.Provider.CreateQuery<int> translated |> Seq.toArray
         CollectionAssert.AreEqual ([| 2; 4; 6 |], translatedQuery, "Translated Contains query should match the expected values.")
     }
