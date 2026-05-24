@@ -27,7 +27,7 @@ type CosmosAssert private () =
         match result with
         | CreateResult.Ok ok -> ok
         | _ ->
-            Assert.Fail ($"Expected CreateResult.Ok, but {result} given. {message}")
+            Assert.Fail (message)
             Unchecked.defaultof<_>
 
     static member IsOk (result : CreateResult<'T>, [<Optional>] message) = CosmosAssert.WantOk (result, message) |> ignore
@@ -84,7 +84,7 @@ type CosmosAssert private () =
         | CreateResult.IdAlreadyExists _ -> ()
         | _ ->
             Assert.Fail (message)
-            Unchecked.defaultof<_>
+            ()
 
     static member IsConflict (result : CreateResult<'T>, [<Optional>] message) =
         CosmosAssert.WantConflict (result, message) |> ignore
