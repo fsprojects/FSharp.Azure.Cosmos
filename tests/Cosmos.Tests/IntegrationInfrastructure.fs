@@ -137,8 +137,8 @@ type IntegrationTestBase<'DatabaseTestApplicationFactory when 'DatabaseTestAppli
 
     member this.Application =
         match this.application with
-        | ValueSome application -> application
         | ValueNone -> invalidOp "Application not initialized. Ensure test runs within TestInitialize/TestCleanup lifecycle."
+        | ValueSome application -> application
 
     abstract CreateApplication : TestContext -> 'DatabaseTestApplicationFactory
 
