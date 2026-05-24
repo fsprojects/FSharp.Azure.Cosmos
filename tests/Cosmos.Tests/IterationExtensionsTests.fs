@@ -27,8 +27,8 @@ type IterationExtensionsIntegrationTests () =
             |> TaskSeq.toListAsync
         let foundCount =
             iteratedItems
-            |> List.filter (fun item -> expectedIds.Contains item.id)
-            |> List.length
+            |> Seq.filter (fun item -> expectedIds.Contains item.id)
+            |> Seq.length
         Assert.IsTrue ((foundCount = 2), "FeedIterator.AsAsyncEnumerable should iterate seeded items.")
     }
 
@@ -50,7 +50,7 @@ type IterationExtensionsIntegrationTests () =
             |> TaskSeq.toListAsync
         let foundCount =
             iteratedItems
-            |> List.filter (fun item -> expectedIds.Contains item.id)
-            |> List.length
+            |> Seq.filter (fun item -> expectedIds.Contains item.id)
+            |> Seq.length
         Assert.IsTrue ((foundCount = 2), "IQueryable.AsAsyncEnumerable should iterate seeded items.")
     }

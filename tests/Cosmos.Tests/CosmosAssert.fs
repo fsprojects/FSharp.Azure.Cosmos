@@ -13,6 +13,7 @@ open Microsoft.VisualStudio.TestTools.UnitTesting
 
 [<AbstractClass; Sealed; DebuggerNonUserCode>]
 type CosmosAssert private () =
+
     static member private GetMessageOrDefault (message : string) (defaultMessage : string) =
         if String.IsNullOrWhiteSpace message then
             defaultMessage
