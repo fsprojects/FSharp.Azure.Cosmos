@@ -10,7 +10,6 @@ type internal TestItem = { id : string; partitionKey : string; name : string; qu
 type OperationTestBase () =
     inherit IntegrationTestBase ()
 
-    [<Literal>]
     let containerId = "operation-tests"
 
     member private this.GetDatabase () =
