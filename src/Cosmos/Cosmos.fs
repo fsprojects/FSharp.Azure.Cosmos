@@ -232,7 +232,7 @@ module Operations =
         /// </summary>
         /// <param name="deletedFieldName">Name of the field that marks the item as deleted</param>
         /// <param name="id">Item Id</param>
-        /// <param name="requiestOptions">Request options</param>
+        /// <param name="requestOptions">Request options</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="deletedFieldName"/> is <c>null</c>.</exception>
         /// <exception cref="ArgumentException">
@@ -241,7 +241,7 @@ module Operations =
         /// </exception>
         member container.IsNotDeletedAsync
             (deletedFieldName : string)
-            (id : string, [<Optional>] requiestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
+            (id : string, [<Optional>] requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
             if obj.ReferenceEquals (deletedFieldName, null) then
                 nullArg (nameof deletedFieldName)
@@ -276,10 +276,7 @@ module Operations =
                     )
                         .WithParameter("@Id", id)
                 let! count =
-                    container.GetItemQueryIterator<int>(
-                        query,
-                        requestOptions = getRequestOptionsWithMaxItemCount1 requiestOptions
-                    )
+                    container.GetItemQueryIterator<int>(query, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
                     |> CancellableTaskSeq.ofFeedIterator cancellationToken
                     |> TaskSeq.tryHead
                     |> Task.map (Option.defaultValue 0)
