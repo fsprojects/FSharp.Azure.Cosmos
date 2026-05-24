@@ -57,10 +57,10 @@ type ReadExtensionsIntegrationTests () =
             "IsNotDeletedAsync should support deleted field names starting with underscore."
         )
 
-        let! notDeletedWithDigitInBodyFieldName = container.IsNotDeletedAsync "deletedAt1" secondItem.id
+        let! notDeletedWithDigit = container.IsNotDeletedAsync "deletedAt1" secondItem.id
 
         Assert.IsTrue (
-            notDeletedWithDigitInBodyFieldName,
+            notDeletedWithDigit,
             "IsNotDeletedAsync should support deleted field names with digits after the first character."
         )
 
