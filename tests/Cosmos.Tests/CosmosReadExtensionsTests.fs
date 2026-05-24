@@ -81,13 +81,10 @@ type CosmosReadExtensionsIntegrationTests () =
         let! container = this.GetContainer ()
         let testItem = this.NewItem "invalid-deleted-field-name"
         let invokeIsNotDeleted (deletedFieldName : string | null) =
-            Func<Task> (fun () ->
-                task {
-                    let! _ = container.IsNotDeletedAsync deletedFieldName testItem.id
-                    return ()
-                }
-                :> Task
-            )
+            Func<Task> (fun () -> task {
+                let! _ = container.IsNotDeletedAsync deletedFieldName testItem.id
+                return ()
+            })
 
         let! _ =
             Assert.ThrowsExactlyAsync<ArgumentNullException> (
