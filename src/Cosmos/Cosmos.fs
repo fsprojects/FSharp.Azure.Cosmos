@@ -224,19 +224,24 @@ module Operations =
             (deletedFieldName : string | null)
             (id : string, [<Optional>] requiestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             = task {
+            let deletedFieldName =
+                match deletedFieldName with
+                | null -> nullArg (nameof deletedFieldName)
+                | deletedFieldName -> deletedFieldName
+
             let isAsciiLetter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
             let isAsciiDigit c = '0' <= c && c <= '9'
 
             let isValidDeletedFieldName =
-                match deletedFieldName with
-                | null -> false
-                | name when String.IsNullOrWhiteSpace name -> false
-                | name ->
-                    let firstCharacter = name[0]
+                if String.IsNullOrWhiteSpace deletedFieldName then
+                    false
+                else
+                    let firstCharacter = deletedFieldName[0]
                     let hasValidStart = firstCharacter = '_' || isAsciiLetter firstCharacter
                     let hasValidBody =
-                        name
+                        deletedFieldName
                         |> Seq.forall (fun c -> c = '_' || isAsciiLetter c || isAsciiDigit c)
+
                     hasValidStart && hasValidBody
 
             if not isValidDeletedFieldName then

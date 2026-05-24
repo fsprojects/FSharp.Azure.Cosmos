@@ -9,26 +9,14 @@ open Microsoft.Azure.Cosmos
 type TestItem = { id : string; partitionKey : string; name : string; quantity : int }
 
 [<AbstractClass>]
-type OperationTestBase () =
-    inherit IntegrationTestBase ()
+type OperationTestBase<'DatabaseTestApplicationFactory when 'DatabaseTestApplicationFactory :> DatabaseTestApplicationFactory> ()
+    =
+    inherit IntegrationTestBase<'DatabaseTestApplicationFactory> ()
 
     let containerId = "operation-tests"
 
-    member private this.GetDatabase () =
-        match this.Application.Database with
-        | ValueSome database -> database
-        | ValueNone -> invalidOp "Database is not initialized."
-
     member this.GetContainer () : Task<Container> = task {
-        let database = this.GetDatabase ()
-
-        let! containerResponse =
-            database.CreateContainerIfNotExistsAsync (
-                ContainerProperties (containerId, "/partitionKey"),
-                cancellationToken = this.CancellationToken
-            )
-
-        return containerResponse.Container
+        return! this.Application.GetOrCreateContainerAsync (containerId, "/partitionKey", this.CancellationToken)
     }
 
     member internal this.NewItem (suffix : string) : TestItem = {
@@ -51,3 +39,9 @@ type OperationTestBase () =
 
             CosmosAssert.IsOk (createResponse.Result, $"Seed create should succeed for item '{seedItem.id}'.")
     }
+
+[<AbstractClass>]
+type OperationTestBase () =
+    inherit OperationTestBase<DatabaseTestApplicationFactory> ()
+
+    override _.CreateApplication context = DatabaseTestApplicationFactory (context)

@@ -85,7 +85,8 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
     member _.Database = database
 
     member _.InitializeAsync (cancellationToken : CancellationToken) : Task = task {
-        let! createdDatabase = client.CreateDatabaseIfNotExistsAsync (databaseId, cancellationToken = cancellationToken)
+        let! createdDatabase =
+            client.CreateDatabaseIfNotExistsAsync (databaseId, cancellationToken = cancellationToken)
         database <- ValueSome createdDatabase.Database
     }
 
@@ -95,6 +96,24 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
         | ValueSome existingDatabase ->
             let! _ = existingDatabase.DeleteAsync (cancellationToken = cancellationToken)
             database <- ValueNone
+    }
+
+    member _.GetOrCreateContainerAsync
+        (containerId : string, partitionKeyPath : string, cancellationToken : CancellationToken)
+        : Task<Container>
+        = task {
+        let database =
+            match database with
+            | ValueSome existingDatabase -> existingDatabase
+            | ValueNone -> invalidOp "Database is not initialized."
+
+        let! containerResponse =
+            database.CreateContainerIfNotExistsAsync (
+                ContainerProperties (containerId, partitionKeyPath),
+                cancellationToken = cancellationToken
+            )
+
+        return containerResponse.Container
     }
 
     abstract SeedDataAsync : cancellationToken : CancellationToken -> Task
@@ -109,18 +128,19 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
             |> ValueTask
 
 [<AbstractClass; TestClass; TestCategory "Cosmos DB Emulator">]
-type IntegrationTestBase () =
+type IntegrationTestBase<'DatabaseTestApplicationFactory when 'DatabaseTestApplicationFactory :> DatabaseTestApplicationFactory>
+    ()
+    =
     inherit TestBase ()
 
-    member val private application : DatabaseTestApplicationFactory voption = ValueNone with get, set
+    member val private application : 'DatabaseTestApplicationFactory voption = ValueNone with get, set
 
     member this.Application =
         match this.application with
-        | ValueNone -> invalidOp "Application not initialized. Ensure test runs within TestInitialize/TestCleanup lifecycle."
         | ValueSome application -> application
+        | ValueNone -> invalidOp "Application not initialized. Ensure test runs within TestInitialize/TestCleanup lifecycle."
 
-    abstract CreateApplication : TestContext -> DatabaseTestApplicationFactory
-    default _.CreateApplication context = DatabaseTestApplicationFactory (context)
+    abstract CreateApplication : TestContext -> 'DatabaseTestApplicationFactory
 
     [<TestInitialize>]
     member this.Initialize () : Task = task {
@@ -135,6 +155,11 @@ type IntegrationTestBase () =
         match this.application with
         | ValueNone -> ()
         | ValueSome application ->
-            do! (application :> IAsyncDisposable).DisposeAsync().AsTask ()
+            do! (application :> IAsyncDisposable).DisposeAsync().AsTask()
             this.application <- ValueNone
     }
+
+type IntegrationTestBase () =
+    inherit IntegrationTestBase<DatabaseTestApplicationFactory> ()
+
+    override _.CreateApplication context = DatabaseTestApplicationFactory (context)

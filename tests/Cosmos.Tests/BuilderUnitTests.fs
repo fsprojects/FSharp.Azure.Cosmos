@@ -7,7 +7,7 @@ open Microsoft.VisualStudio.TestTools.UnitTesting
 
 type private BuilderTestItem = { id : string; partitionKey : string; value : int }
 
-[<TestClass>]
+[<TestClass; BuildersTestCategory>]
 type BuilderUnitTests () =
 
     [<TestMethod>]
