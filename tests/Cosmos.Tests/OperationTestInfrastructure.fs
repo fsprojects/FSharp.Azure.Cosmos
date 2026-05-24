@@ -4,7 +4,7 @@ open System
 open System.Threading.Tasks
 open Microsoft.Azure.Cosmos
 
-type TestItem = { id : string; partitionKey : string; name : string; quantity : int }
+type internal TestItem = { id : string; partitionKey : string; name : string; quantity : int }
 
 [<AbstractClass>]
 type OperationTestBase () =
@@ -30,7 +30,7 @@ type OperationTestBase () =
         return containerResponse.Container
     }
 
-    member this.NewItem (suffix : string) : TestItem = {
+    member internal this.NewItem (suffix : string) : TestItem = {
         id = $"{this.TestContext.TestName}-{suffix}"
         partitionKey = "integration"
         name = $"item-{suffix}"
