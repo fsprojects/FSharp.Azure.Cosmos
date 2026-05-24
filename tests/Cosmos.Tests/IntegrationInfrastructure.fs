@@ -7,6 +7,31 @@ open System.Threading.Tasks
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
+[<AutoOpen>]
+module TestContextExtensions =
+
+    type TestContext with
+
+        member ctx.GetTestDatabaseIdentifier () =
+            match ctx.TestData with
+            | null -> ctx.TestName
+            | testData ->
+                let dataHash =
+                    testData
+                    |> Array.fold
+                        (fun acc item ->
+                            let itemHash =
+                                match item with
+                                | null -> 0
+                                | item -> item.GetHashCode ()
+
+                            HashCode.Combine (acc, itemHash)
+                        )
+                        0
+                    |> abs
+
+                $"{ctx.TestName}_{dataHash}"
+
 [<AbstractClass; TestClass>]
 type TestBase () =
 
@@ -16,26 +41,13 @@ type TestBase () =
 
 type DatabaseTestApplicationFactory (testContext : TestContext) =
     [<Literal>]
-    let defaultClassName = "CosmosTests"
-
-    [<Literal>]
     let endpoint = "https://127.0.0.1:8081"
 
     [<Literal>]
     let primaryKey =
         "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
 
-    let buildDatabaseId () =
-        let testClassName =
-            match testContext.FullyQualifiedTestClassName with
-            | null -> defaultClassName
-            | fullyQualifiedTestClassName ->
-                if fullyQualifiedTestClassName.Trim().Length = 0 then
-                    defaultClassName
-                else
-                    fullyQualifiedTestClassName
-
-        $"{testClassName}-{Guid.NewGuid ():N}"
+    let buildDatabaseId () = testContext.GetTestDatabaseIdentifier ()
 
     let databaseId = buildDatabaseId ()
     let client =
