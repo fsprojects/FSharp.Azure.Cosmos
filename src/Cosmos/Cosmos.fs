@@ -70,6 +70,10 @@ module Operations =
 
     type ItemRequestOptions with
 
+        /// <summary>
+        /// Adds a pre-trigger to request options.
+        /// </summary>
+        /// <param name="trigger">Trigger name.</param>
         member options.AddPreTrigger (trigger : string) =
             options.PreTriggers <- [|
                 if not <| isNull options.PreTriggers then
@@ -77,6 +81,11 @@ module Operations =
                 yield trigger
             |]
 
+        /// <summary>
+        /// Adds pre-triggers to request options.
+        /// </summary>
+        /// <param name="triggers">Trigger names.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="triggers"/> is <c>null</c>.</exception>
         member options.AddPreTriggers (triggers : string seq) =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
@@ -93,6 +102,11 @@ module Operations =
                 yield trigger
             |]
 
+        /// <summary>
+        /// Adds post-triggers to request options.
+        /// </summary>
+        /// <param name="triggers">Trigger names.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="triggers"/> is <c>null</c>.</exception>
         member options.AddPostTriggers (triggers : string seq) =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
@@ -211,19 +225,23 @@ module Operations =
         /// <summary>
         /// Checks if an item with specified Id exists in the container partition with specified key.
         /// </summary>
+        /// <param name="deletedFieldName">Deleted marker field name.</param>
         /// <param name="id">Item Id</param>
-        /// <param name="partitionKey">Partition key</param>
+        /// <param name="requestOptions">Request options</param>
         /// <param name="cancellationToken">Cancellation token</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="deletedFieldName"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="deletedFieldName"/> does not start with a letter or underscore,
+        /// or contains characters other than letters, digits, or underscores.
+        /// </exception>
         member container.IsNotDeletedAsync
-            (deletedFieldName : string | null)
+            (deletedFieldName : string)
             (id : string, [<Optional>] requiestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
-            task {
-                let deletedFieldName =
-                    match deletedFieldName with
-                    | null -> nullArg (nameof deletedFieldName)
-                    | deletedFieldName -> deletedFieldName
+            if obj.ReferenceEquals (deletedFieldName, null) then
+                nullArg (nameof deletedFieldName)
 
+            task {
                 let isAsciiLetter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
                 let isAsciiDigit c = '0' <= c && c <= '9'
 

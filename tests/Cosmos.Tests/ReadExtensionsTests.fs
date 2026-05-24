@@ -57,6 +57,13 @@ type ReadExtensionsIntegrationTests () =
             "IsNotDeletedAsync should support deleted field names starting with underscore."
         )
 
+        let! notDeletedWithDigitInBodyFieldName = container.IsNotDeletedAsync "deletedAt1" secondItem.id
+
+        Assert.IsTrue (
+            notDeletedWithDigitInBodyFieldName,
+            "IsNotDeletedAsync should support deleted field names with digits after the first character."
+        )
+
         let! patchResponse =
             container.ExecuteOverwriteAsync (
                 patch {
@@ -80,7 +87,7 @@ type ReadExtensionsIntegrationTests () =
     member this.``IsNotDeletedAsync throws for invalid deleted field names`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "invalid-deleted-field-name"
-        let invokeIsNotDeleted (deletedFieldName : string | null) =
+        let invokeIsNotDeleted (deletedFieldName : string) =
             Func<Task> (fun () -> task {
                 let! _ = container.IsNotDeletedAsync deletedFieldName testItem.id
                 return ()
@@ -88,8 +95,14 @@ type ReadExtensionsIntegrationTests () =
 
         let! _ =
             Assert.ThrowsExactlyAsync<ArgumentNullException> (
-                invokeIsNotDeleted null,
+                invokeIsNotDeleted Unchecked.defaultof<string>,
                 "IsNotDeletedAsync should throw ArgumentNullException when deleted field name is null."
+            )
+
+        let! _ =
+            Assert.ThrowsExactlyAsync<ArgumentException> (
+                invokeIsNotDeleted "",
+                "IsNotDeletedAsync should throw ArgumentException when deleted field name is empty."
             )
 
         let! _ =
