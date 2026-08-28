@@ -1,6 +1,7 @@
 namespace FSharp.Azure.Cosmos.Tests
 
 open System
+open System.Threading.Tasks
 open FSharp.Azure.Cosmos
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
@@ -27,7 +28,11 @@ type BuilderUnitTests () =
         }
 
         Assert.IsValueSome (createOperation.PartitionKey, "Create builder should set partition key.")
-        Assert.IsTrue (createOperation.RequestOptions.SessionToken = "create-session", "Create builder should set session token.")
+        Assert.AreEqual (
+            "create-session",
+            createOperation.RequestOptions.SessionToken,
+            "Create builder should set session token."
+        )
         Assert.IsFalse (
             createOperation.RequestOptions.EnableContentResponseOnWrite,
             "Create builder should disable content response."
@@ -38,7 +43,7 @@ type BuilderUnitTests () =
         )
 
     [<TestMethod>]
-    member _.``Read builder configures id partition key and request options`` () =
+    member _.``Read builder configures id and partition key and request options`` () =
         let operation = read {
             id "read-id"
             partitionKey "pk"
@@ -46,10 +51,10 @@ type BuilderUnitTests () =
             sessionToken "read-session"
         }
 
-        Assert.IsTrue (operation.Id = "read-id", "Read builder should set id.")
-        Assert.IsFalse (isNull operation.RequestOptions, "Read builder should initialize request options when needed.")
-        Assert.IsTrue (operation.RequestOptions.IfNoneMatchEtag = "etag-value", "Read builder should set eTag option.")
-        Assert.IsTrue (operation.RequestOptions.SessionToken = "read-session", "Read builder should set session token.")
+        Assert.AreEqual ("read-id", operation.Id, "Read builder should set id.")
+        Assert.IsNotNull (operation.RequestOptions, "Read builder should initialize request options when needed.")
+        Assert.AreEqual ("etag-value", operation.RequestOptions.IfNoneMatchEtag, "Read builder should set eTag option.")
+        Assert.AreEqual ("read-session", operation.RequestOptions.SessionToken, "Read builder should set session token.")
 
     [<TestMethod>]
     member _.``ReadMany builder collects item tuples and request options`` () =
@@ -59,9 +64,9 @@ type BuilderUnitTests () =
             sessionToken "readmany-session"
         }
 
-        Assert.IsTrue (operation.Items.Length = 2, "ReadMany builder should collect all item tuples.")
-        Assert.IsFalse (isNull operation.RequestOptions, "ReadMany builder should create request options when needed.")
-        Assert.IsTrue (operation.RequestOptions.SessionToken = "readmany-session", "ReadMany builder should set session token.")
+        Assert.AreEqual (2, operation.Items.Length, "ReadMany builder should collect all item tuples.")
+        Assert.IsNotNull (operation.RequestOptions, "ReadMany builder should create request options when needed.")
+        Assert.AreEqual ("readmany-session", operation.RequestOptions.SessionToken, "ReadMany builder should set session token.")
 
     [<TestMethod>]
     member _.``Replace builders configure operation and content response mode`` () =
@@ -80,8 +85,8 @@ type BuilderUnitTests () =
             partitionKey replaceItem.partitionKey
         }
 
-        Assert.IsTrue (replaceOperation.Id = replaceItem.id, "Replace builder should set id.")
-        Assert.IsTrue (replaceOperation.RequestOptions.IfMatchEtag = "replace-etag", "Replace builder should set eTag.")
+        Assert.AreEqual (replaceItem.id, replaceOperation.Id, "Replace builder should set id.")
+        Assert.AreEqual ("replace-etag", replaceOperation.RequestOptions.IfMatchEtag, "Replace builder should set eTag.")
         Assert.IsFalse (
             replaceOperation.RequestOptions.EnableContentResponseOnWrite,
             "Replace builder should disable content response."
@@ -92,7 +97,7 @@ type BuilderUnitTests () =
         )
 
     [<TestMethod>]
-    member _.``Replace concurrently builders configure update function and response mode`` () =
+    member _.``Replace concurrently builders configure update function and response mode`` () : Task = task {
         let replaceConcurrentlyOperation = replaceConcurrenly<BuilderTestItem, string> {
             id "replace-concurrent-id"
             partitionKey "pk"
@@ -105,11 +110,11 @@ type BuilderUnitTests () =
             update (fun item -> async { return Result.Ok item })
         }
 
-        let updateResult =
+        let! updateResult =
             replaceConcurrentlyOperation.Update { id = "id"; partitionKey = "pk"; value = 2 }
-            |> Async.RunSynchronously
+            |> Async.StartAsTask
 
-        Assert.IsTrue (replaceConcurrentlyOperation.Id = "replace-concurrent-id", "Replace concurrently builder should set id.")
+        Assert.AreEqual ("replace-concurrent-id", replaceConcurrentlyOperation.Id, "Replace concurrently builder should set id.")
         Assert.IsOk (updateResult, "Replace concurrently builder should set update function.")
         Assert.IsFalse (
             replaceConcurrentlyOperation.RequestOptions.EnableContentResponseOnWrite,
@@ -119,6 +124,7 @@ type BuilderUnitTests () =
             replaceConcurrentlyAndReadOperation.RequestOptions.EnableContentResponseOnWrite,
             "Replace concurrently and read builder should enable content response."
         )
+    }
 
     [<TestMethod>]
     member _.``Upsert builders configure operation and content response mode`` () =
@@ -136,7 +142,7 @@ type BuilderUnitTests () =
         }
 
         Assert.IsValueSome (upsertOperation.PartitionKey, "Upsert builder should set partition key.")
-        Assert.IsTrue (upsertOperation.RequestOptions.IfMatchEtag = "upsert-etag", "Upsert builder should set eTag.")
+        Assert.AreEqual ("upsert-etag", upsertOperation.RequestOptions.IfMatchEtag, "Upsert builder should set eTag.")
         Assert.IsFalse (
             upsertOperation.RequestOptions.EnableContentResponseOnWrite,
             "Upsert builder should disable content response."
@@ -147,7 +153,7 @@ type BuilderUnitTests () =
         )
 
     [<TestMethod>]
-    member _.``Upsert concurrently builders configure updateOrCreate and response mode`` () =
+    member _.``Upsert concurrently builders configure updateOrCreate and response mode`` () : Task = task {
         let upsertConcurrentlyOperation = upsertConcurrenly<BuilderTestItem, string> {
             id "upsert-concurrent-id"
             partitionKey "pk"
@@ -164,11 +170,11 @@ type BuilderUnitTests () =
             updateOrCreate (fun _ -> async { return Error "custom-error" })
         }
 
-        let updateResult =
+        let! updateResult =
             upsertConcurrentlyOperation.UpdateOrCreate None
-            |> Async.RunSynchronously
+            |> Async.StartAsTask
 
-        Assert.IsTrue (upsertConcurrentlyOperation.Id = "upsert-concurrent-id", "Upsert concurrently builder should set id.")
+        Assert.AreEqual ("upsert-concurrent-id", upsertConcurrentlyOperation.Id, "Upsert concurrently builder should set id.")
         Assert.IsOk (updateResult, "Upsert concurrently builder should set updateOrCreate function.")
         Assert.IsFalse (
             upsertConcurrentlyOperation.RequestOptions.EnableContentResponseOnWrite,
@@ -178,6 +184,7 @@ type BuilderUnitTests () =
             upsertConcurrentlyAndReadOperation.RequestOptions.EnableContentResponseOnWrite,
             "Upsert concurrently and read builder should enable content response."
         )
+    }
 
     [<TestMethod>]
     member _.``Patch builders configure operations and content response mode`` () =
@@ -194,10 +201,11 @@ type BuilderUnitTests () =
             operation (PatchOperation.Replace ("/value", 5))
         }
 
-        Assert.IsTrue (patchOperation.Id = "patch-id", "Patch builder should set id.")
-        Assert.IsTrue (patchOperation.Operations.Length = 1, "Patch builder should collect operations.")
-        Assert.IsTrue (
-            patchOperation.RequestOptions.FilterPredicate = "FROM c WHERE c.partitionKey = 'pk'",
+        Assert.AreEqual ("patch-id", patchOperation.Id, "Patch builder should set id.")
+        Assert.AreEqual (1, patchOperation.Operations.Length, "Patch builder should collect operations.")
+        Assert.AreEqual (
+            "FROM c WHERE c.partitionKey = 'pk'",
+            patchOperation.RequestOptions.FilterPredicate,
             "Patch builder should set filter predicate."
         )
         Assert.IsFalse (
@@ -218,16 +226,16 @@ type BuilderUnitTests () =
             sessionToken "delete-session"
         }
 
-        Assert.IsTrue (operation.Id = "delete-id", "Delete builder should set id.")
+        Assert.AreEqual ("delete-id", operation.Id, "Delete builder should set id.")
         let options =
             Assert.WantValueSome (operation.RequestOptions, "Delete builder should initialize request options.")
-        Assert.IsTrue (options.IfNoneMatchEtag = "delete-etag", "Delete builder should set eTag.")
-        Assert.IsTrue (options.SessionToken = "delete-session", "Delete builder should set session token.")
+        Assert.AreEqual ("delete-etag", options.IfNoneMatchEtag, "Delete builder should set eTag.")
+        Assert.AreEqual ("delete-session", options.SessionToken, "Delete builder should set session token.")
 
     [<TestMethod>]
     member _.``Unique key builders configure key and policy paths`` () =
         let uniqueKeyDefinition = uniqueKey { paths [ "/tenantId"; "/email" ] }
         let policy = uniqueKeyPolicy { key uniqueKeyDefinition }
 
-        Assert.IsTrue (uniqueKeyDefinition.Paths.Count = 2, "UniqueKey builder should add all paths.")
-        Assert.IsTrue (policy.UniqueKeys.Count = 1, "UniqueKeyPolicy builder should add unique key.")
+        Assert.AreEqual (2, uniqueKeyDefinition.Paths.Count, "UniqueKey builder should add all paths.")
+        Assert.AreEqual (1, policy.UniqueKeys.Count, "UniqueKeyPolicy builder should add unique key.")

@@ -25,7 +25,7 @@ type CreateOperationIntegrationTests () =
             )
 
         CosmosAssert.IsOk (createResponse.Result, "Create should return CreateResult.Ok.")
-        Assert.IsTrue (createResponse.HttpStatusCode = HttpStatusCode.Created, "Create should return HTTP 201.")
+        Assert.AreEqual (HttpStatusCode.Created, createResponse.HttpStatusCode, "Create should return HTTP 201.")
 
         let! readResponse =
             container.ExecuteAsync (
@@ -37,8 +37,8 @@ type CreateOperationIntegrationTests () =
             )
 
         let created = CosmosAssert.WantOk (readResponse.Result, "Created item should be readable.")
-        Assert.IsTrue (testItem.id = created.id, "Create should persist item id.")
-        Assert.IsTrue (testItem.partitionKey = created.partitionKey, "Create should persist partition key.")
+        Assert.AreEqual (testItem.id, created.id, "Create should persist item id.")
+        Assert.AreEqual (testItem.partitionKey, created.partitionKey, "Create should persist partition key.")
     }
 
     [<TestMethod>]
@@ -56,6 +56,6 @@ type CreateOperationIntegrationTests () =
             )
 
         let created = CosmosAssert.WantOk (response.Result, "CreateAndRead should return CreateResult.Ok.")
-        Assert.IsTrue (testItem.id = created.id, "CreateAndRead should return created item id.")
-        Assert.IsTrue (testItem.partitionKey = created.partitionKey, "CreateAndRead should return created partition key.")
+        Assert.AreEqual (testItem.id, created.id, "CreateAndRead should return created item id.")
+        Assert.AreEqual (testItem.partitionKey, created.partitionKey, "CreateAndRead should return created partition key.")
     }

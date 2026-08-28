@@ -24,9 +24,9 @@ type ReadExtensionsIntegrationTests () =
         let! longCountByPartition =
             container.LongCountAsync (PartitionKey "integration", cancellationToken = this.CancellationToken)
 
-        Assert.IsTrue ((countByPartition = 3), "CountAsync by partition should return seeded item count.")
-        Assert.IsTrue ((countByQuery = 3), "CountAsync by query options should return seeded item count.")
-        Assert.IsTrue ((longCountByPartition = 3L), "LongCountAsync should return seeded item count.")
+        Assert.AreEqual (3, countByPartition, "CountAsync by partition should return seeded item count.")
+        Assert.AreEqual (3, countByQuery, "CountAsync by query options should return seeded item count.")
+        Assert.AreEqual (3L, longCountByPartition, "LongCountAsync should return seeded item count.")
     }
 
     [<TestMethod>]
@@ -72,40 +72,60 @@ type ReadExtensionsIntegrationTests () =
                 patch {
                     id firstItem.id
                     partitionKey firstItem.partitionKey
-                    operation (PatchOperation.Set ("/deletedAt1", "2026-05-24T00:00:00Z"))
+                    operation (PatchOperation.Set ("/deletedAt1", true))
                 },
                 this.CancellationToken
             )
 
         match digitFieldPatchResponse.Result with
         | PatchResult.Ok _ ->
-            Assert.IsTrue (digitFieldPatchResponse.HttpStatusCode = HttpStatusCode.OK, "Patch should return HTTP 200.")
+            Assert.AreEqual (HttpStatusCode.OK, digitFieldPatchResponse.HttpStatusCode, "Patch should return HTTP 200.")
         | result -> Assert.Fail ($"Expected patch success for digit-field marker, got {result}.")
 
         let! notDeletedWithDigitAfterPatch = container.IsNotDeletedAsync "deletedAt1" firstItem.id
 
         Assert.IsFalse (
             notDeletedWithDigitAfterPatch,
-            "IsNotDeletedAsync should return false when a digit-containing deleted marker field is set."
+            "IsNotDeletedAsync should return false when a digit-containing deleted marker field is true."
         )
 
-        let! patchResponse =
+        let! patchFalseResponse =
             container.ExecuteOverwriteAsync (
                 patch {
                     id secondItem.id
                     partitionKey secondItem.partitionKey
-                    operation (PatchOperation.Set ("/deletedAt", "2026-05-24T00:00:00Z"))
+                    operation (PatchOperation.Set ("/deletedAt", false))
                 },
                 this.CancellationToken
             )
 
-        match patchResponse.Result with
-        | PatchResult.Ok _ -> Assert.IsTrue (patchResponse.HttpStatusCode = HttpStatusCode.OK, "Patch should return HTTP 200.")
+        match patchFalseResponse.Result with
+        | PatchResult.Ok _ ->
+            Assert.AreEqual (HttpStatusCode.OK, patchFalseResponse.HttpStatusCode, "Patch should return HTTP 200.")
         | result -> Assert.Fail ($"Expected patch success, got {result}.")
 
-        let! notDeletedAfterPatch = container.IsNotDeletedAsync "deletedAt" secondItem.id
+        let! notDeletedAfterFalsePatch = container.IsNotDeletedAsync "deletedAt" secondItem.id
 
-        Assert.IsFalse (notDeletedAfterPatch, "IsNotDeletedAsync should return false after deleted marker is set.")
+        Assert.IsTrue (notDeletedAfterFalsePatch, "IsNotDeletedAsync should return true when deleted marker is false.")
+
+        let! patchTrueResponse =
+            container.ExecuteOverwriteAsync (
+                patch {
+                    id secondItem.id
+                    partitionKey secondItem.partitionKey
+                    operation (PatchOperation.Set ("/deletedAt", true))
+                },
+                this.CancellationToken
+            )
+
+        match patchTrueResponse.Result with
+        | PatchResult.Ok _ ->
+            Assert.AreEqual (HttpStatusCode.OK, patchTrueResponse.HttpStatusCode, "Patch should return HTTP 200.")
+        | result -> Assert.Fail ($"Expected patch success, got {result}.")
+
+        let! notDeletedAfterTruePatch = container.IsNotDeletedAsync "deletedAt" secondItem.id
+
+        Assert.IsFalse (notDeletedAfterTruePatch, "IsNotDeletedAsync should return false after deleted marker is true.")
     }
 
     [<TestMethod>]

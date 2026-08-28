@@ -26,7 +26,7 @@ type UpsertOperationIntegrationTests () =
 
         match createResult.Result with
         | UpsertResult.Ok _ ->
-            Assert.IsTrue (createResult.HttpStatusCode = HttpStatusCode.Created, "First upsert should create item (HTTP 201).")
+            Assert.AreEqual (HttpStatusCode.Created, createResult.HttpStatusCode, "First upsert should create item (HTTP 201).")
         | result -> Assert.Fail ($"Expected first upsert success, got {result}.")
 
         let updated = { testItem with name = "item-upsert-updated"; quantity = 5 }
@@ -42,7 +42,7 @@ type UpsertOperationIntegrationTests () =
 
         match updateResult.Result with
         | UpsertResult.Ok _ ->
-            Assert.IsTrue (updateResult.HttpStatusCode = HttpStatusCode.OK, "Second upsert should update item (HTTP 200).")
+            Assert.AreEqual (HttpStatusCode.OK, updateResult.HttpStatusCode, "Second upsert should update item (HTTP 200).")
         | result -> Assert.Fail ($"Expected second upsert success, got {result}.")
 
         let! readResponse =
@@ -55,8 +55,8 @@ type UpsertOperationIntegrationTests () =
             )
 
         let persisted = CosmosAssert.WantOk (readResponse.Result, "Updated upsert item should be readable.")
-        Assert.IsTrue (updated.name = persisted.name, "Upsert should persist updated name.")
-        Assert.IsTrue (updated.quantity = persisted.quantity, "Upsert should persist updated quantity.")
+        Assert.AreEqual (updated.name, persisted.name, "Upsert should persist updated name.")
+        Assert.AreEqual (updated.quantity, persisted.quantity, "Upsert should persist updated quantity.")
     }
 
     [<TestMethod>]
@@ -75,9 +75,10 @@ type UpsertOperationIntegrationTests () =
 
         match createdResponse.Result with
         | UpsertResult.Ok created ->
-            Assert.IsTrue (testItem.name = created.name, "UpsertAndRead create should return created resource.")
-            Assert.IsTrue (
-                createdResponse.HttpStatusCode = HttpStatusCode.Created,
+            Assert.AreEqual (testItem.name, created.name, "UpsertAndRead create should return created resource.")
+            Assert.AreEqual (
+                HttpStatusCode.Created,
+                createdResponse.HttpStatusCode,
                 "UpsertAndRead create should return HTTP 201."
             )
         | result -> Assert.Fail ($"Expected upsertAndRead create success, got {result}.")
@@ -95,9 +96,9 @@ type UpsertOperationIntegrationTests () =
 
         match updatedResponse.Result with
         | UpsertResult.Ok upserted ->
-            Assert.IsTrue (updated.name = upserted.name, "UpsertAndRead update should return updated name.")
-            Assert.IsTrue (updated.quantity = upserted.quantity, "UpsertAndRead update should return updated quantity.")
-            Assert.IsTrue (updatedResponse.HttpStatusCode = HttpStatusCode.OK, "UpsertAndRead update should return HTTP 200.")
+            Assert.AreEqual (updated.name, upserted.name, "UpsertAndRead update should return updated name.")
+            Assert.AreEqual (updated.quantity, upserted.quantity, "UpsertAndRead update should return updated quantity.")
+            Assert.AreEqual (HttpStatusCode.OK, updatedResponse.HttpStatusCode, "UpsertAndRead update should return HTTP 200.")
         | result -> Assert.Fail ($"Expected upsertAndRead update success, got {result}.")
     }
 
@@ -157,7 +158,7 @@ type UpsertOperationIntegrationTests () =
         match concurrentResponse.Result with
         | UpsertConcurrentResult.Ok updated ->
             Assert.IsTrue (conflictInjected, "Upsert concurrently test should inject a conflicting update at least once.")
-            Assert.IsTrue (updated.name = "upsert-concurrent-updated", "Upsert concurrently should persist updated name.")
-            Assert.IsTrue (updated.quantity = original.quantity + 7, "Upsert concurrently should persist updated quantity.")
+            Assert.AreEqual ("upsert-concurrent-updated", updated.name, "Upsert concurrently should persist updated name.")
+            Assert.AreEqual (original.quantity + 7, updated.quantity, "Upsert concurrently should persist updated quantity.")
         | result -> Assert.Fail ($"Expected upsert concurrently success after retry, got {result}.")
     }

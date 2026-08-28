@@ -42,7 +42,7 @@ type PatchOperationIntegrationTests () =
             )
 
         match patchResponse.Result with
-        | PatchResult.Ok _ -> Assert.IsTrue (patchResponse.HttpStatusCode = HttpStatusCode.OK, "Patch should return HTTP 200.")
+        | PatchResult.Ok _ -> Assert.AreEqual (HttpStatusCode.OK, patchResponse.HttpStatusCode, "Patch should return HTTP 200.")
         | result -> Assert.Fail ($"Expected patch success, got {result}.")
 
         let! readResponse =
@@ -55,10 +55,8 @@ type PatchOperationIntegrationTests () =
             )
 
         let persisted = CosmosAssert.WantOk (readResponse.Result, "Patched item should be readable.")
-        let isNamePatched = patchedName = persisted.name
-        let isQuantityPatched = patchedQuantity = persisted.quantity
-        Assert.IsTrue (isNamePatched, "Patch should persist patched name.")
-        Assert.IsTrue (isQuantityPatched, "Patch should persist patched quantity.")
+        Assert.AreEqual (patchedName, persisted.name, "Patch should persist patched name.")
+        Assert.AreEqual (patchedQuantity, persisted.quantity, "Patch should persist patched quantity.")
     }
 
     [<TestMethod>]
@@ -93,10 +91,8 @@ type PatchOperationIntegrationTests () =
 
         match patchResponse.Result with
         | PatchResult.Ok patched ->
-            let isNamePatched = patchedName = patched.name
-            let isQuantityPatched = patchedQuantity = patched.quantity
-            Assert.IsTrue (isNamePatched, "PatchAndRead should return patched name.")
-            Assert.IsTrue (isQuantityPatched, "PatchAndRead should return patched quantity.")
-            Assert.IsTrue (patchResponse.HttpStatusCode = HttpStatusCode.OK, "PatchAndRead should return HTTP 200.")
+            Assert.AreEqual (patchedName, patched.name, "PatchAndRead should return patched name.")
+            Assert.AreEqual (patchedQuantity, patched.quantity, "PatchAndRead should return patched quantity.")
+            Assert.AreEqual (HttpStatusCode.OK, patchResponse.HttpStatusCode, "PatchAndRead should return HTTP 200.")
         | result -> Assert.Fail ($"Expected patchAndRead success, got {result}.")
     }

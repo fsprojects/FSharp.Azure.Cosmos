@@ -39,7 +39,7 @@ type ReplaceOperationIntegrationTests () =
             )
 
         CosmosAssert.IsOk (replaceResponse.Result, "Replace should return ReplaceResult.Ok.")
-        Assert.IsTrue (replaceResponse.HttpStatusCode = HttpStatusCode.OK, "Replace should return HTTP 200.")
+        Assert.AreEqual (HttpStatusCode.OK, replaceResponse.HttpStatusCode, "Replace should return HTTP 200.")
 
         let! readResponse =
             container.ExecuteAsync (
@@ -51,8 +51,8 @@ type ReplaceOperationIntegrationTests () =
             )
 
         let persisted = CosmosAssert.WantOk (readResponse.Result, "Replaced item should be readable.")
-        Assert.IsTrue (replacement.name = persisted.name, "Replace should persist replacement name.")
-        Assert.IsTrue (replacement.quantity = persisted.quantity, "Replace should persist replacement quantity.")
+        Assert.AreEqual (replacement.name, persisted.name, "Replace should persist replacement name.")
+        Assert.AreEqual (replacement.quantity, persisted.quantity, "Replace should persist replacement quantity.")
     }
 
     [<TestMethod>]
@@ -85,9 +85,9 @@ type ReplaceOperationIntegrationTests () =
 
         let replaced =
             CosmosAssert.WantOk (replaceResponse.Result, "ReplaceAndRead should return ReplaceResult.Ok.")
-        Assert.IsTrue (replacement.name = replaced.name, "ReplaceAndRead should return replacement name.")
-        Assert.IsTrue (replacement.quantity = replaced.quantity, "ReplaceAndRead should return replacement quantity.")
-        Assert.IsTrue (replaceResponse.HttpStatusCode = HttpStatusCode.OK, "ReplaceAndRead should return HTTP 200.")
+        Assert.AreEqual (replacement.name, replaced.name, "ReplaceAndRead should return replacement name.")
+        Assert.AreEqual (replacement.quantity, replaced.quantity, "ReplaceAndRead should return replacement quantity.")
+        Assert.AreEqual (HttpStatusCode.OK, replaceResponse.HttpStatusCode, "ReplaceAndRead should return HTTP 200.")
     }
 
     [<TestMethod>]
@@ -144,7 +144,7 @@ type ReplaceOperationIntegrationTests () =
         match concurrentResponse.Result with
         | ReplaceConcurrentResult.Ok updated ->
             Assert.IsTrue (conflictInjected, "Replace concurrently test should inject a conflicting update at least once.")
-            Assert.IsTrue (updated.name = "replace-concurrent-updated", "Replace concurrently should persist updated name.")
-            Assert.IsTrue (updated.quantity = original.quantity + 10, "Replace concurrently should persist updated quantity.")
+            Assert.AreEqual ("replace-concurrent-updated", updated.name, "Replace concurrently should persist updated name.")
+            Assert.AreEqual (original.quantity + 10, updated.quantity, "Replace concurrently should persist updated quantity.")
         | result -> Assert.Fail ($"Expected replace concurrently success after retry, got {result}.")
     }

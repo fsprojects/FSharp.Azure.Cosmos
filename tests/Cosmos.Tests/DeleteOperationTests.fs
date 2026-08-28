@@ -36,7 +36,7 @@ type DeleteOperationIntegrationTests () =
             )
 
         CosmosAssert.IsOk (deleteResponse.Result, "Delete should return DeleteResult.Ok.")
-        Assert.IsTrue (deleteResponse.HttpStatusCode = HttpStatusCode.NoContent, "Delete should return HTTP 204.")
+        Assert.AreEqual (HttpStatusCode.NoContent, deleteResponse.HttpStatusCode, "Delete should return HTTP 204.")
 
         let! missingResponse =
             container.ExecuteAsync (
@@ -48,5 +48,5 @@ type DeleteOperationIntegrationTests () =
             )
 
         CosmosAssert.IsNotFound (missingResponse.Result, "Read after delete should return ReadResult.NotFound.")
-        Assert.IsTrue (missingResponse.HttpStatusCode = HttpStatusCode.NotFound, "Read after delete should return HTTP 404.")
+        Assert.AreEqual (HttpStatusCode.NotFound, missingResponse.HttpStatusCode, "Read after delete should return HTTP 404.")
     }

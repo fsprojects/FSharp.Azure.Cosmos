@@ -8,6 +8,33 @@ open System.Threading.Tasks
 open FSharp.Control
 open Microsoft.Azure.Cosmos
 
+module CosmosName =
+
+    [<CompiledName "ValidateField">]
+    let validateField (fieldName : string) =
+        if obj.ReferenceEquals (fieldName, null) then
+            nullArg (nameof fieldName)
+
+        let isAsciiLetter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+        let isAsciiDigit c = '0' <= c && c <= '9'
+
+        let isValidFieldName =
+            if String.IsNullOrWhiteSpace fieldName then
+                false
+            else
+                let firstCharacter = fieldName[0]
+                let hasValidStart = firstCharacter = '_' || isAsciiLetter firstCharacter
+                let hasValidBody =
+                    fieldName
+                    |> Seq.forall (fun c -> c = '_' || isAsciiLetter c || isAsciiDigit c)
+
+                hasValidStart && hasValidBody
+
+        if not isValidFieldName then
+            invalidArg
+                (nameof fieldName)
+                "Field name must start with a letter or underscore and contain only letters, digits, or underscores."
+
 module internal RequestOptions =
 
     let internal createOrUpdate setter requestOptions =
@@ -243,36 +270,15 @@ module Operations =
             (deletedFieldName : string)
             (id : string, [<Optional>] requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
-            if obj.ReferenceEquals (deletedFieldName, null) then
-                nullArg (nameof deletedFieldName)
+            CosmosName.validateField deletedFieldName
 
             task {
-                let isAsciiLetter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
-                let isAsciiDigit c = '0' <= c && c <= '9'
-
-                let isValidDeletedFieldName =
-                    if String.IsNullOrWhiteSpace deletedFieldName then
-                        false
-                    else
-                        let firstCharacter = deletedFieldName[0]
-                        let hasValidStart = firstCharacter = '_' || isAsciiLetter firstCharacter
-                        let hasValidBody =
-                            deletedFieldName
-                            |> Seq.forall (fun c -> c = '_' || isAsciiLetter c || isAsciiDigit c)
-
-                        hasValidStart && hasValidBody
-
-                if not isValidDeletedFieldName then
-                    invalidArg
-                        (nameof deletedFieldName)
-                        "Deleted field name must start with a letter or underscore and contain only letters, digits, or underscores."
-
                 let query =
                     QueryDefinition(
                         $"SELECT VALUE COUNT(1) \
                          FROM item \
                          WHERE item.id = @Id \
-                         AND (NOT IS_DEFINED(item.{deletedFieldName}) OR IS_NULL(item.{deletedFieldName}))"
+                         AND (NOT IS_DEFINED(item.{deletedFieldName}) OR IS_NULL(item.{deletedFieldName}) OR item.{deletedFieldName} = false)"
                     )
                         .WithParameter("@Id", id)
                 let! count =
