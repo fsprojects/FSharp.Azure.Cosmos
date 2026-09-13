@@ -8,15 +8,30 @@ open System.Threading.Tasks
 open FSharp.Control
 open Microsoft.Azure.Cosmos
 
+/// <summary>
+/// Helpers for validating Cosmos DB item field names used in dynamically constructed queries.
+/// </summary>
 module CosmosName =
 
-    [<CompiledName "ValidateField">]
-    let validateField (fieldName : string) =
-        if obj.ReferenceEquals (fieldName, null) then
-            nullArg (nameof fieldName)
+    let private isAsciiLetter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+    let private isAsciiDigit c = '0' <= c && c <= '9'
 
-        let isAsciiLetter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
-        let isAsciiDigit c = '0' <= c && c <= '9'
+    /// <summary>
+    /// Validates that <paramref name="fieldName"/> is a syntactically valid Cosmos DB item field name:
+    /// non-null, non-empty, starting with a letter or underscore, and containing only letters, digits,
+    /// or underscores.
+    /// </summary>
+    /// <param name="paramName">Name of the caller's parameter to report in a thrown exception.</param>
+    /// <param name="fieldName">Field name to validate.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="fieldName"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="fieldName"/> does not start with a letter or underscore,
+    /// or contains characters other than letters, digits, or underscores.
+    /// </exception>
+    [<CompiledName "ValidateField">]
+    let validateField (paramName : string) (fieldName : string) =
+        if obj.ReferenceEquals (fieldName, null) then
+            nullArg paramName
 
         let isValidFieldName =
             if String.IsNullOrWhiteSpace fieldName then
@@ -32,7 +47,7 @@ module CosmosName =
 
         if not isValidFieldName then
             invalidArg
-                (nameof fieldName)
+                paramName
                 "Field name must start with a letter or underscore and contain only letters, digits, or underscores."
 
 module internal RequestOptions =
@@ -270,7 +285,7 @@ module Operations =
             (deletedFieldName : string)
             (id : string, [<Optional>] requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
-            CosmosName.validateField deletedFieldName
+            CosmosName.validateField (nameof deletedFieldName) deletedFieldName
 
             task {
                 let query =

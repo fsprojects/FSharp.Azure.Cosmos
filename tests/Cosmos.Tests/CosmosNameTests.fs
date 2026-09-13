@@ -1,7 +1,6 @@
 namespace FSharp.Azure.Cosmos.Tests
 
 open System
-open System.Threading.Tasks
 open FSharp.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
@@ -9,37 +8,49 @@ open Microsoft.VisualStudio.TestTools.UnitTesting
 type CosmosNameTests () =
 
     [<TestMethod>]
-    member _.``Validate field throws for null`` () : Task = task {
-        let! _ =
-            Assert.ThrowsExactlyAsync<ArgumentNullException>(
-                Func<Task>(fun () ->
-                    CosmosName.validateField Unchecked.defaultof<string>
-                    Task.CompletedTask
-                ),
-                "ValidateField should throw ArgumentNullException for null."
+    [<DataRow("deletedAt", DisplayName = "letters only")>]
+    [<DataRow("_deletedAt", DisplayName = "starts with underscore")>]
+    [<DataRow("deletedAt1", DisplayName = "digit after first character")>]
+    [<DataRow("a", DisplayName = "single letter")>]
+    [<DataRow("_", DisplayName = "single underscore")>]
+    member _.``ValidateField accepts valid field names`` (fieldName : string) = CosmosName.validateField "fieldName" fieldName
+
+    [<TestMethod>]
+    [<DataRow("", DisplayName = "empty")>]
+    [<DataRow(" ", DisplayName = "whitespace")>]
+    [<DataRow("1deletedAt", DisplayName = "starts with digit")>]
+    [<DataRow("1deleted", DisplayName = "starts with digit, short name")>]
+    [<DataRow("deleted-at", DisplayName = "contains hyphen")>]
+    [<DataRow("deleted-field", DisplayName = "contains hyphen, another field name")>]
+    [<DataRow("deleted.field", DisplayName = "contains dot")>]
+    [<DataRow("deleted field", DisplayName = "contains space")>]
+    member _.``ValidateField throws ArgumentException for invalid field names`` (fieldName : string) =
+        Assert.ThrowsExactly<ArgumentException>(
+            (fun () -> CosmosName.validateField "fieldName" fieldName),
+            "ValidateField should throw ArgumentException for invalid field names."
+        )
+        |> ignore
+
+    [<TestMethod>]
+    member _.``ValidateField throws ArgumentNullException for null field name`` () =
+        Assert.ThrowsExactly<ArgumentNullException>(
+            (fun () -> CosmosName.validateField "fieldName" Unchecked.defaultof<string>),
+            "ValidateField should throw ArgumentNullException for null field name."
+        )
+        |> ignore
+
+    [<TestMethod>]
+    member _.``ValidateField reports the caller supplied parameter name on failure`` () =
+        let exn =
+            Assert.ThrowsExactly<ArgumentException>(fun () -> CosmosName.validateField "customParam" "1invalid")
+
+        Assert.AreEqual ("customParam", exn.ParamName, "ValidateField should report the supplied paramName on failure.")
+
+    [<TestMethod>]
+    member _.``ValidateField reports the caller supplied parameter name on null`` () =
+        let exn =
+            Assert.ThrowsExactly<ArgumentNullException>(fun () ->
+                CosmosName.validateField "customParam" Unchecked.defaultof<string>
             )
-        return ()
-    }
 
-    [<TestMethod>]
-    member _.``Validate field throws for invalid values`` () : Task = task {
-        let invalidFieldNames = [ ""; " "; "1deleted"; "deleted-field" ]
-
-        for fieldName in invalidFieldNames do
-            let! _ =
-                Assert.ThrowsExactlyAsync<ArgumentException>(
-                    Func<Task>(fun () ->
-                        CosmosName.validateField fieldName
-                        Task.CompletedTask
-                    ),
-                    $"ValidateField should throw ArgumentException for '{fieldName}'."
-                )
-            ()
-
-        return ()
-    }
-
-    [<TestMethod>]
-    member _.``Validate field accepts valid values`` () =
-        CosmosName.validateField "_deleted"
-        CosmosName.validateField "deletedAt1"
+        Assert.AreEqual ("customParam", exn.ParamName, "ValidateField should report the supplied paramName on null.")

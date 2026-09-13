@@ -30,113 +30,154 @@ type ReadExtensionsIntegrationTests () =
     }
 
     [<TestMethod>]
-    member this.``ExistsAsync and IsNotDeletedAsync return expected values`` () : Task = task {
+    member this.``ExistsAsync returns expected values for partition key variants`` () : Task = task {
         let! container = this.GetContainer ()
-        let firstItem = this.NewItem "exists-1"
-        let secondItem = this.NewItem "exists-2"
-        do! this.SeedItemsAsync (container, [ firstItem; secondItem ])
+        let testItem = this.NewItem "exists"
+        do! this.SeedItemsAsync (container, [ testItem ])
 
         let! existsWithPartition =
-            container.ExistsAsync (firstItem.id, PartitionKey firstItem.partitionKey, this.CancellationToken)
+            container.ExistsAsync (testItem.id, PartitionKey testItem.partitionKey, this.CancellationToken)
 
         let! existsWithoutPartition =
-            container.ExistsAsync (firstItem.id, cancellationToken = this.CancellationToken)
+            container.ExistsAsync (testItem.id, cancellationToken = this.CancellationToken)
 
         let! missingExists =
-            container.ExistsAsync ($"{firstItem.id}-missing", cancellationToken = this.CancellationToken)
+            container.ExistsAsync ($"{testItem.id}-missing", cancellationToken = this.CancellationToken)
 
         Assert.IsTrue (existsWithPartition, "ExistsAsync with partition key should return true for existing item.")
         Assert.IsTrue (existsWithoutPartition, "ExistsAsync without partition key should return true for existing item.")
         Assert.IsFalse (missingExists, "ExistsAsync should return false for missing item.")
+    }
 
-        let! notDeletedBeforePatch = container.IsNotDeletedAsync "deletedAt" secondItem.id
+    [<TestMethod>]
+    [<DataRow("deletedAt", DisplayName = "letters only")>]
+    [<DataRow("_deletedAt", DisplayName = "starts with underscore")>]
+    [<DataRow("deletedAt1", DisplayName = "digit after first character")>]
+    member this.``IsNotDeletedAsync accepts valid deleted field name shapes`` (deletedFieldName : string) : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "valid-field-name"
+        do! this.SeedItemsAsync (container, [ testItem ])
 
-        Assert.IsTrue (notDeletedBeforePatch, "IsNotDeletedAsync should return true before deleted marker is set.")
+        let! notDeleted = container.IsNotDeletedAsync deletedFieldName testItem.id
 
-        let! notDeletedWithUnderscoreFieldName = container.IsNotDeletedAsync "_deletedAt" secondItem.id
+        Assert.IsTrue (notDeleted, $"IsNotDeletedAsync should accept a deleted field name shaped like '{deletedFieldName}'.")
+    }
 
-        Assert.IsTrue (
-            notDeletedWithUnderscoreFieldName,
-            "IsNotDeletedAsync should support deleted field names starting with underscore."
-        )
+    [<TestMethod>]
+    member this.``IsNotDeletedAsync returns true when deleted marker field is undefined`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "marker-undefined"
+        do! this.SeedItemsAsync (container, [ testItem ])
 
-        let! notDeletedWithDigit = container.IsNotDeletedAsync "deletedAt1" secondItem.id
+        let! notDeleted = container.IsNotDeletedAsync "deletedAt" testItem.id
 
-        Assert.IsTrue (
-            notDeletedWithDigit,
-            "IsNotDeletedAsync should support deleted field names with digits after the first character."
-        )
+        Assert.IsTrue (notDeleted, "IsNotDeletedAsync should return true when the deleted marker field is undefined.")
+    }
 
-        let! digitFieldPatchResponse =
+    [<TestMethod>]
+    member this.``IsNotDeletedAsync returns true when deleted marker field is null`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "marker-null"
+        do! this.SeedItemsAsync (container, [ testItem ])
+
+        let! patchResponse =
             container.ExecuteOverwriteAsync (
                 patch {
-                    id firstItem.id
-                    partitionKey firstItem.partitionKey
-                    operation (PatchOperation.Set ("/deletedAt1", true))
+                    id testItem.id
+                    partitionKey testItem.partitionKey
+                    operation (PatchOperation.Set ("/deletedAt", Unchecked.defaultof<obj>))
                 },
                 this.CancellationToken
             )
 
-        match digitFieldPatchResponse.Result with
-        | PatchResult.Ok _ ->
-            Assert.AreEqual (HttpStatusCode.OK, digitFieldPatchResponse.HttpStatusCode, "Patch should return HTTP 200.")
-        | result -> Assert.Fail ($"Expected patch success for digit-field marker, got {result}.")
+        match patchResponse.Result with
+        | PatchResult.Ok _ -> ()
+        | result -> Assert.Fail ($"Expected patch success setting null marker, got {result}.")
 
-        let! notDeletedWithDigitAfterPatch = container.IsNotDeletedAsync "deletedAt1" firstItem.id
+        let! notDeleted = container.IsNotDeletedAsync "deletedAt" testItem.id
 
-        Assert.IsFalse (
-            notDeletedWithDigitAfterPatch,
-            "IsNotDeletedAsync should return false when a digit-containing deleted marker field is true."
-        )
+        Assert.IsTrue (notDeleted, "IsNotDeletedAsync should return true when the deleted marker field is null.")
+    }
 
-        let! patchFalseResponse =
+    [<TestMethod>]
+    member this.``IsNotDeletedAsync returns true when deleted marker field is false`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "marker-false"
+        do! this.SeedItemsAsync (container, [ testItem ])
+
+        let! patchResponse =
             container.ExecuteOverwriteAsync (
                 patch {
-                    id secondItem.id
-                    partitionKey secondItem.partitionKey
+                    id testItem.id
+                    partitionKey testItem.partitionKey
                     operation (PatchOperation.Set ("/deletedAt", false))
                 },
                 this.CancellationToken
             )
 
-        match patchFalseResponse.Result with
-        | PatchResult.Ok _ ->
-            Assert.AreEqual (HttpStatusCode.OK, patchFalseResponse.HttpStatusCode, "Patch should return HTTP 200.")
-        | result -> Assert.Fail ($"Expected patch success, got {result}.")
+        match patchResponse.Result with
+        | PatchResult.Ok _ -> ()
+        | result -> Assert.Fail ($"Expected patch success setting false marker, got {result}.")
 
-        let! notDeletedAfterFalsePatch = container.IsNotDeletedAsync "deletedAt" secondItem.id
+        let! notDeleted = container.IsNotDeletedAsync "deletedAt" testItem.id
 
-        Assert.IsTrue (notDeletedAfterFalsePatch, "IsNotDeletedAsync should return true when deleted marker is false.")
+        Assert.IsTrue (notDeleted, "IsNotDeletedAsync should return true when the deleted marker field is explicitly false.")
+    }
 
-        let! patchTrueResponse =
+    [<TestMethod>]
+    member this.``IsNotDeletedAsync returns false when deleted marker field is true`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "marker-true"
+        do! this.SeedItemsAsync (container, [ testItem ])
+
+        let! patchResponse =
             container.ExecuteOverwriteAsync (
                 patch {
-                    id secondItem.id
-                    partitionKey secondItem.partitionKey
+                    id testItem.id
+                    partitionKey testItem.partitionKey
                     operation (PatchOperation.Set ("/deletedAt", true))
                 },
                 this.CancellationToken
             )
 
-        match patchTrueResponse.Result with
-        | PatchResult.Ok _ ->
-            Assert.AreEqual (HttpStatusCode.OK, patchTrueResponse.HttpStatusCode, "Patch should return HTTP 200.")
-        | result -> Assert.Fail ($"Expected patch success, got {result}.")
+        match patchResponse.Result with
+        | PatchResult.Ok _ -> ()
+        | result -> Assert.Fail ($"Expected patch success setting true marker, got {result}.")
 
-        let! notDeletedAfterTruePatch = container.IsNotDeletedAsync "deletedAt" secondItem.id
+        let! notDeleted = container.IsNotDeletedAsync "deletedAt" testItem.id
 
-        Assert.IsFalse (notDeletedAfterTruePatch, "IsNotDeletedAsync should return false after deleted marker is true.")
+        Assert.IsFalse (notDeleted, "IsNotDeletedAsync should return false when the deleted marker field is true.")
     }
 
     [<TestMethod>]
-    member this.``IsNotDeletedAsync throws for invalid deleted field names`` () : Task = task {
+    member this.``IsNotDeletedAsync returns false when deleted marker field is a timestamp`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "marker-timestamp"
+        do! this.SeedItemsAsync (container, [ testItem ])
+
+        let! patchResponse =
+            container.ExecuteOverwriteAsync (
+                patch {
+                    id testItem.id
+                    partitionKey testItem.partitionKey
+                    operation (PatchOperation.Set ("/deletedAt", "2026-05-24T00:00:00Z"))
+                },
+                this.CancellationToken
+            )
+
+        match patchResponse.Result with
+        | PatchResult.Ok _ -> Assert.AreEqual (HttpStatusCode.OK, patchResponse.HttpStatusCode, "Patch should return HTTP 200.")
+        | result -> Assert.Fail ($"Expected patch success, got {result}.")
+
+        let! notDeleted = container.IsNotDeletedAsync "deletedAt" testItem.id
+
+        Assert.IsFalse (notDeleted, "IsNotDeletedAsync should return false when the deleted marker field is a timestamp.")
+    }
+
+    [<TestMethod>]
+    member this.``IsNotDeletedAsync throws for null or malformed deleted field names`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.NewItem "invalid-deleted-field-name"
-        let invokeIsNotDeleted (deletedFieldName : string) =
-            Func<Task>(fun () -> task {
-                let! _ = container.IsNotDeletedAsync deletedFieldName testItem.id
-                return ()
-            })
 
         let! _ =
             Assert.ThrowsExactlyAsync<ArgumentNullException>(
@@ -149,32 +190,11 @@ type ReadExtensionsIntegrationTests () =
 
         let! _ =
             Assert.ThrowsExactlyAsync<ArgumentException>(
-                invokeIsNotDeleted "",
-                "IsNotDeletedAsync should throw ArgumentException when deleted field name is empty."
-            )
-
-        let! _ =
-            Assert.ThrowsExactlyAsync<ArgumentException>(
-                invokeIsNotDeleted " ",
-                "IsNotDeletedAsync should throw ArgumentException when deleted field name is whitespace."
-            )
-
-        let! _ =
-            Assert.ThrowsExactlyAsync<ArgumentException>(
-                invokeIsNotDeleted "1deletedAt",
-                "IsNotDeletedAsync should throw ArgumentException when deleted field name starts with a digit."
-            )
-
-        let! _ =
-            Assert.ThrowsExactlyAsync<ArgumentException>(
-                invokeIsNotDeleted "deleted-at",
-                "IsNotDeletedAsync should throw ArgumentException when deleted field name has unsupported characters."
-            )
-
-        let! _ =
-            Assert.ThrowsExactlyAsync<ArgumentException>(
-                invokeIsNotDeleted "deleted-field",
-                "IsNotDeletedAsync should throw ArgumentException for field names with hyphens."
+                Func<Task>(fun () -> task {
+                    let! _ = container.IsNotDeletedAsync "1invalid" testItem.id
+                    return ()
+                }),
+                "IsNotDeletedAsync should throw ArgumentException for a malformed deleted field name."
             )
 
         return ()

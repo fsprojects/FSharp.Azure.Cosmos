@@ -64,7 +64,7 @@ type BuilderUnitTests () =
             sessionToken "readmany-session"
         }
 
-        Assert.AreEqual (2, operation.Items.Length, "ReadMany builder should collect all item tuples.")
+        Assert.HasCount (2, operation.Items, "ReadMany builder should collect all item tuples.")
         Assert.IsNotNull (operation.RequestOptions, "ReadMany builder should create request options when needed.")
         Assert.AreEqual ("readmany-session", operation.RequestOptions.SessionToken, "ReadMany builder should set session token.")
 
@@ -202,7 +202,7 @@ type BuilderUnitTests () =
         }
 
         Assert.AreEqual ("patch-id", patchOperation.Id, "Patch builder should set id.")
-        Assert.AreEqual (1, patchOperation.Operations.Length, "Patch builder should collect operations.")
+        Assert.HasCount (1, patchOperation.Operations, "Patch builder should collect operations.")
         Assert.AreEqual (
             "FROM c WHERE c.partitionKey = 'pk'",
             patchOperation.RequestOptions.FilterPredicate,
@@ -237,5 +237,5 @@ type BuilderUnitTests () =
         let uniqueKeyDefinition = uniqueKey { paths [ "/tenantId"; "/email" ] }
         let policy = uniqueKeyPolicy { key uniqueKeyDefinition }
 
-        Assert.AreEqual (2, uniqueKeyDefinition.Paths.Count, "UniqueKey builder should add all paths.")
-        Assert.AreEqual (1, policy.UniqueKeys.Count, "UniqueKeyPolicy builder should add unique key.")
+        Assert.HasCount (2, uniqueKeyDefinition.Paths, "UniqueKey builder should add all paths.")
+        Assert.HasCount (1, policy.UniqueKeys, "UniqueKeyPolicy builder should add unique key.")

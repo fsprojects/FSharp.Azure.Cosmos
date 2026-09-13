@@ -71,9 +71,9 @@ type ReadManyOperationIntegrationTests () =
         match readManyResponse.Result with
         | ReadManyResult.Ok (feed : FeedResponse<TestItem>) ->
             let returnedIds = feed |> Seq.map _.id |> Set.ofSeq
-            Assert.AreEqual (2, feed.Count, "ReadMany should return requested number of items.")
-            Assert.IsTrue (returnedIds.Contains firstItem.id, "ReadMany should include first item.")
-            Assert.IsTrue (returnedIds.Contains secondItem.id, "ReadMany should include second item.")
+            Assert.HasCount (2, feed, "ReadMany should return requested number of items.")
+            Assert.Contains (firstItem.id, returnedIds, "ReadMany should include first item.")
+            Assert.Contains (secondItem.id, returnedIds, "ReadMany should include second item.")
             Assert.AreEqual (HttpStatusCode.OK, readManyResponse.HttpStatusCode, "ReadMany should return HTTP 200.")
         | result -> Assert.Fail ($"Expected read many success, got {result}.")
     }
