@@ -456,3 +456,30 @@ type PatchOperationIntegrationTests () =
             "Patch concurrently of a missing item should return HTTP 404."
         )
     }
+
+    [<TestMethod>]
+    member this.``Patch concurrently rejects a non-positive retry count`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "patch-concurrent-invalid-retry-count"
+
+        let operation = patchConcurrenly<TestItem, string> {
+            id testItem.id
+            partitionKey testItem.partitionKey
+            update (fun _ -> task { return Result.Error "should not be called" })
+        }
+
+        for maxRetryCount in [| 0; -1 |] do
+            let invoke () =
+                Func<Task>(fun () -> task {
+                    let! _ = container.ExecuteConcurrentlyAsync (operation, maxRetryCount, this.CancellationToken)
+                    return ()
+                })
+
+            let! _ =
+                Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(
+                    invoke (),
+                    $"Patch concurrently should throw ArgumentOutOfRangeException for maxRetryCount = %i{maxRetryCount}."
+                )
+
+            ()
+    }

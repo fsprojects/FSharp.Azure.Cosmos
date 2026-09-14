@@ -310,9 +310,11 @@ let rec executeConcurrentlyAsync<'value, 'error>
 
             return CosmosResponse.fromItemResponse Ok response
     with
+    // Any count at or below the last attempt is exhausted, so a non-positive count passed to this public function
+    // stops after one attempt instead of decrementing forever while the item keeps failing the precondition.
     | HandleException ex when
         ex.StatusCode = HttpStatusCode.PreconditionFailed
-        && retryAttempts = 1
+        && retryAttempts <= 1
         ->
         return CosmosResponse.fromException toPatchConcurrentlyErrorResult ex
     | HandleException ex when ex.StatusCode = HttpStatusCode.PreconditionFailed ->
@@ -383,8 +385,9 @@ type Microsoft.Azure.Cosmos.Container with
     /// and returns <see cref="CosmosResponse{PatchConcurrentResult{T, E}}"/>.
     /// </summary>
     /// <param name="operation">Patch operation.</param>
-    /// <param name="maxRetryCount">Max retry count. Default is 10.</param>
+    /// <param name="maxRetryCount">Max retry count. Must be greater than zero. Default is 10.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxRetryCount"/> is less than one.</exception>
     member container.ExecuteConcurrentlyAsync<'T, 'E>
         (
             operation : PatchConcurrentlyOperation<'T, 'E>,
@@ -392,6 +395,11 @@ type Microsoft.Azure.Cosmos.Container with
             [<Optional>] cancellationToken : CancellationToken
         )
         =
+        if maxRetryCount < 1 then
+            raise (
+                ArgumentOutOfRangeException (nameof maxRetryCount, maxRetryCount, "Max retry count must be greater than zero.")
+            )
+
         executeConcurrentlyAsync<'T, 'E> cancellationToken container operation maxRetryCount
 
     /// <summary>
