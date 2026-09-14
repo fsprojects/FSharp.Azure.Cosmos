@@ -109,6 +109,7 @@ type ReadOperationIntegrationTests () =
             // The service ignored If-None-Match and returned the full document (observed on the Linux
             // vnext-preview emulator). NotModified cannot be produced without a 304 from the service, so this
             // environment cannot verify conditional reads; report that instead of passing or failing.
+            // Tracked upstream: https://github.com/Azure/azure-cosmos-db-emulator-docker/issues/349
             Assert.Inconclusive (
                 "The Cosmos DB endpoint ignored If-None-Match and returned HTTP 200, so conditional reads cannot be verified against it."
             )
