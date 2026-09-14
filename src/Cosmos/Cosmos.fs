@@ -269,13 +269,18 @@ module Operations =
             container.ExistsAsync (id, QueryRequestOptions (PartitionKey = partitionKey), cancellationToken)
 
         /// <summary>
-        /// Checks if an item with specified Id exists in the container and its
-        /// <paramref name="deletedFieldName"/> field is <see langword="null"/>.
+        /// Checks whether an item with the specified Id exists and is not marked as deleted.
+        /// <para>
+        /// The item is treated as not deleted when the <paramref name="deletedFieldName"/> field is absent,
+        /// <c>null</c>, or <c>false</c>. Any other value, such as <c>true</c> or a deletion timestamp,
+        /// marks the item as deleted.
+        /// </para>
         /// </summary>
-        /// <param name="deletedFieldName">Name of the field that marks the item as deleted</param>
+        /// <param name="deletedFieldName">Name of the item field that marks the item as deleted.</param>
         /// <param name="id">Item Id</param>
-        /// <param name="requestOptions">Request options</param>
+        /// <param name="requestOptions">Query request options, for example to scope the query to a partition key.</param>
         /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns><c>true</c> when the item exists and is not marked as deleted; otherwise <c>false</c>.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="deletedFieldName"/> is <c>null</c>.</exception>
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="deletedFieldName"/> does not start with a letter or underscore,

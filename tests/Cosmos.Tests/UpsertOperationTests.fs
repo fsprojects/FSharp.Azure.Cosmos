@@ -170,7 +170,7 @@ type UpsertOperationIntegrationTests () =
         let testItem = this.NewItem "upsert-requires-etag"
 
         let invoke () =
-            Func<Task> (fun () -> task {
+            Func<Task>(fun () -> task {
                 let! _ =
                     container.ExecuteAsync (
                         upsert {
@@ -184,7 +184,7 @@ type UpsertOperationIntegrationTests () =
             })
 
         let! _ =
-            Assert.ThrowsExactlyAsync<ArgumentException> (
+            Assert.ThrowsExactlyAsync<ArgumentException>(
                 invoke (),
                 "Upsert safe execute should throw ArgumentException when no eTag is set."
             )

@@ -16,7 +16,6 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
   </PropertyGroup>
 

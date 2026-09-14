@@ -179,7 +179,7 @@ type ReplaceOperationIntegrationTests () =
         let testItem = this.NewItem "replace-requires-etag"
 
         let invoke () =
-            Func<Task> (fun () -> task {
+            Func<Task>(fun () -> task {
                 let! _ =
                     container.ExecuteAsync (
                         replace {
@@ -194,7 +194,7 @@ type ReplaceOperationIntegrationTests () =
             })
 
         let! _ =
-            Assert.ThrowsExactlyAsync<ArgumentException> (
+            Assert.ThrowsExactlyAsync<ArgumentException>(
                 invoke (),
                 "Replace safe execute should throw ArgumentException when no eTag is set."
             )

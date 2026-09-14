@@ -123,7 +123,7 @@ type PatchOperationIntegrationTests () =
         let testItem = this.NewItem "patch-requires-etag"
 
         let invoke () =
-            Func<Task> (fun () -> task {
+            Func<Task>(fun () -> task {
                 let! _ =
                     container.ExecuteAsync (
                         patch {
@@ -138,7 +138,7 @@ type PatchOperationIntegrationTests () =
             })
 
         let! _ =
-            Assert.ThrowsExactlyAsync<ArgumentException> (
+            Assert.ThrowsExactlyAsync<ArgumentException>(
                 invoke (),
                 "Patch safe execute should throw ArgumentException when no eTag is set."
             )

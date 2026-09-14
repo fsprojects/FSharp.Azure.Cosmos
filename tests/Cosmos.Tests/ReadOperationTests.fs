@@ -77,7 +77,7 @@ type ReadOperationIntegrationTests () =
     }
 
     [<TestMethod>]
-    member this.``Read execute currently throws for a matching eTag instead of returning NotModified`` () : Task = task {
+    member this.``Read execute returns NotModified when eTag matches current item`` () : Task = task {
         let! container = this.GetContainer ()
         let testItem = this.Application.SeededItem
 
@@ -91,32 +91,30 @@ type ReadOperationIntegrationTests () =
             )
 
         CosmosAssert.IsOk (foundResponse.Result, "Baseline read should succeed.")
+        Assert.IsFalse (String.IsNullOrEmpty foundResponse.ETag, "Baseline read should return an ETag.")
 
-        // KNOWN GAP: ReadItemAsync throws a 304 CosmosException for a matching eTag, and
-        // HttpStatusCode.NotModified is absent from `canHandleStatusCode`, so it is never
-        // converted to ReadResult.NotModified via `successFn` — that result case is currently
-        // unreachable. This test pins today's actual behavior; if it starts failing, 304
-        // handling has likely been fixed and this test should be replaced with one asserting
-        // ReadResult.NotModified.
-        let! exn =
-            Assert.ThrowsExactlyAsync<CosmosException> (
-                Func<Task> (fun () -> task {
-                    let! _ =
-                        container.ExecuteAsync (
-                            read {
-                                id testItem.id
-                                partitionKey testItem.partitionKey
-                                eTag foundResponse.ETag
-                            },
-                            this.CancellationToken
-                        )
-
-                    return ()
-                }),
-                "Read with a matching eTag currently throws rather than returning ReadResult.NotModified."
+        let! notModifiedResponse =
+            container.ExecuteAsync (
+                read {
+                    id testItem.id
+                    partitionKey testItem.partitionKey
+                    eTag foundResponse.ETag
+                },
+                this.CancellationToken
             )
 
-        Assert.AreEqual (HttpStatusCode.NotModified, exn.StatusCode, "The thrown CosmosException should carry HTTP 304.")
+        match notModifiedResponse.Result with
+        | ReadResult.NotModified -> ()
+        | result ->
+            Assert.Fail (
+                $"Expected ReadResult.NotModified for a matching eTag, got {result} (HTTP {int notModifiedResponse.HttpStatusCode})."
+            )
+
+        Assert.AreEqual (
+            HttpStatusCode.NotModified,
+            notModifiedResponse.HttpStatusCode,
+            "Read with a matching eTag should report HTTP 304."
+        )
     }
 
     [<TestMethod>]
@@ -188,8 +186,8 @@ type ReadOperationIntegrationTests () =
         let testItem = this.Application.SeededItem
 
         let matchingQuery =
-            QueryDefinition("SELECT * FROM c WHERE c.id = @id").WithParameter ("@id", testItem.id)
-        let matchingIterator = container.GetItemQueryIterator<TestItem> (matchingQuery)
+            QueryDefinition("SELECT * FROM c WHERE c.id = @id").WithParameter("@id", testItem.id)
+        let matchingIterator = container.GetItemQueryIterator<TestItem>(matchingQuery)
         let! matchingResponse = matchingIterator.FirstAsync (this.CancellationToken)
 
         let found =
@@ -197,8 +195,8 @@ type ReadOperationIntegrationTests () =
         Assert.AreEqual (testItem.id, found.id, "FirstAsync should return the matching item.")
 
         let emptyQuery =
-            QueryDefinition("SELECT * FROM c WHERE c.id = @id").WithParameter ("@id", $"{testItem.id}-missing")
-        let emptyIterator = container.GetItemQueryIterator<TestItem> (emptyQuery)
+            QueryDefinition("SELECT * FROM c WHERE c.id = @id").WithParameter("@id", $"{testItem.id}-missing")
+        let emptyIterator = container.GetItemQueryIterator<TestItem>(emptyQuery)
         let! emptyResponse = emptyIterator.FirstAsync (this.CancellationToken)
 
         CosmosAssert.IsNotFound (emptyResponse.Result, "FirstAsync should return ReadResult.NotFound for an empty query result.")

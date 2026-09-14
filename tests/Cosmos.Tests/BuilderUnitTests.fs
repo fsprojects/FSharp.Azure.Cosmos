@@ -499,13 +499,13 @@ type BuilderUnitTests () =
     member _.``AddPreTriggers and AddPostTriggers throw for null trigger sequence`` () =
         let options = ItemRequestOptions ()
 
-        Assert.ThrowsExactly<ArgumentNullException> (
+        Assert.ThrowsExactly<ArgumentNullException>(
             (fun () -> options.AddPreTriggers Unchecked.defaultof<string seq>),
             "AddPreTriggers should throw ArgumentNullException for a null sequence."
         )
         |> ignore
 
-        Assert.ThrowsExactly<ArgumentNullException> (
+        Assert.ThrowsExactly<ArgumentNullException>(
             (fun () -> options.AddPostTriggers Unchecked.defaultof<string seq>),
             "AddPostTriggers should throw ArgumentNullException for a null sequence."
         )

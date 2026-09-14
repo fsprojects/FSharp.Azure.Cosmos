@@ -53,15 +53,38 @@ type ReadExtensionsIntegrationTests () =
     [<DataRow("deletedAt", DisplayName = "letters only")>]
     [<DataRow("_deletedAt", DisplayName = "starts with underscore")>]
     [<DataRow("deletedAt1", DisplayName = "digit after first character")>]
-    member this.``IsNotDeletedAsync accepts valid deleted field name shapes`` (deletedFieldName : string) : Task = task {
-        let! container = this.GetContainer ()
-        let testItem = this.NewItem "valid-field-name"
-        do! this.SeedItemsAsync (container, [ testItem ])
+    member this.``IsNotDeletedAsync evaluates valid deleted field name shapes in the query`` (deletedFieldName : string) : Task =
+        task {
+            let! container = this.GetContainer ()
+            let testItem = this.NewItem "valid-field-name"
+            do! this.SeedItemsAsync (container, [ testItem ])
 
-        let! notDeleted = container.IsNotDeletedAsync deletedFieldName testItem.id
+            let! notDeletedBefore = container.IsNotDeletedAsync deletedFieldName testItem.id
 
-        Assert.IsTrue (notDeleted, $"IsNotDeletedAsync should accept a deleted field name shaped like '{deletedFieldName}'.")
-    }
+            Assert.IsTrue (
+                notDeletedBefore,
+                $"IsNotDeletedAsync should return true before the '{deletedFieldName}' marker is set."
+            )
+
+            let! patchResponse =
+                container.ExecuteOverwriteAsync (
+                    patch {
+                        id testItem.id
+                        partitionKey testItem.partitionKey
+                        operation (PatchOperation.Set ($"/{deletedFieldName}", true))
+                    },
+                    this.CancellationToken
+                )
+
+            CosmosAssert.IsOk (patchResponse.Result, $"Setting the '{deletedFieldName}' marker should succeed.")
+
+            let! notDeletedAfter = container.IsNotDeletedAsync deletedFieldName testItem.id
+
+            Assert.IsFalse (
+                notDeletedAfter,
+                $"IsNotDeletedAsync should return false once the '{deletedFieldName}' marker is true."
+            )
+        }
 
     [<TestMethod>]
     member this.``IsNotDeletedAsync returns true when deleted marker field is undefined`` () : Task = task {
