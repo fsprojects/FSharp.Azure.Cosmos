@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Compile Include="TestCategories.fs" />
+    <Compile Include="IterationExtensionsUnitTests.fs" />
     <Compile Include="Tests.fs" />
   </ItemGroup>
 
