@@ -156,6 +156,16 @@ type CosmosAssert private () =
     static member IsModifiedBefore (result : PatchResult<'T>, [<Optional>] message) =
         CosmosAssert.WantModifiedBefore (result, message) |> ignore
 
+    static member WantModifiedBefore<'T> (result : DeleteResult<'T>, [<Optional>] message) =
+        match result with
+        | DeleteResult.ModifiedBefore response -> response
+        | _ ->
+            Assert.Fail (CosmosAssert.GetMessageOrDefault message $"Expected DeleteResult.ModifiedBefore but got {result}.")
+            Unchecked.defaultof<_>
+
+    static member IsModifiedBefore (result : DeleteResult<'T>, [<Optional>] message) =
+        CosmosAssert.WantModifiedBefore (result, message) |> ignore
+
     static member WantConflict (result : CreateResult<'T>, [<Optional>] message) =
         match result with
         | CreateResult.IdAlreadyExists _ -> ()

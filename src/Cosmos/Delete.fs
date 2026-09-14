@@ -44,15 +44,15 @@ type DeleteBuilder () =
             RequestOptions = ValueSome options
     }
 
-    /// <summary>Sets the eTag to <see cref="ItemRequestOptions.IfNoneMatchEtag"/></summary>
+    /// <summary>Sets the eTag to <see cref="ItemRequestOptions.IfMatchEtag"/></summary>
     [<CustomOperation "eTag">]
     member _.ETag (state : DeleteOperation, eTag : string) =
         match state.RequestOptions with
         | ValueSome requestOptions ->
-            requestOptions.IfNoneMatchEtag <- eTag
+            requestOptions.IfMatchEtag <- eTag
             state
         | ValueNone ->
-            let options = ItemRequestOptions (IfNoneMatchEtag = eTag)
+            let options = ItemRequestOptions (IfMatchEtag = eTag)
             { state with RequestOptions = ValueSome options }
 
     // ------------------------------------------- Request options -------------------------------------------
@@ -156,6 +156,8 @@ let delete = DeleteBuilder ()
 type DeleteResult<'t> =
     | Ok of 't // 200
     | NotFound of ResponseBody : string // 404
+    /// Precondition failed
+    | ModifiedBefore of ResponseBody : string // 412 - need re-do
 
 open System.Net
 
@@ -164,6 +166,7 @@ module CosmosException =
     let toDeleteResult (ex : CosmosException) =
         match ex.StatusCode with
         | HttpStatusCode.NotFound -> DeleteResult.NotFound ex.ResponseBody
+        | HttpStatusCode.PreconditionFailed -> DeleteResult.ModifiedBefore ex.ResponseBody
         | _ -> raise ex
 
 open System.Runtime.InteropServices

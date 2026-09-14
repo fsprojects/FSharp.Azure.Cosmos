@@ -411,7 +411,7 @@ type BuilderUnitTests () =
         Assert.AreEqual ("delete-id", operation.Id, "Delete builder should set id.")
         let options =
             Assert.WantValueSome (operation.RequestOptions, "Delete builder should initialize request options.")
-        Assert.AreEqual ("delete-etag", options.IfNoneMatchEtag, "Delete builder should set eTag.")
+        Assert.AreEqual ("delete-etag", options.IfMatchEtag, "Delete builder should set eTag.")
         Assert.AreEqual ("delete-session", options.SessionToken, "Delete builder should set session token.")
 
     [<TestMethod>]
