@@ -294,17 +294,20 @@ let rec executeConcurrentlyAsync<'value, 'error>
         match patchOperationsResult with
         | Result.Error e -> return CosmosResponse.fromItemResponse (fun _ -> CustomError e) response
         | Result.Ok patchOperations ->
-            // Unlike replace, reuse the builder's own options instead of fresh ones, so that
+            // Unlike replace, start from the builder's own options instead of fresh ones, so that
             // filterPredicate, triggers and EnableContentResponseOnWrite (patchConcurrenlyAndRead) stay effective.
-            // Each attempt overwrites IfMatchEtag with the eTag of the item it has just read.
-            operation.RequestOptions.IfMatchEtag <- response.ETag
+            // Each attempt works on a copy: the options object belongs to the caller, who may reuse the same
+            // operation later or run it concurrently, so the per-attempt eTag must never be written back into it,
+            // and the SDK keeps reading the options while it builds the request.
+            let attemptOptions = operation.RequestOptions.ShallowCopy () :?> PatchItemRequestOptions
+            attemptOptions.IfMatchEtag <- response.ETag
 
             let! response =
                 container.PatchItemAsync<'value>(
                     operation.Id,
                     operation.PartitionKey,
                     patchOperations.ToImmutableList (),
-                    operation.RequestOptions,
+                    attemptOptions,
                     cancellationToken = ct
                 )
 

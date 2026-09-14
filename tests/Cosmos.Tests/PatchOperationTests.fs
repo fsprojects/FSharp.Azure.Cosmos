@@ -284,6 +284,12 @@ type PatchOperationIntegrationTests () =
 
         let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
 
+        // Two attempts ran with two different eTags; neither may leak into the caller-owned options.
+        Assert.IsNull (
+            operation.RequestOptions.IfMatchEtag,
+            "Patch concurrently must not write the per-attempt eTag back into the caller's request options."
+        )
+
         match concurrentResponse.Result with
         | PatchConcurrentResult.Ok _ ->
             Assert.IsTrue (conflictInjected, "Patch concurrently test should inject a conflicting update at least once.")
