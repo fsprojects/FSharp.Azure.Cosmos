@@ -142,16 +142,23 @@ type Microsoft.Azure.Cosmos.Container with
     /// </summary>
     /// <param name="operation">Read operation</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    member container.ExecuteAsync<'T> (operation : ReadManyOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
-        let successFn result : ReadManyResult<FeedResponse<'T>> =
-            if Object.Equals (result, Unchecked.defaultof<'T>) then
-                ReadManyResult.NotModified
-            else
-                ReadManyResult.Ok result
+    member container.ExecuteAsync<'T>
+        (operation : ReadManyOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
+        : Task<CosmosResponse<ReadManyResult<FeedResponse<'T>>>>
+        = task {
+        try
+            let! response = container.PlainExecuteAsync (operation, cancellationToken)
 
-        container.ExecuteAsync<'T, ReadManyResult<FeedResponse<'T>>>(
-            operation,
-            successFn,
-            toReadResult ReadManyResult.IncompatibleConsistencyLevel ReadManyResult.NotFound,
-            cancellationToken
-        )
+            // A matching If-None-Match can come back as a successful 304 feed response...
+            if response.StatusCode = HttpStatusCode.NotModified then
+                return CosmosResponse.fromFeedResponse (fun _ -> ReadManyResult.NotModified) response
+            else
+                return CosmosResponse.fromFeedResponse ReadManyResult.Ok response
+        with
+        // ...or, depending on the SDK transport and emulator, as a thrown 304 CosmosException.
+        | CosmosException ex when ex.StatusCode = HttpStatusCode.NotModified ->
+            return CosmosResponse.fromException (fun _ -> ReadManyResult.NotModified) ex
+        | HandleException ex ->
+            return
+                CosmosResponse.fromException (toReadResult ReadManyResult.IncompatibleConsistencyLevel ReadManyResult.NotFound) ex
+    }
