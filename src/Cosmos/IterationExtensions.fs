@@ -13,14 +13,15 @@ module FeedIteratorExtensions =
     type FeedIterator<'T> with
 
         /// Converts the iterator to an async sequence of items.
-        member iterator.AsAsyncEnumerable<'T> ([<Optional; EnumeratorCancellation>] cancellationToken : CancellationToken) = taskSeq {
-            while iterator.HasMoreResults do
-                let! page = iterator.ReadNextAsync (cancellationToken)
+        member iterator.AsAsyncEnumerable<'T> ([<Optional; EnumeratorCancellation>] cancellationToken : CancellationToken) =
+            taskSeq {
+                while iterator.HasMoreResults do
+                    let! page = iterator.ReadNextAsync (cancellationToken)
 
-                for item in page do
-                    cancellationToken.ThrowIfCancellationRequested ()
-                    yield item
-        }
+                    for item in page do
+                        cancellationToken.ThrowIfCancellationRequested ()
+                        yield item
+            }
 
 open System.Linq
 open Microsoft.Azure.Cosmos
@@ -32,4 +33,4 @@ module QueryableExtensions =
     type IQueryable<'T> with
 
         member inline query.AsAsyncEnumerable<'T> ([<Optional; EnumeratorCancellation>] cancellationToken : CancellationToken) =
-            query.ToFeedIterator().AsAsyncEnumerable<'T> (cancellationToken)
+            query.ToFeedIterator().AsAsyncEnumerable<'T>(cancellationToken)
