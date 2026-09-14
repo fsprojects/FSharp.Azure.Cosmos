@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="TestCategories.fs" />
     <Compile Include="Tests.fs" />
   </ItemGroup>
 
