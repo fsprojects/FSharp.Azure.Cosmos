@@ -50,3 +50,25 @@ type DeleteOperationIntegrationTests () =
         CosmosAssert.IsNotFound (missingResponse.Result, "Read after delete should return ReadResult.NotFound.")
         Assert.AreEqual (HttpStatusCode.NotFound, missingResponse.HttpStatusCode, "Read after delete should return HTTP 404.")
     }
+
+    [<TestMethod>]
+    member this.``Delete execute returns NotFound for a missing item`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "delete-missing"
+
+        let! deleteResponse =
+            container.ExecuteAsync (
+                delete {
+                    id testItem.id
+                    partitionKey testItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsNotFound (deleteResponse.Result, "Delete of a never-created item should return DeleteResult.NotFound.")
+        Assert.AreEqual (
+            HttpStatusCode.NotFound,
+            deleteResponse.HttpStatusCode,
+            "Delete of a missing item should return HTTP 404."
+        )
+    }

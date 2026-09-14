@@ -1,5 +1,6 @@
 namespace FSharp.Azure.Cosmos.Tests.Integration
 
+open System
 open System.Net
 open System.Threading.Tasks
 open FSharp.Azure.Cosmos
@@ -161,4 +162,222 @@ type UpsertOperationIntegrationTests () =
             Assert.AreEqual ("upsert-concurrent-updated", updated.name, "Upsert concurrently should persist updated name.")
             Assert.AreEqual (original.quantity + 7, updated.quantity, "Upsert concurrently should persist updated quantity.")
         | result -> Assert.Fail ($"Expected upsert concurrently success after retry, got {result}.")
+    }
+
+    [<TestMethod>]
+    member this.``Upsert execute requires an ETag`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "upsert-requires-etag"
+
+        let invoke () =
+            Func<Task> (fun () -> task {
+                let! _ =
+                    container.ExecuteAsync (
+                        upsert {
+                            item testItem
+                            partitionKey testItem.partitionKey
+                        },
+                        this.CancellationToken
+                    )
+
+                return ()
+            })
+
+        let! _ =
+            Assert.ThrowsExactlyAsync<ArgumentException> (
+                invoke (),
+                "Upsert safe execute should throw ArgumentException when no eTag is set."
+            )
+
+        return ()
+    }
+
+    [<TestMethod>]
+    member this.``Upsert execute succeeds when the ETag matches`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "upsert-matching-etag"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item testItem
+                    partitionKey testItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let updated = { testItem with name = "item-upsert-matching-etag"; quantity = 8 }
+
+        let! upsertResponse =
+            container.ExecuteAsync (
+                upsert {
+                    item updated
+                    partitionKey updated.partitionKey
+                    eTag createResponse.ETag
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (upsertResponse.Result, "Safe upsert with a matching eTag should return UpsertResult.Ok.")
+        Assert.AreEqual (
+            HttpStatusCode.OK,
+            upsertResponse.HttpStatusCode,
+            "Safe upsert with a matching eTag should return HTTP 200."
+        )
+    }
+
+    [<TestMethod>]
+    member this.``Upsert execute returns ModifiedBefore for a stale ETag`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "upsert-stale-etag"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item testItem
+                    partitionKey testItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+        let staleETag = createResponse.ETag
+
+        let! overwriteResponse =
+            container.ExecuteOverwriteAsync (
+                upsert {
+                    item { testItem with name = "item-upsert-stale-etag-changed"; quantity = 2 }
+                    partitionKey testItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (overwriteResponse.Result, "Overwrite that changes the ETag should succeed.")
+
+        let! staleUpsertResponse =
+            container.ExecuteAsync (
+                upsert {
+                    item { testItem with name = "item-upsert-stale-etag-final"; quantity = 3 }
+                    partitionKey testItem.partitionKey
+                    eTag staleETag
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsModifiedBefore (
+            staleUpsertResponse.Result,
+            "Safe upsert with a stale eTag should return UpsertResult.ModifiedBefore."
+        )
+        Assert.AreEqual (
+            HttpStatusCode.PreconditionFailed,
+            staleUpsertResponse.HttpStatusCode,
+            "Safe upsert with a stale eTag should return HTTP 412."
+        )
+    }
+
+    [<TestMethod>]
+    member this.``Upsert concurrently returns CustomError when update reports an error`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "upsert-concurrent-custom-error"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let operation = upsertConcurrenly<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            updateOrCreate (fun _ -> async { return Result.Error "update rejected" })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
+        let customError =
+            CosmosAssert.WantCustomError (
+                concurrentResponse.Result,
+                "Upsert concurrently should return UpsertConcurrentResult.CustomError when update reports an error."
+            )
+        Assert.AreEqual ("update rejected", customError, "Upsert concurrently CustomError should carry the reported error.")
+    }
+
+    [<TestMethod>]
+    member this.``Upsert concurrently returns ModifiedBefore when retries are exhausted`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "upsert-concurrent-exhausted"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let operation = upsertConcurrenly<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            updateOrCreate (fun maybeCurrent -> async {
+                match maybeCurrent with
+                | Some current ->
+                    // Always inject a competing write first, so the single allowed attempt
+                    // (maxRetryCount = 1) always observes a stale ETag and exhausts immediately.
+                    let competingUpdate = { current with name = "competing-exhaustion-update" }
+
+                    let! _ =
+                        container.ExecuteOverwriteAsync (
+                            upsert {
+                                item competingUpdate
+                                partitionKey competingUpdate.partitionKey
+                            },
+                            this.CancellationToken
+                        )
+                        |> Async.AwaitTask
+
+                    return Result.Ok { current with name = "should-not-be-persisted" }
+                | None -> return Result.Error "Expected existing item for exhaustion test."
+            })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 1, this.CancellationToken)
+
+        CosmosAssert.IsModifiedBefore (
+            concurrentResponse.Result,
+            "Upsert concurrently should return UpsertConcurrentResult.ModifiedBefore once retries are exhausted."
+        )
+    }
+
+    [<TestMethod>]
+    member this.``Upsert concurrently creates item when it does not exist`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "upsert-concurrent-create"
+
+        let operation = upsertConcurrenly<TestItem, string> {
+            id testItem.id
+            partitionKey testItem.partitionKey
+            updateOrCreate (
+                function
+                | None -> async { return Result.Ok testItem }
+                | Some _ -> async { return Result.Error "Expected no existing item for create test." }
+            )
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
+        match concurrentResponse.Result with
+        | UpsertConcurrentResult.Ok created ->
+            Assert.AreEqual (testItem.id, created.id, "Upsert concurrently create branch should persist the new item's id.")
+            Assert.AreEqual (testItem.name, created.name, "Upsert concurrently create branch should persist the new item's name.")
+        | result -> Assert.Fail ($"Expected upsert concurrently create success, got {result}.")
     }

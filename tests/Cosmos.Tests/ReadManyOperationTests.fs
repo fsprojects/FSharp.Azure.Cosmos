@@ -77,3 +77,45 @@ type ReadManyOperationIntegrationTests () =
             Assert.AreEqual (HttpStatusCode.OK, readManyResponse.HttpStatusCode, "ReadMany should return HTTP 200.")
         | result -> Assert.Fail ($"Expected read many success, got {result}.")
     }
+
+    [<TestMethod>]
+    member this.``ReadMany execute currently returns Ok instead of NotModified for a matching eTag`` () : Task = task {
+        let! container = this.GetContainer ()
+        let firstItem, secondItem =
+            match this.Application.SeededItems with
+            | [ firstItem; secondItem ] -> firstItem, secondItem
+            | seededItems -> failwith $"Expected exactly two seeded items but got {seededItems.Length}."
+
+        let! baselineResponse =
+            container.ExecuteAsync (
+                readMany {
+                    item firstItem.id firstItem.partitionKey
+                    item secondItem.id secondItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        match baselineResponse.Result with
+        | ReadManyResult.Ok _ -> ()
+        | result -> Assert.Fail ($"Expected baseline read many success, got {result}.")
+
+        let! notModifiedResponse =
+            container.ExecuteAsync (
+                readMany {
+                    item firstItem.id firstItem.partitionKey
+                    item secondItem.id secondItem.partitionKey
+                    eTag baselineResponse.ETag
+                },
+                this.CancellationToken
+            )
+
+        // KNOWN GAP: the successFn in ReadMany.fs decides NotModified by comparing the whole
+        // FeedResponse<'T> to Unchecked.defaultof<'T> (the ITEM type's default) — a type
+        // mismatch that can never be true, so ReadManyResult.NotModified is unreachable and a
+        // matching eTag is silently ignored. This test pins today's actual (buggy) Ok outcome;
+        // if it starts failing, that comparison has likely been fixed to inspect the feed's own
+        // status, and this test should be replaced with one asserting ReadManyResult.NotModified.
+        match notModifiedResponse.Result with
+        | ReadManyResult.Ok _ -> ()
+        | result -> Assert.Fail ($"Expected the current (buggy) ReadManyResult.Ok, got {result}.")
+    }

@@ -59,3 +59,32 @@ type CreateOperationIntegrationTests () =
         Assert.AreEqual (testItem.id, created.id, "CreateAndRead should return created item id.")
         Assert.AreEqual (testItem.partitionKey, created.partitionKey, "CreateAndRead should return created partition key.")
     }
+
+    [<TestMethod>]
+    member this.``Create execute returns IdAlreadyExists for a duplicate id`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "create-duplicate"
+
+        let! firstResponse =
+            container.ExecuteAsync (
+                create {
+                    item testItem
+                    partitionKey testItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (firstResponse.Result, "First create should succeed.")
+
+        let! secondResponse =
+            container.ExecuteAsync (
+                create {
+                    item testItem
+                    partitionKey testItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsConflict (secondResponse.Result, "Create with a duplicate id should return CreateResult.IdAlreadyExists.")
+        Assert.AreEqual (HttpStatusCode.Conflict, secondResponse.HttpStatusCode, "Duplicate create should return HTTP 409.")
+    }
