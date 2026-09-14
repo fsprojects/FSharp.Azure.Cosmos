@@ -4,9 +4,7 @@ open System
 open System.Net
 open Microsoft.Azure.Cosmos
 
-/// <summary>
 /// Represents the response from a Cosmos DB operation.
-/// </summary>
 type CosmosResponse<'T> = {
     HttpStatusCode : HttpStatusCode
     Headers : Headers

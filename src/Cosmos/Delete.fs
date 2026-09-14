@@ -44,7 +44,7 @@ type DeleteBuilder () =
             RequestOptions = ValueSome options
     }
 
-    /// <summary>Sets the eTag to <see cref="ItemRequestOptions.IfNotMatchEtag"/></summary>
+    /// <summary>Sets the eTag to <see cref="ItemRequestOptions.IfNoneMatchEtag"/></summary>
     [<CustomOperation "eTag">]
     member _.ETag (state : DeleteOperation, eTag : string) =
         match state.RequestOptions with
