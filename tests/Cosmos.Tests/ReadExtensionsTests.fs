@@ -1,7 +1,7 @@
 namespace FSharp.Azure.Cosmos.Tests.Integration
 
-open System.Net
 open System
+open System.Net
 open System.Threading.Tasks
 open FSharp.Azure.Cosmos
 open FSharp.Azure.Cosmos.Tests

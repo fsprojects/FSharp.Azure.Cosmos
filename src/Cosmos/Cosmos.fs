@@ -23,7 +23,7 @@ module CosmosName =
     /// </summary>
     /// <param name="paramName">Name of the caller's parameter to report in a thrown exception.</param>
     /// <param name="fieldName">Field name to validate.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="fieldName"/> is <c>null</c>.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="fieldName"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">
     /// Thrown when <paramref name="fieldName"/> does not start with a letter or underscore,
     /// or contains characters other than letters, digits, or underscores.
@@ -128,7 +128,7 @@ module Operations =
         /// Adds pre-triggers to request options.
         /// </summary>
         /// <param name="triggers">Trigger names.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="triggers"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="triggers"/> is <see langword="null"/>.</exception>
         member options.AddPreTriggers (triggers : string seq) =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
@@ -151,7 +151,7 @@ module Operations =
         /// Adds post-triggers to request options.
         /// </summary>
         /// <param name="triggers">Trigger names.</param>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="triggers"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="triggers"/> is <see langword="null"/>.</exception>
         member options.AddPostTriggers (triggers : string seq) =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
@@ -276,7 +276,7 @@ module Operations =
         /// Checks whether an item with the specified Id exists and is not marked as deleted.
         /// <para>
         /// The item is treated as not deleted when the <paramref name="deletedFieldName"/> field is absent,
-        /// <c>null</c>, or <c>false</c>. Any other value, such as <c>true</c> or a deletion timestamp,
+        /// <see langword="null"/>, or <c>false</c>. Any other value, such as <c>true</c> or a deletion timestamp,
         /// marks the item as deleted.
         /// </para>
         /// </summary>
@@ -285,7 +285,7 @@ module Operations =
         /// <param name="requestOptions">Query request options, for example to scope the query to a partition key.</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns><c>true</c> when the item exists and is not marked as deleted; otherwise <c>false</c>.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="deletedFieldName"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="deletedFieldName"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException">
         /// Thrown when <paramref name="deletedFieldName"/> does not start with a letter or underscore,
         /// or contains characters other than letters, digits, or underscores.
