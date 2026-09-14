@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
+# Temporary shim: .github/workflows/build.yml still runs this file with bash.
+# The implementation lives in start-cosmos-emulator.ps1. Delete this file once the workflow
+# calls the .ps1 directly (shell: pwsh).
 set -euo pipefail
 
-docker run -d --name cosmosdb \
-  -p 8081:8081 \
-  -p 8080:8080 \
-  -p 1234:1234 \
-  -e PROTOCOL=https \
-  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+exec pwsh -NoProfile -File "$(dirname "${BASH_SOURCE[0]}")/start-cosmos-emulator.ps1"

@@ -6,6 +6,17 @@
     "forwardPorts": [
         0
     ],
+    // Share the host's network namespace so the container can reach the Cosmos DB Emulator
+    // that runs as a sibling container on the host, bound to the host's 127.0.0.1:8081.
+    "runArgs": [
+        "--network=host"
+    ],
+    // Runs on the host before the container is created. On GitHub Actions (where pwsh is
+    // preinstalled) it starts the Cosmos DB Emulator and waits until it is ready. Elsewhere -
+    // including a host with no pwsh at all - the `command -v pwsh` guard keeps this a no-op
+    // instead of failing devcontainer creation outright; sh is the shell the devcontainer CLI
+    // already uses to run a string-form command on any host capable of running this container.
+    "initializeCommand": "if [ \"$GITHUB_ACTIONS\" = \"true\" ] && command -v pwsh > /dev/null 2>&1; then pwsh -NoProfile -File \"${localWorkspaceFolder}/.devcontainer/initialize-cosmos-emulator.ps1\"; fi",
     "features": {
         // https://github.com/devcontainers/features/blob/main/src/common-utils/README.md
         "ghcr.io/devcontainers/features/common-utils:2": {
@@ -19,8 +30,8 @@
         },
         // https://github.com/devcontainers/features/blob/main/src/github-cli/README.md
         "ghcr.io/devcontainers/features/github-cli:1": {},
-        // https://github.com/devcontainers-contrib/features/blob/main/src/starship/README.md
-        "ghcr.io/devcontainers-contrib/features/starship:1": {},
+        // https://github.com/devcontainers-extra/features/blob/main/src/starship/README.md
+        "ghcr.io/devcontainers-extra/features/starship:1": {},
         // https://github.com/devcontainers/features/blob/main/src/dotnet/README.md
         "ghcr.io/devcontainers/features/dotnet:2": {
             "version": "10.0",
@@ -30,7 +41,7 @@
     "overrideFeatureInstallOrder": [
         "ghcr.io/devcontainers/features/common-utils",
         "ghcr.io/devcontainers/features/github-cli",
-        "ghcr.io/devcontainers-contrib/features/starship",
+        "ghcr.io/devcontainers-extra/features/starship",
         "ghcr.io/devcontainers/features/dotnet"
     ],
     "customizations": {
