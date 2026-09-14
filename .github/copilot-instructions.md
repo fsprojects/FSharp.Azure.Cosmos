@@ -40,11 +40,24 @@
 
 Use GitHub MCP tools for code search in these repositories when needed.
 
+## MCP Servers
+
+MCP server configuration lives in #file:'.mcp.json'. Local tool packages are pinned in #file:'.config/dotnet-tools.json' – run `dotnet tool restore` before first use.
+
+| Server | Tool package | Command | Notes |
+|---|---|---|---|
+| `F#` | `fslangmcp` | `dotnet tool run fslangmcp` | Semantic F# MCP backed by the compiler and FSAC. Use it for cross-project symbol search, project/file outlines, diagnostics, rename previews, dead-code checks, and other F#-aware analysis that plain text search misses. See <https://github.com/Neftedollar/FsLangMCP>. |
+| `GitHub` | – | HTTP | Code search in dependency repositories. |
+| `Microsoft Docs` | – | HTTP | Official Microsoft and Azure documentation. |
+
+For F# work, prefer FsLangMCP over `rg`/plain text search whenever the task depends on symbol meaning, compile context, cross-project usage, diagnostics, or safe refactoring preview.
+
 ## F# Coding Guidelines
 
 ### Language Preferences
 
 * Always use the latest F# 10 features over old syntax.
+* If you are running outside of an IDE, or the IDE does not provide F# semantic tools, use FsLangMCP as the primary tool for F# code navigation, symbol discovery, diagnostics, usage search and refactoring preview. Prefer its semantic tools over plain text search.
 * Prefer `voption` over `option`.
 * Prefer `task` CE over `async` CE.
 * Prefer underscore lambda syntax like `Seq.map _.Name` over `Seq.map (fun x -> x.Name)`, but only when the expression is a simple member access. Complex expressions like `Seq.where (fun x -> x.Name = name)` or `Seq.map (fun x -> x.Field1, x.Field2)` cannot be simplified.
