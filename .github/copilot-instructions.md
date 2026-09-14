@@ -42,7 +42,12 @@ Use GitHub MCP tools for code search in these repositories when needed.
 
 ## MCP Servers
 
-MCP server configuration lives in #file:'.mcp.json'. Local tool packages are pinned in #file:'.config/dotnet-tools.json' – run `dotnet tool restore` before first use.
+MCP server configuration lives in #file:'.mcp.json':
+
+* `servers` – read by VS Code / GitHub Copilot.
+* `mcpServers` – read by Claude Code. Mirrors the same servers; keep both sections in sync when adding or changing a server.
+
+Local tool packages are pinned in #file:'.config/dotnet-tools.json' – run `dotnet tool restore` before first use.
 
 | Server | Tool package | Command | Notes |
 |---|---|---|---|
