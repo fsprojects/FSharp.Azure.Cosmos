@@ -6,6 +6,11 @@
     "forwardPorts": [
         0
     ],
+    // Share the host's network namespace so the container can reach the Cosmos DB Emulator
+    // that CI starts as a sibling container on the runner, bound to the host's 127.0.0.1:8081.
+    "runArgs": [
+        "--network=host"
+    ],
     "features": {
         // https://github.com/devcontainers/features/blob/main/src/common-utils/README.md
         "ghcr.io/devcontainers/features/common-utils:2": {
