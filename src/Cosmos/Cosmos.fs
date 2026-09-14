@@ -118,7 +118,7 @@ module Operations =
         /// <param name="requestOptions">Request options</param>
         /// <param name="cancellationToken">Cancellation token</param>
         member container.CountAsync (requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken) =
-            container.GetItemQueryIterator<int> (countQuery, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
+            container.GetItemQueryIterator<int>(countQuery, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
             |> CancellableTaskSeq.ofFeedIterator cancellationToken
             |> TaskSeq.tryHead
             |> Task.map (Option.defaultValue 0)
@@ -156,7 +156,7 @@ module Operations =
         member container.LongCountAsync
             (requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
             =
-            container.GetItemQueryIterator<int64> (countQuery, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
+            container.GetItemQueryIterator<int64>(countQuery, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
             |> CancellableTaskSeq.ofFeedIterator cancellationToken
             |> TaskSeq.tryHead
             |> Task.map (Option.defaultValue 0)
@@ -191,19 +191,15 @@ module Operations =
         /// <param name="cancellationToken">Cancellation token</param>
         member container.ExistsAsync
             (id : string, [<Optional>] requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
-            =
-            task {
-                let query = getExistsQuery id
-                let! count =
-                    container.GetItemQueryIterator<int> (
-                        query,
-                        requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions
-                    )
-                    |> CancellableTaskSeq.ofFeedIterator cancellationToken
-                    |> TaskSeq.tryHead
-                    |> Task.map (Option.defaultValue 0)
-                return count = 1
-            }
+            = task {
+            let query = getExistsQuery id
+            let! count =
+                container.GetItemQueryIterator<int>(query, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
+                |> CancellableTaskSeq.ofFeedIterator cancellationToken
+                |> TaskSeq.tryHead
+                |> Task.map (Option.defaultValue 0)
+            return count = 1
+        }
 
         /// <summary>
         /// Checks if an item with specified Id exists in the container partition with specified key.
@@ -227,22 +223,18 @@ module Operations =
         member container.IsNotDeletedAsync
             deletedFieldName
             (id : string, [<Optional>] requiestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
-            =
-            task {
-                let query =
-                    QueryDefinition(
-                        $"SELECT VALUE COUNT(1) \
+            = task {
+            let query =
+                QueryDefinition(
+                    $"SELECT VALUE COUNT(1) \
                      FROM item \
                      WHERE item.id = @Id AND IS_NULL(item.{deletedFieldName})"
-                    )
-                        .WithParameter ("@Id", id)
-                let! count =
-                    container.GetItemQueryIterator<int> (
-                        query,
-                        requestOptions = getRequestOptionsWithMaxItemCount1 requiestOptions
-                    )
-                    |> CancellableTaskSeq.ofFeedIterator cancellationToken
-                    |> TaskSeq.tryHead
-                    |> Task.map (Option.defaultValue 0)
-                return count = 1
-            }
+                )
+                    .WithParameter("@Id", id)
+            let! count =
+                container.GetItemQueryIterator<int>(query, requestOptions = getRequestOptionsWithMaxItemCount1 requiestOptions)
+                |> CancellableTaskSeq.ofFeedIterator cancellationToken
+                |> TaskSeq.tryHead
+                |> Task.map (Option.defaultValue 0)
+            return count = 1
+        }

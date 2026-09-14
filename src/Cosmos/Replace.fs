@@ -205,11 +205,11 @@ type ReplaceConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
-let replace<'T> = ReplaceBuilder<'T> (false)
-let replaceAndRead<'T> = ReplaceBuilder<'T> (true)
+let replace<'T> = ReplaceBuilder<'T>(false)
+let replaceAndRead<'T> = ReplaceBuilder<'T>(true)
 
-let replaceConcurrenly<'T, 'E> = ReplaceConcurrentlyBuilder<'T, 'E> (false)
-let replaceConcurrenlyAndRead<'T, 'E> = ReplaceConcurrentlyBuilder<'T, 'E> (true)
+let replaceConcurrenly<'T, 'E> = ReplaceConcurrentlyBuilder<'T, 'E>(false)
+let replaceConcurrenlyAndRead<'T, 'E> = ReplaceConcurrentlyBuilder<'T, 'E>(true)
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
 
@@ -267,42 +267,36 @@ let rec executeConcurrentlyAsync<'value, 'error>
     (container : Container)
     (operation : ReplaceConcurrentlyOperation<'value, 'error>)
     (retryAttempts : int)
-    : Task<CosmosResponse<ReplaceConcurrentResult<'value, 'error>>> =
-    task {
-        try
-            let partitionKey =
-                match operation.PartitionKey with
-                | ValueSome partitionKey -> partitionKey
-                | ValueNone -> PartitionKey.None
+    : Task<CosmosResponse<ReplaceConcurrentResult<'value, 'error>>> = task {
+    try
+        let partitionKey =
+            match operation.PartitionKey with
+            | ValueSome partitionKey -> partitionKey
+            | ValueNone -> PartitionKey.None
 
-            let! response = container.ReadItemAsync<'value> (operation.Id, partitionKey, cancellationToken = ct)
-            let eTag = response.ETag
-            let! itemUpdateResult = operation.Update response.Resource
+        let! response = container.ReadItemAsync<'value>(operation.Id, partitionKey, cancellationToken = ct)
+        let eTag = response.ETag
+        let! itemUpdateResult = operation.Update response.Resource
 
-            match itemUpdateResult with
-            | Result.Error e -> return CosmosResponse.fromItemResponse (fun _ -> CustomError e) response
-            | Result.Ok item ->
-                let updateOptions = new ItemRequestOptions (IfMatchEtag = eTag)
+        match itemUpdateResult with
+        | Result.Error e -> return CosmosResponse.fromItemResponse (fun _ -> CustomError e) response
+        | Result.Ok item ->
+            let updateOptions = new ItemRequestOptions (IfMatchEtag = eTag)
 
-                let! response =
-                    container.ReplaceItemAsync<'value> (
-                        item,
-                        operation.Id,
-                        requestOptions = updateOptions,
-                        cancellationToken = ct
-                    )
+            let! response =
+                container.ReplaceItemAsync<'value>(item, operation.Id, requestOptions = updateOptions, cancellationToken = ct)
 
-                return CosmosResponse.fromItemResponse Ok response
-        with
-        | HandleException ex when
-            ex.StatusCode = HttpStatusCode.PreconditionFailed
-            && retryAttempts = 1
-            ->
-            return CosmosResponse.fromException toReplaceConcurrentlyErrorResult ex
-        | HandleException ex when ex.StatusCode = HttpStatusCode.PreconditionFailed ->
-            return! executeConcurrentlyAsync ct container operation (retryAttempts - 1)
-        | HandleException ex -> return CosmosResponse.fromException toReplaceConcurrentlyErrorResult ex
-    }
+            return CosmosResponse.fromItemResponse Ok response
+    with
+    | HandleException ex when
+        ex.StatusCode = HttpStatusCode.PreconditionFailed
+        && retryAttempts = 1
+        ->
+        return CosmosResponse.fromException toReplaceConcurrentlyErrorResult ex
+    | HandleException ex when ex.StatusCode = HttpStatusCode.PreconditionFailed ->
+        return! executeConcurrentlyAsync ct container operation (retryAttempts - 1)
+    | HandleException ex -> return CosmosResponse.fromException toReplaceConcurrentlyErrorResult ex
+}
 
 open System.Runtime.InteropServices
 
@@ -319,7 +313,7 @@ type Microsoft.Azure.Cosmos.Container with
     member container.PlainExecuteAsync<'T>
         (operation : ReplaceOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
         =
-        container.ReplaceItemAsync<'T> (
+        container.ReplaceItemAsync<'T>(
             operation.Item,
             operation.Id,
             operation.PartitionKey |> ValueOption.toNullable,
@@ -337,14 +331,13 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteOverwriteAsync<'T, 'Result>
         (operation : ReplaceOperation<'T>, success, failure, [<Optional>] cancellationToken : CancellationToken)
         : Task<CosmosResponse<'Result>>
-        =
-        task {
-            try
-                let! response = container.PlainExecuteAsync (operation, cancellationToken)
-                return CosmosResponse.fromItemResponse success response
-            with HandleException ex ->
-                return CosmosResponse.fromException failure ex
-        }
+        = task {
+        try
+            let! response = container.PlainExecuteAsync (operation, cancellationToken)
+            return CosmosResponse.fromItemResponse success response
+        with HandleException ex ->
+            return CosmosResponse.fromException failure ex
+    }
 
     /// <summary>
     /// Executes a replace operation safely and returns <see cref="CosmosResponse{ReplaceResult{T}}"/>.
