@@ -14,8 +14,10 @@
     // Runs on the host before the container is created. On GitHub Actions it starts the
     // Cosmos DB Emulator and waits until it is ready; elsewhere it does nothing.
     "initializeCommand": [
-        "bash",
-        "${localWorkspaceFolder}/.devcontainer/initialize-cosmos-emulator.sh"
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "${localWorkspaceFolder}/.devcontainer/initialize-cosmos-emulator.ps1"
     ],
     "features": {
         // https://github.com/devcontainers/features/blob/main/src/common-utils/README.md
