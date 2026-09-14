@@ -76,6 +76,7 @@ type ReadExtensionsIntegrationTests () =
     [<DataRow("deletedAt", DisplayName = "letters only")>]
     [<DataRow("_deletedAt", DisplayName = "starts with underscore")>]
     [<DataRow("deletedAt1", DisplayName = "digit after first character")>]
+    [<DataRow("value", DisplayName = "reserved Cosmos SQL keyword")>]
     member this.``IsNotDeletedAsync evaluates valid deleted field name shapes in the query`` (deletedFieldName : string) : Task =
         task {
             let! container = this.GetContainer ()

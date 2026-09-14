@@ -297,12 +297,14 @@ module Operations =
             CosmosName.validateField (nameof deletedFieldName) deletedFieldName
 
             task {
+                // Bracket notation, not item.{deletedFieldName}: a validated field name can still be a reserved
+                // Cosmos SQL keyword (e.g. "value"), which dot notation would turn into an invalid query.
                 let query =
                     QueryDefinition(
                         $"SELECT VALUE COUNT(1) \
                          FROM item \
                          WHERE item.id = @Id \
-                         AND (NOT IS_DEFINED(item.{deletedFieldName}) OR IS_NULL(item.{deletedFieldName}) OR item.{deletedFieldName} = false)"
+                         AND (NOT IS_DEFINED(item[\"{deletedFieldName}\"]) OR IS_NULL(item[\"{deletedFieldName}\"]) OR item[\"{deletedFieldName}\"] = false)"
                     )
                         .WithParameter("@Id", id)
                 let! count =
