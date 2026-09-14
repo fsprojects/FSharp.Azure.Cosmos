@@ -132,7 +132,7 @@ type UpsertOperationIntegrationTests () =
 
                         let competingUpdate = { current with name = "competing-upsert-update" }
 
-                        let! _ =
+                        let! competingResponse =
                             container.ExecuteOverwriteAsync (
                                 upsert {
                                     item competingUpdate
@@ -142,7 +142,10 @@ type UpsertOperationIntegrationTests () =
                             )
                             |> Async.AwaitTask
 
-                        ()
+                        CosmosAssert.IsOk (
+                            competingResponse.Result,
+                            "Competing upsert should succeed so the retried upsert observes a stale ETag."
+                        )
 
                     return
                         Result.Ok {

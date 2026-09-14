@@ -118,7 +118,7 @@ type ReplaceOperationIntegrationTests () =
 
                     let competingUpdate = { current with name = "competing-update" }
 
-                    let! _ =
+                    let! competingResponse =
                         container.ExecuteOverwriteAsync (
                             replace {
                                 id competingUpdate.id
@@ -129,7 +129,10 @@ type ReplaceOperationIntegrationTests () =
                         )
                         |> Async.AwaitTask
 
-                    ()
+                    CosmosAssert.IsOk (
+                        competingResponse.Result,
+                        "Competing replace should succeed so the retried replace observes a stale ETag."
+                    )
 
                 return
                     Result.Ok {
