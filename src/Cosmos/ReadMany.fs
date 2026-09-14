@@ -47,7 +47,7 @@ type ReadManyBuilder<'T> () =
             RequestOptions = options
     }
 
-    /// <summary>Sets the eTag to <see cref="ReadManyRequestOptions.IfNotMatchEtag"/></summary>
+    /// <summary>Sets the eTag to <see cref="ReadManyRequestOptions.IfNoneMatchEtag"/></summary>
     [<CustomOperation "eTag">]
     member _.ETag (state : ReadManyOperation<_>, eTag : string) =
         match state.RequestOptions with
@@ -110,7 +110,7 @@ open CosmosException
 type Microsoft.Azure.Cosmos.Container with
 
     /// <summary>
-    /// Executes a read many operation and returns <see cref="ItemResponse{T}"/>.
+    /// Executes a read many operation and returns <see cref="FeedResponse{T}"/>.
     /// </summary>
     /// <param name="operation">Read many operation</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -139,7 +139,7 @@ type Microsoft.Azure.Cosmos.Container with
         }
 
     /// <summary>
-    /// Executes a read many operation and returns <see cref="CosmosResponse{ReadResult{T}}"/>.
+    /// Executes a read many operation and returns <see cref="CosmosResponse{ReadManyResult{FeedResponse{T}}}"/>.
     /// </summary>
     /// <param name="operation">Read operation</param>
     /// <param name="cancellationToken">Cancellation token</param>

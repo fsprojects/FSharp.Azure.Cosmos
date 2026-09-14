@@ -31,7 +31,10 @@ type PatchBuilder<'T> (enableContentResponseOnWrite : bool) =
 
     /// <summary>Adds the <see cref="PatchOperation"/></summary>
     [<CustomOperation "operations">]
-    member _.Operations (state : PatchOperation<'T>, operations) = { state with Operations = state.Operations @ operations }
+    member _.Operations (state : PatchOperation<'T>, operations) = {
+        state with
+            Operations = [ yield! state.Operations; yield! operations ]
+    }
 
     /// Sets the Id of an item being patched
     [<CustomOperation "id">]
@@ -184,7 +187,9 @@ type Microsoft.Azure.Cosmos.Container with
 
     /// <summary>
     /// Executes a patch operation safely and returns <see cref="CosmosResponse{PatchResult{T}}"/>.
+    /// <para>
     /// Requires ETag to be set in <see cref="PatchItemRequestOptions"/>.
+    /// </para>
     /// </summary>
     /// <param name="operation">Patch operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

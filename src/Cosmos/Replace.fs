@@ -348,10 +348,10 @@ type Microsoft.Azure.Cosmos.Container with
 
     /// <summary>
     /// Executes a replace operation safely and returns <see cref="CosmosResponse{ReplaceResult{T}}"/>.
-    /// </summary>
     /// <para>
     /// Requires ETag to be set in <see cref="ItemRequestOptions"/>.
     /// </para>
+    /// </summary>
     /// <param name="operation">Replace operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     member container.ExecuteAsync<'T> (operation : ReplaceOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
@@ -361,7 +361,7 @@ type Microsoft.Azure.Cosmos.Container with
         container.ExecuteOverwriteAsync (operation, ReplaceResult.Ok, toReplaceResult, cancellationToken)
 
     /// <summary>
-    /// Executes a replace operation replacing existing item if it exists and returns <see cref="CosmosResponse{UpsertResult{T}}"/>.
+    /// Executes a replace operation replacing existing item if it exists and returns <see cref="CosmosResponse{ReplaceResult{T}}"/>.
     /// </summary>
     /// <param name="operation">Replace operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

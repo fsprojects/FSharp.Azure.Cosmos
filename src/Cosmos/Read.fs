@@ -35,7 +35,7 @@ type ReadBuilder<'T> () =
     [<CustomOperation "requestOptions">]
     member _.RequestOptions (state : ReadOperation<_>, options : ItemRequestOptions) = { state with RequestOptions = options }
 
-    /// <summary>Sets the eTag to <see cref="ItemRequestOptions.IfNotMatchEtag"/></summary>
+    /// <summary>Sets the eTag to <see cref="ItemRequestOptions.IfNoneMatchEtag"/></summary>
     [<CustomOperation "eTag">]
     member _.ETag (state : ReadOperation<_>, eTag : string) =
         match state.RequestOptions with
@@ -160,7 +160,7 @@ type Microsoft.Azure.Cosmos.Container with
         )
 
     /// <summary>
-    /// Executes a read operation and returns <see cref="CosmosResponse{FSharpValueOption{T}}"/>.
+    /// Executes a read operation and returns <see cref="CosmosResponse{FSharpOption{T}}"/>.
     /// </summary>
     /// <param name="operation">Read operation</param>
     /// <param name="cancellationToken">Cancellation token</param>
@@ -173,7 +173,7 @@ type Microsoft.Azure.Cosmos.Container with
         )
 
     /// <summary>
-    /// Executes a read operation and returns <see cref="CosmosResponse{FSharpOption{T}}"/>.
+    /// Executes a read operation and returns <see cref="CosmosResponse{FSharpValueOption{T}}"/>.
     /// </summary>
     /// <param name="operation">Read operation</param>
     /// <param name="cancellationToken">Cancellation token</param>

@@ -72,8 +72,9 @@ module Operations =
 
         member options.AddPreTrigger (trigger : string) =
             options.PreTriggers <- [|
-                if not <| isNull options.PreTriggers then
-                    yield! options.PreTriggers
+                match options.PreTriggers with
+                | null -> ()
+                | existing -> yield! existing
                 yield trigger
             |]
 
@@ -81,22 +82,29 @@ module Operations =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
             options.PreTriggers <- [|
-                if not <| isNull options.PreTriggers then
-                    yield! options.PreTriggers
+                match options.PreTriggers with
+                | null -> ()
+                | existing -> yield! existing
                 yield! triggers
             |]
 
         member options.AddPostTrigger (trigger : string) =
             options.PostTriggers <- [|
-                if not <| isNull options.PostTriggers then
-                    yield! options.PostTriggers
+                match options.PostTriggers with
+                | null -> ()
+                | existing -> yield! existing
                 yield trigger
             |]
 
         member options.AddPostTriggers (triggers : string seq) =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
-            options.PostTriggers <- [| yield! options.PostTriggers; yield! triggers |]
+            options.PostTriggers <- [|
+                match options.PostTriggers with
+                | null -> ()
+                | existing -> yield! existing
+                yield! triggers
+            |]
 
     let internal countQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM c")
     let internal existsQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM item WHERE item.id = @Id")
@@ -209,10 +217,12 @@ module Operations =
             container.ExistsAsync (id, QueryRequestOptions (PartitionKey = partitionKey), cancellationToken)
 
         /// <summary>
-        /// Checks if an item with specified Id exists in the container partition with specified key.
+        /// Checks if an item with specified Id exists in the container and its
+        /// <paramref name="deletedFieldName"/> field is <see langword="null"/>.
         /// </summary>
+        /// <param name="deletedFieldName">Name of the field that marks the item as deleted</param>
         /// <param name="id">Item Id</param>
-        /// <param name="partitionKey">Partition key</param>
+        /// <param name="requiestOptions">Request options</param>
         /// <param name="cancellationToken">Cancellation token</param>
         member container.IsNotDeletedAsync
             deletedFieldName
