@@ -8,6 +8,48 @@ open System.Threading.Tasks
 open FSharp.Control
 open Microsoft.Azure.Cosmos
 
+/// <summary>
+/// Helpers for validating Cosmos DB item field names used in dynamically constructed queries.
+/// </summary>
+module CosmosName =
+
+    let private isAsciiLetter c = ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+    let private isAsciiDigit c = '0' <= c && c <= '9'
+
+    /// <summary>
+    /// Validates that <paramref name="fieldName"/> is a syntactically valid Cosmos DB item field name:
+    /// non-null, non-empty, starting with a letter or underscore, and containing only letters, digits,
+    /// or underscores.
+    /// </summary>
+    /// <param name="paramName">Name of the caller's parameter to report in a thrown exception.</param>
+    /// <param name="fieldName">Field name to validate.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="fieldName"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="fieldName"/> does not start with a letter or underscore,
+    /// or contains characters other than letters, digits, or underscores.
+    /// </exception>
+    [<CompiledName "ValidateField">]
+    let validateField (paramName : string) (fieldName : string) =
+        if obj.ReferenceEquals (fieldName, null) then
+            nullArg paramName
+
+        let isValidFieldName =
+            if String.IsNullOrWhiteSpace fieldName then
+                false
+            else
+                let firstCharacter = fieldName[0]
+                let hasValidStart = firstCharacter = '_' || isAsciiLetter firstCharacter
+                let hasValidBody =
+                    fieldName
+                    |> Seq.forall (fun c -> c = '_' || isAsciiLetter c || isAsciiDigit c)
+
+                hasValidStart && hasValidBody
+
+        if not isValidFieldName then
+            invalidArg
+                paramName
+                "Field name must start with a letter or underscore and contain only letters, digits, or underscores."
+
 module internal RequestOptions =
 
     let internal createOrUpdate setter requestOptions =
@@ -70,6 +112,10 @@ module Operations =
 
     type ItemRequestOptions with
 
+        /// <summary>
+        /// Adds a pre-trigger to request options.
+        /// </summary>
+        /// <param name="trigger">Trigger name.</param>
         member options.AddPreTrigger (trigger : string) =
             options.PreTriggers <- [|
                 match options.PreTriggers with
@@ -78,6 +124,11 @@ module Operations =
                 yield trigger
             |]
 
+        /// <summary>
+        /// Adds pre-triggers to request options.
+        /// </summary>
+        /// <param name="triggers">Trigger names.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="triggers"/> is <see langword="null"/>.</exception>
         member options.AddPreTriggers (triggers : string seq) =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
@@ -96,6 +147,11 @@ module Operations =
                 yield trigger
             |]
 
+        /// <summary>
+        /// Adds post-triggers to request options.
+        /// </summary>
+        /// <param name="triggers">Trigger names.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="triggers"/> is <see langword="null"/>.</exception>
         member options.AddPostTriggers (triggers : string seq) =
             if obj.ReferenceEquals (triggers, null) then
                 raise (ArgumentNullException (nameof triggers))
@@ -185,6 +241,10 @@ module Operations =
 
         /// <summary>
         /// Checks if an item with specified Id exists in the container.
+        /// <para>
+        /// Without a <paramref name="requestOptions"/> partition key, the query spans every partition: the
+        /// same Id can exist in more than one logical partition, so any positive count is treated as a match.
+        /// </para>
         /// </summary>
         /// <param name="id">Item Id</param>
         /// <param name="requestOptions">Request options</param>
@@ -198,7 +258,7 @@ module Operations =
                 |> CancellableTaskSeq.ofFeedIterator cancellationToken
                 |> TaskSeq.tryHead
                 |> Task.map (Option.defaultValue 0)
-            return count = 1
+            return count > 0
         }
 
         /// <summary>
@@ -213,28 +273,44 @@ module Operations =
             container.ExistsAsync (id, QueryRequestOptions (PartitionKey = partitionKey), cancellationToken)
 
         /// <summary>
-        /// Checks if an item with specified Id exists in the container and its
-        /// <paramref name="deletedFieldName"/> field is <see langword="null"/>.
+        /// Checks whether an item with the specified Id exists and is not marked as deleted.
+        /// <para>
+        /// The item is treated as not deleted when the <paramref name="deletedFieldName"/> field is absent,
+        /// <see langword="null"/>, or <c>false</c>. Any other value, such as <c>true</c> or a deletion timestamp,
+        /// marks the item as deleted.
+        /// </para>
         /// </summary>
-        /// <param name="deletedFieldName">Name of the field that marks the item as deleted</param>
+        /// <param name="deletedFieldName">Name of the item field that marks the item as deleted.</param>
         /// <param name="id">Item Id</param>
-        /// <param name="requiestOptions">Request options</param>
+        /// <param name="requestOptions">Query request options, for example to scope the query to a partition key.</param>
         /// <param name="cancellationToken">Cancellation token</param>
+        /// <returns><c>true</c> when the item exists and is not marked as deleted; otherwise <c>false</c>.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="deletedFieldName"/> is <see langword="null"/>.</exception>
+        /// <exception cref="ArgumentException">
+        /// Thrown when <paramref name="deletedFieldName"/> does not start with a letter or underscore,
+        /// or contains characters other than letters, digits, or underscores.
+        /// </exception>
         member container.IsNotDeletedAsync
-            deletedFieldName
-            (id : string, [<Optional>] requiestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
-            = task {
-            let query =
-                QueryDefinition(
-                    $"SELECT VALUE COUNT(1) \
-                     FROM item \
-                     WHERE item.id = @Id AND IS_NULL(item.{deletedFieldName})"
-                )
-                    .WithParameter("@Id", id)
-            let! count =
-                container.GetItemQueryIterator<int>(query, requestOptions = getRequestOptionsWithMaxItemCount1 requiestOptions)
-                |> CancellableTaskSeq.ofFeedIterator cancellationToken
-                |> TaskSeq.tryHead
-                |> Task.map (Option.defaultValue 0)
-            return count = 1
-        }
+            (deletedFieldName : string)
+            (id : string, [<Optional>] requestOptions : QueryRequestOptions, [<Optional>] cancellationToken : CancellationToken)
+            =
+            CosmosName.validateField (nameof deletedFieldName) deletedFieldName
+
+            task {
+                // Bracket notation, not item.{deletedFieldName}: a validated field name can still be a reserved
+                // Cosmos SQL keyword (e.g. "value"), which dot notation would turn into an invalid query.
+                let query =
+                    QueryDefinition(
+                        $"SELECT VALUE COUNT(1) \
+                         FROM item \
+                         WHERE item.id = @Id \
+                         AND (NOT IS_DEFINED(item[\"{deletedFieldName}\"]) OR IS_NULL(item[\"{deletedFieldName}\"]) OR item[\"{deletedFieldName}\"] = false)"
+                    )
+                        .WithParameter("@Id", id)
+                let! count =
+                    container.GetItemQueryIterator<int>(query, requestOptions = getRequestOptionsWithMaxItemCount1 requestOptions)
+                    |> CancellableTaskSeq.ofFeedIterator cancellationToken
+                    |> TaskSeq.tryHead
+                    |> Task.map (Option.defaultValue 0)
+                return count > 0
+            }
