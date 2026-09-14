@@ -221,9 +221,9 @@ type ReadExtensionsIntegrationTests () =
     }
 
     [<TestMethod>]
-    member this.``IsNotDeletedAsync throws for null or malformed deleted field names`` () : Task = task {
+    member this.``IsNotDeletedAsync throws ArgumentNullException for a null deleted field name`` () : Task = task {
         let! container = this.GetContainer ()
-        let testItem = this.NewItem "invalid-deleted-field-name"
+        let testItem = this.NewItem "null-deleted-field-name"
 
         let! _ =
             Assert.ThrowsExactlyAsync<ArgumentNullException>(
@@ -234,13 +234,32 @@ type ReadExtensionsIntegrationTests () =
                 "IsNotDeletedAsync should throw ArgumentNullException when deleted field name is null."
             )
 
+        return ()
+    }
+
+    [<TestMethod>]
+    [<DataRow("", DisplayName = "empty")>]
+    [<DataRow(" ", DisplayName = "whitespace")>]
+    [<DataRow("1deletedAt", DisplayName = "starts with digit")>]
+    [<DataRow("1deleted", DisplayName = "starts with digit, short name")>]
+    [<DataRow("deleted-at", DisplayName = "contains hyphen")>]
+    [<DataRow("deleted-field", DisplayName = "contains hyphen, another field name")>]
+    [<DataRow("deleted.field", DisplayName = "contains dot")>]
+    [<DataRow("deleted field", DisplayName = "contains space")>]
+    member this.``IsNotDeletedAsync throws ArgumentException for malformed deleted field names``
+        (deletedFieldName : string)
+        : Task
+        = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "malformed-deleted-field-name"
+
         let! _ =
             Assert.ThrowsExactlyAsync<ArgumentException>(
                 Func<Task>(fun () -> task {
-                    let! _ = container.IsNotDeletedAsync "1invalid" testItem.id
+                    let! _ = container.IsNotDeletedAsync deletedFieldName testItem.id
                     return ()
                 }),
-                "IsNotDeletedAsync should throw ArgumentException for a malformed deleted field name."
+                $"IsNotDeletedAsync should throw ArgumentException for deleted field name '{deletedFieldName}'."
             )
 
         return ()

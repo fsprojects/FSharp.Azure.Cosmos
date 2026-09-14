@@ -42,15 +42,19 @@ type CosmosNameTests () =
     [<TestMethod>]
     member _.``ValidateField reports the caller supplied parameter name on failure`` () =
         let exn =
-            Assert.ThrowsExactly<ArgumentException>(fun () -> CosmosName.validateField "customParam" "1invalid")
+            Assert.ThrowsExactly<ArgumentException>(
+                (fun () -> CosmosName.validateField "customParam" "1invalid"),
+                "ValidateField should throw ArgumentException so the reported ParamName can be inspected."
+            )
 
         Assert.AreEqual ("customParam", exn.ParamName, "ValidateField should report the supplied paramName on failure.")
 
     [<TestMethod>]
     member _.``ValidateField reports the caller supplied parameter name on null`` () =
         let exn =
-            Assert.ThrowsExactly<ArgumentNullException>(fun () ->
-                CosmosName.validateField "customParam" Unchecked.defaultof<string>
+            Assert.ThrowsExactly<ArgumentNullException>(
+                (fun () -> CosmosName.validateField "customParam" Unchecked.defaultof<string>),
+                "ValidateField should throw ArgumentNullException so the reported ParamName can be inspected."
             )
 
         Assert.AreEqual ("customParam", exn.ParamName, "ValidateField should report the supplied paramName on null.")

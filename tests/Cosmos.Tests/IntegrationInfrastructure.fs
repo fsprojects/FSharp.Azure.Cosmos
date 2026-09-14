@@ -122,8 +122,10 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
     interface IAsyncDisposable with
         member this.DisposeAsync () =
             task {
-                do! this.CleanupAsync (CancellationToken.None)
-                client.Dispose ()
+                try
+                    do! this.CleanupAsync (CancellationToken.None)
+                finally
+                    client.Dispose ()
             }
             |> ValueTask
 
