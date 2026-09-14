@@ -50,6 +50,29 @@ type ReadExtensionsIntegrationTests () =
     }
 
     [<TestMethod>]
+    member this.``ExistsAsync and IsNotDeletedAsync match an id present in more than one partition`` () : Task = task {
+        let! container = this.GetContainer ()
+        let firstItem = this.NewItem "shared-id"
+        let secondItem = { firstItem with partitionKey = "integration-2" }
+        do! this.SeedItemsAsync (container, [ firstItem; secondItem ])
+
+        let! existsAcrossPartitions =
+            container.ExistsAsync (firstItem.id, cancellationToken = this.CancellationToken)
+
+        Assert.IsTrue (
+            existsAcrossPartitions,
+            "ExistsAsync should match an id present in more than one partition when the query is not partition-scoped."
+        )
+
+        let! notDeletedAcrossPartitions = container.IsNotDeletedAsync "deletedAt" firstItem.id
+
+        Assert.IsTrue (
+            notDeletedAcrossPartitions,
+            "IsNotDeletedAsync should match an id present in more than one partition when the query is not partition-scoped."
+        )
+    }
+
+    [<TestMethod>]
     [<DataRow("deletedAt", DisplayName = "letters only")>]
     [<DataRow("_deletedAt", DisplayName = "starts with underscore")>]
     [<DataRow("deletedAt1", DisplayName = "digit after first character")>]

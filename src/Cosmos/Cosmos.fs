@@ -241,6 +241,10 @@ module Operations =
 
         /// <summary>
         /// Checks if an item with specified Id exists in the container.
+        /// <para>
+        /// Without a <paramref name="requestOptions"/> partition key, the query spans every partition: the
+        /// same Id can exist in more than one logical partition, so any positive count is treated as a match.
+        /// </para>
         /// </summary>
         /// <param name="id">Item Id</param>
         /// <param name="requestOptions">Request options</param>
@@ -254,7 +258,7 @@ module Operations =
                 |> CancellableTaskSeq.ofFeedIterator cancellationToken
                 |> TaskSeq.tryHead
                 |> Task.map (Option.defaultValue 0)
-            return count = 1
+            return count > 0
         }
 
         /// <summary>
@@ -306,5 +310,5 @@ module Operations =
                     |> CancellableTaskSeq.ofFeedIterator cancellationToken
                     |> TaskSeq.tryHead
                     |> Task.map (Option.defaultValue 0)
-                return count = 1
+                return count > 0
             }
