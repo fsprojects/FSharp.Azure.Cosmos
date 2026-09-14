@@ -159,12 +159,85 @@ type UpsertOperationIntegrationTests () =
 
         let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
 
+        // Two attempts ran with two different eTags; neither may leak into the caller-owned options.
+        Assert.IsNull (
+            operation.RequestOptions.IfMatchEtag,
+            "Upsert concurrently must not write the per-attempt eTag back into the caller's request options."
+        )
+
+        match concurrentResponse.Result with
+        | UpsertConcurrentResult.Ok returned ->
+            Assert.IsTrue (conflictInjected, "Upsert concurrently test should inject a conflicting update at least once.")
+            // upsertConcurrenly disables content response, so an empty Ok proves the builder's options were applied.
+            Assert.IsNull (returned, "Upsert concurrently should honor the builder's disabled content response.")
+
+            let! readResponse =
+                container.ExecuteAsync (
+                    read {
+                        id original.id
+                        partitionKey original.partitionKey
+                    },
+                    this.CancellationToken
+                )
+
+            let persisted = CosmosAssert.WantOk (readResponse.Result, "Upserted item should be readable.")
+            Assert.AreEqual ("upsert-concurrent-updated", persisted.name, "Upsert concurrently should persist updated name.")
+            Assert.AreEqual (original.quantity + 7, persisted.quantity, "Upsert concurrently should persist updated quantity.")
+        | result -> Assert.Fail ($"Expected upsert concurrently success after retry, got {result}.")
+    }
+
+    [<TestMethod>]
+    member this.``UpsertAndRead concurrently returns updated item`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "upsert-concurrent-and-read"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let operation = upsertConcurrenlyAndRead<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            updateOrCreate (fun maybeCurrent -> async {
+                match maybeCurrent with
+                | Some current ->
+                    return
+                        Result.Ok {
+                            current with
+                                name = "upsert-concurrent-and-read-updated"
+                                quantity = current.quantity + 5
+                        }
+                | None -> return Result.Error "Expected existing item for upsertAndRead concurrently test."
+            })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
         match concurrentResponse.Result with
         | UpsertConcurrentResult.Ok updated ->
-            Assert.IsTrue (conflictInjected, "Upsert concurrently test should inject a conflicting update at least once.")
-            Assert.AreEqual ("upsert-concurrent-updated", updated.name, "Upsert concurrently should persist updated name.")
-            Assert.AreEqual (original.quantity + 7, updated.quantity, "Upsert concurrently should persist updated quantity.")
-        | result -> Assert.Fail ($"Expected upsert concurrently success after retry, got {result}.")
+            Assert.AreEqual (
+                "upsert-concurrent-and-read-updated",
+                updated.name,
+                "UpsertAndRead concurrently should return updated name."
+            )
+            Assert.AreEqual (
+                original.quantity + 5,
+                updated.quantity,
+                "UpsertAndRead concurrently should return updated quantity."
+            )
+            Assert.AreEqual (
+                HttpStatusCode.OK,
+                concurrentResponse.HttpStatusCode,
+                "UpsertAndRead concurrently should return HTTP 200."
+            )
+        | result -> Assert.Fail ($"Expected upsertAndRead concurrently success, got {result}.")
     }
 
     [<TestMethod>]
@@ -379,8 +452,21 @@ type UpsertOperationIntegrationTests () =
         let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
 
         match concurrentResponse.Result with
-        | UpsertConcurrentResult.Ok created ->
-            Assert.AreEqual (testItem.id, created.id, "Upsert concurrently create branch should persist the new item's id.")
+        | UpsertConcurrentResult.Ok returned ->
+            // upsertConcurrenly disables content response on the create branch too.
+            Assert.IsNull (returned, "Upsert concurrently create branch should honor the builder's disabled content response.")
+
+            let! readResponse =
+                container.ExecuteAsync (
+                    read {
+                        id testItem.id
+                        partitionKey testItem.partitionKey
+                    },
+                    this.CancellationToken
+                )
+
+            let created =
+                CosmosAssert.WantOk (readResponse.Result, "Item created by upsert concurrently should be readable.")
             Assert.AreEqual (testItem.name, created.name, "Upsert concurrently create branch should persist the new item's name.")
         | result -> Assert.Fail ($"Expected upsert concurrently create success, got {result}.")
     }

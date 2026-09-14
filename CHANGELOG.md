@@ -14,6 +14,7 @@ Return `ValueOption` from Cosmos DB exception unwrappers
 * `delete { eTag }` now sets `IfMatchEtag` instead of `IfNoneMatchEtag`, which the Cosmos SDK ignores on writes; a stale eTag now surfaces as a new `DeleteResult.ModifiedBefore` (412)
 * `ExistsAsync` and `IsNotDeletedAsync` now treat any positive count as a match instead of requiring `count = 1`, fixing a false negative when the same id exists in more than one logical partition
 * `IsNotDeletedAsync` now uses bracket notation for the deleted-marker field name, fixing a query syntax failure when the field name is a reserved Cosmos SQL keyword (e.g. `value`)
+* `replaceConcurrenly` / `upsertConcurrenly` now send the builder's request options (session token, consistency level, indexing directive, triggers, content response) instead of silently dropping them; as a result the non-`AndRead` variants no longer return the item in `Ok` — use `replaceConcurrenlyAndRead` / `upsertConcurrenlyAndRead` to get it
 
 ## [1.0.1] - 2025-08-08
 
