@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 Return `ValueOption` from Cosmos DB exception unwrappers
 
+### Fixed
+* `delete { eTag }` now sets `IfMatchEtag` instead of `IfNoneMatchEtag`, which the Cosmos SDK ignores on writes; a stale eTag now surfaces as a new `DeleteResult.ModifiedBefore` (412)
+* `ExistsAsync` and `IsNotDeletedAsync` now treat any positive count as a match instead of requiring `count = 1`, fixing a false negative when the same id exists in more than one logical partition
+* `IsNotDeletedAsync` now uses bracket notation for the deleted-marker field name, fixing a query syntax failure when the field name is a reserved Cosmos SQL keyword (e.g. `value`)
+
 ## [1.0.1] - 2025-08-08
 
 ### Fixed
