@@ -11,25 +11,8 @@ if ($env:GITHUB_ACTIONS -ne 'true') {
 	exit 0
 }
 
-$containerName = 'cosmosdb'
-
-# The dev container CLI can run initializeCommand more than once, so only create the container once.
-$existing = docker ps --all --filter "name=^$containerName$" --format '{{.Names}}'
-if ($existing -contains $containerName) {
-	Write-Host 'Cosmos DB Emulator container already exists.'
-	docker start $containerName | Out-Null
-}
-else {
-	# Same settings as .github/scripts/linux/start-cosmos-emulator.sh, which the main Linux CI job uses.
-	docker run -d --name $containerName `
-		-p 8081:8081 -p 8080:8080 -p 1234:1234 `
-		-e PROTOCOL=https `
-		mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview | Out-Null
-}
-
-if ($LASTEXITCODE -ne 0) {
-	throw "docker exited with code $LASTEXITCODE."
-}
+# The dev container CLI can run initializeCommand more than once; the start script handles an existing container.
+& (Join-Path $PSScriptRoot '..' '.github' 'scripts' 'linux' 'start-cosmos-emulator.ps1')
 
 $maxAttempts = 120
 for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
@@ -48,5 +31,5 @@ for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
 	Start-Sleep -Seconds 5
 }
 
-docker logs --tail 50 $containerName
+docker logs --tail 50 cosmosdb
 throw 'Cosmos DB Emulator failed to become ready in time.'
