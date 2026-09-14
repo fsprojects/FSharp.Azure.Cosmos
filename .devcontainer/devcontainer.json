@@ -7,9 +7,15 @@
         0
     ],
     // Share the host's network namespace so the container can reach the Cosmos DB Emulator
-    // that CI starts as a sibling container on the runner, bound to the host's 127.0.0.1:8081.
+    // that runs as a sibling container on the host, bound to the host's 127.0.0.1:8081.
     "runArgs": [
         "--network=host"
+    ],
+    // Runs on the host before the container is created. On GitHub Actions it starts the
+    // Cosmos DB Emulator and waits until it is ready; elsewhere it does nothing.
+    "initializeCommand": [
+        "bash",
+        "${localWorkspaceFolder}/.devcontainer/initialize-cosmos-emulator.sh"
     ],
     "features": {
         // https://github.com/devcontainers/features/blob/main/src/common-utils/README.md
@@ -24,8 +30,8 @@
         },
         // https://github.com/devcontainers/features/blob/main/src/github-cli/README.md
         "ghcr.io/devcontainers/features/github-cli:1": {},
-        // https://github.com/devcontainers-contrib/features/blob/main/src/starship/README.md
-        "ghcr.io/devcontainers-contrib/features/starship:1": {},
+        // https://github.com/devcontainers-extra/features/blob/main/src/starship/README.md
+        "ghcr.io/devcontainers-extra/features/starship:1": {},
         // https://github.com/devcontainers/features/blob/main/src/dotnet/README.md
         "ghcr.io/devcontainers/features/dotnet:2": {
             "version": "10.0",
@@ -35,7 +41,7 @@
     "overrideFeatureInstallOrder": [
         "ghcr.io/devcontainers/features/common-utils",
         "ghcr.io/devcontainers/features/github-cli",
-        "ghcr.io/devcontainers-contrib/features/starship",
+        "ghcr.io/devcontainers-extra/features/starship",
         "ghcr.io/devcontainers/features/dotnet"
     ],
     "customizations": {
