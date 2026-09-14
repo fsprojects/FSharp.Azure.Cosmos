@@ -1,8 +1,10 @@
-﻿[<AutoOpen>]
+[<AutoOpen>]
 module FSharp.Azure.Cosmos.Patch
 
 open System.Collections.Immutable
 open System.Linq
+open System.Threading
+open System.Threading.Tasks
 open Microsoft.Azure.Cosmos
 
 [<Struct>]
@@ -11,6 +13,14 @@ type PatchOperation<'T> = {
     Id : string
     PartitionKey : PartitionKey
     RequestOptions : PatchItemRequestOptions
+}
+
+[<Struct>]
+type PatchConcurrentlyOperation<'T, 'E> = {
+    Id : string
+    PartitionKey : PartitionKey
+    RequestOptions : PatchItemRequestOptions
+    Update : 'T -> Task<Result<PatchOperation list, 'E>>
 }
 
 open System
@@ -119,8 +129,111 @@ type PatchBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
+type PatchConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
+    member _.Yield _ =
+        {
+            Id = String.Empty
+            PartitionKey = PartitionKey.None
+            RequestOptions = PatchItemRequestOptions (EnableContentResponseOnWrite = enableContentResponseOnWrite)
+            Update =
+                fun _ ->
+                    raise
+                    <| MissingMethodException ("Update function is not set for concurrent patch operation")
+        }
+        : PatchConcurrentlyOperation<'T, 'E>
+
+    /// Sets the Id of an item being patched
+    [<CustomOperation "id">]
+    member _.Id (state : PatchConcurrentlyOperation<_, _>, id) = { state with Id = id }
+
+    /// Sets the partition key
+    [<CustomOperation "partitionKey">]
+    member _.PartitionKey (state : PatchConcurrentlyOperation<_, _>, partitionKey : PartitionKey) = {
+        state with
+            PartitionKey = partitionKey
+    }
+
+    /// Sets the partition key
+    [<CustomOperation "partitionKey">]
+    member _.PartitionKey (state : PatchConcurrentlyOperation<_, _>, partitionKey : string) = {
+        state with
+            PartitionKey = PartitionKey partitionKey
+    }
+
+    /// Sets the request options
+    [<CustomOperation "requestOptions">]
+    member _.RequestOptions (state : PatchConcurrentlyOperation<_, _>, options : PatchItemRequestOptions) =
+        options.EnableContentResponseOnWrite <- state.RequestOptions.EnableContentResponseOnWrite
+        { state with RequestOptions = options }
+
+    /// Sets the function that computes patch operations from the current item
+    [<CustomOperation "update">]
+    member _.Update (state : PatchConcurrentlyOperation<_, _>, update : 'T -> Task<Result<PatchOperation list, 'E>>) = {
+        state with
+            Update = update
+    }
+
+    // ------------------------------------------- Patch request options -------------------------------------------
+    /// Sets the filter predicate
+    [<CustomOperation "filterPredicate">]
+    member _.FilterPredicate (state : PatchConcurrentlyOperation<_, _>, filterPredicate : string) =
+        state.RequestOptions.FilterPredicate <- filterPredicate
+        state
+
+    // ------------------------------------------- Request options -------------------------------------------
+    /// <summary>Sets the operation <see cref="ConsistencyLevel"/></summary>
+    [<CustomOperation "consistencyLevel">]
+    member _.ConsistencyLevel (state : PatchConcurrentlyOperation<_, _>, consistencyLevel : ConsistencyLevel Nullable) =
+        state.RequestOptions.ConsistencyLevel <- consistencyLevel
+        state
+
+    /// Sets if the response should include the content of the item after the operation
+    [<CustomOperation "enableContentResponseOnWrite">]
+    member _.EnableContentResponseOnWrite (state : PatchConcurrentlyOperation<_, _>, enableContentResponseOnWrite : bool) =
+        state.RequestOptions.EnableContentResponseOnWrite <- enableContentResponseOnWrite
+        state
+
+    /// Sets the indexing directive
+    [<CustomOperation "indexingDirective">]
+    member _.IndexingDirective (state : PatchConcurrentlyOperation<_, _>, indexingDirective : IndexingDirective Nullable) =
+        state.RequestOptions.IndexingDirective <- indexingDirective
+        state
+
+    /// Adds a trigger to be invoked before the operation
+    [<CustomOperation "preTrigger">]
+    member _.PreTrigger (state : PatchConcurrentlyOperation<_, _>, trigger : string) =
+        state.RequestOptions.AddPreTrigger trigger
+        state
+
+    /// Adds triggers to be invoked before the operation
+    [<CustomOperation "preTriggers">]
+    member _.PreTriggers (state : PatchConcurrentlyOperation<_, _>, triggers : seq<string>) =
+        state.RequestOptions.AddPreTriggers triggers
+        state
+
+    /// Adds a trigger to be invoked after the operation
+    [<CustomOperation "postTrigger">]
+    member _.PostTrigger (state : PatchConcurrentlyOperation<_, _>, trigger : string) =
+        state.RequestOptions.AddPostTrigger trigger
+        state
+
+    /// Adds triggers to be invoked after the operation
+    [<CustomOperation "postTriggers">]
+    member _.PostTriggers (state : PatchConcurrentlyOperation<_, _>, triggers : seq<string>) =
+        state.RequestOptions.AddPostTriggers triggers
+        state
+
+    /// Sets the session token
+    [<CustomOperation "sessionToken">]
+    member _.SessionToken (state : PatchConcurrentlyOperation<_, _>, sessionToken : string) =
+        state.RequestOptions.SessionToken <- sessionToken
+        state
+
 let patch<'T> = PatchBuilder<'T>(false)
 let patchAndRead<'T> = PatchBuilder<'T>(true)
+
+let patchConcurrenly<'T, 'E> = PatchConcurrentlyBuilder<'T, 'E>(false)
+let patchConcurrenlyAndRead<'T, 'E> = PatchConcurrentlyBuilder<'T, 'E>(true)
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
 
@@ -132,6 +245,16 @@ type PatchResult<'t> =
     /// Precondition failed
     | ModifiedBefore of ResponseBody : string // 412 - need re-do
     | TooManyRequests of ResponseBody : string * RetryAfter : TimeSpan voption // 429
+
+/// Represents the result of a concurrent patch operation.
+type PatchConcurrentResult<'T, 'E> =
+    | Ok of 'T // 200
+    | BadRequest of ResponseBody : string // 400
+    | NotFound of ResponseBody : string // 404
+    /// Precondition failed
+    | ModifiedBefore of ResponseBody : string // 412 - need re-do
+    | TooManyRequests of ResponseBody : string * RetryAfter : TimeSpan voption // 429
+    | CustomError of Error : 'E
 
 open System.Net
 
@@ -145,10 +268,57 @@ module CosmosException =
         | HttpStatusCode.TooManyRequests -> PatchResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
         | _ -> raise ex
 
+    let toPatchConcurrentlyErrorResult (ex : CosmosException) =
+        match ex.StatusCode with
+        | HttpStatusCode.BadRequest -> PatchConcurrentResult.BadRequest ex.ResponseBody
+        | HttpStatusCode.NotFound -> PatchConcurrentResult.NotFound ex.ResponseBody
+        | HttpStatusCode.PreconditionFailed -> PatchConcurrentResult.ModifiedBefore ex.ResponseBody
+        | HttpStatusCode.TooManyRequests ->
+            PatchConcurrentResult.TooManyRequests (ex.ResponseBody, ex.RetryAfter |> ValueOption.ofNullable)
+        | _ -> raise ex
+
 open System.Runtime.InteropServices
-open System.Threading
-open System.Threading.Tasks
 open CosmosException
+
+let rec executeConcurrentlyAsync<'value, 'error>
+    (ct : CancellationToken)
+    (container : Container)
+    (operation : PatchConcurrentlyOperation<'value, 'error>)
+    (retryAttempts : int)
+    : Task<CosmosResponse<PatchConcurrentResult<'value, 'error>>> = task {
+    try
+        let! response =
+            container.ReadItemAsync<'value>(operation.Id, operation.PartitionKey, cancellationToken = ct)
+        let! patchOperationsResult = operation.Update response.Resource
+
+        match patchOperationsResult with
+        | Result.Error e -> return CosmosResponse.fromItemResponse (fun _ -> CustomError e) response
+        | Result.Ok patchOperations ->
+            // Unlike replace, reuse the builder's own options instead of fresh ones, so that
+            // filterPredicate, triggers and EnableContentResponseOnWrite (patchConcurrenlyAndRead) stay effective.
+            // Each attempt overwrites IfMatchEtag with the eTag of the item it has just read.
+            operation.RequestOptions.IfMatchEtag <- response.ETag
+
+            let! response =
+                container.PatchItemAsync<'value>(
+                    operation.Id,
+                    operation.PartitionKey,
+                    patchOperations.ToImmutableList (),
+                    operation.RequestOptions,
+                    cancellationToken = ct
+                )
+
+            return CosmosResponse.fromItemResponse Ok response
+    with
+    | HandleException ex when
+        ex.StatusCode = HttpStatusCode.PreconditionFailed
+        && retryAttempts = 1
+        ->
+        return CosmosResponse.fromException toPatchConcurrentlyErrorResult ex
+    | HandleException ex when ex.StatusCode = HttpStatusCode.PreconditionFailed ->
+        return! executeConcurrentlyAsync ct container operation (retryAttempts - 1)
+    | HandleException ex -> return CosmosResponse.fromException toPatchConcurrentlyErrorResult ex
+}
 
 type Microsoft.Azure.Cosmos.Container with
 
@@ -207,3 +377,30 @@ type Microsoft.Azure.Cosmos.Container with
         (operation : PatchOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
         =
         container.ExecuteOverwriteAsync (operation, PatchResult.Ok, toPatchResult, cancellationToken)
+
+    /// <summary>
+    /// Executes a patch operation by computing patch operations from the current item
+    /// and returns <see cref="CosmosResponse{PatchConcurrentResult{T, E}}"/>.
+    /// </summary>
+    /// <param name="operation">Patch operation.</param>
+    /// <param name="maxRetryCount">Max retry count. Default is 10.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    member container.ExecuteConcurrentlyAsync<'T, 'E>
+        (
+            operation : PatchConcurrentlyOperation<'T, 'E>,
+            [<Optional; DefaultParameterValue(DefaultRetryCount)>] maxRetryCount : int,
+            [<Optional>] cancellationToken : CancellationToken
+        )
+        =
+        executeConcurrentlyAsync<'T, 'E> cancellationToken container operation maxRetryCount
+
+    /// <summary>
+    /// Executes a patch operation by computing patch operations from the current item
+    /// and returns <see cref="CosmosResponse{PatchConcurrentResult{T, E}}"/>.
+    /// </summary>
+    /// <param name="operation">Patch operation.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    member container.ExecuteConcurrentlyAsync<'T, 'E>
+        (operation : PatchConcurrentlyOperation<'T, 'E>, [<Optional>] cancellationToken : CancellationToken)
+        =
+        executeConcurrentlyAsync<'T, 'E> cancellationToken container operation DefaultRetryCount
