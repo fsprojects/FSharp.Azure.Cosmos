@@ -80,7 +80,7 @@ type ReadBuilder<'T> () =
             options.SessionToken <- sessionToken
             state
 
-let read<'T> = ReadBuilder<'T> ()
+let read<'T> = ReadBuilder<'T>()
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
 
@@ -114,7 +114,7 @@ type Microsoft.Azure.Cosmos.Container with
     /// <param name="operation">Read operation</param>
     /// <param name="cancellationToken">Cancellation token</param>
     member container.PlainExecuteAsync<'T> (operation : ReadOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
-        container.ReadItemAsync<'T> (
+        container.ReadItemAsync<'T>(
             operation.Id,
             operation.PartitionKey,
             operation.RequestOptions,
@@ -131,14 +131,13 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteAsync<'T, 'Result>
         (operation : ReadOperation<'T>, success, failure, [<Optional>] cancellationToken : CancellationToken)
         : Task<CosmosResponse<'Result>>
-        =
-        task {
-            try
-                let! result = container.PlainExecuteAsync (operation, cancellationToken)
-                return CosmosResponse.fromItemResponse (success) result
-            with HandleException ex ->
-                return CosmosResponse.fromException (failure) ex
-        }
+        = task {
+        try
+            let! result = container.PlainExecuteAsync (operation, cancellationToken)
+            return CosmosResponse.fromItemResponse (success) result
+        with HandleException ex ->
+            return CosmosResponse.fromException (failure) ex
+    }
 
     /// <summary>
     /// Executes a read operation and returns <see cref="CosmosResponse{ReadResult{T}}"/>.
@@ -152,7 +151,7 @@ type Microsoft.Azure.Cosmos.Container with
             else
                 ReadResult.Ok result
 
-        container.ExecuteAsync<'T, ReadResult<'T>> (
+        container.ExecuteAsync<'T, ReadResult<'T>>(
             operation,
             successFn,
             toReadResult ReadResult.IncompatibleConsistencyLevel ReadResult.NotFound,
@@ -165,7 +164,7 @@ type Microsoft.Azure.Cosmos.Container with
     /// <param name="operation">Read operation</param>
     /// <param name="cancellationToken">Cancellation token</param>
     member container.ExecuteAsyncOption<'T> (operation : ReadOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
-        container.ExecuteAsync<'T, 'T option> (
+        container.ExecuteAsync<'T, 'T option>(
             operation,
             Some,
             toReadResult (fun message -> raise (invalidOp message)) (fun _ -> None),
@@ -180,7 +179,7 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteAsyncValueOption<'T>
         (operation : ReadOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
         =
-        container.ExecuteAsync<'T, 'T voption> (
+        container.ExecuteAsync<'T, 'T voption>(
             operation,
             ValueSome,
             toReadResult (fun message -> raise (invalidOp message)) (fun _ -> ValueNone),

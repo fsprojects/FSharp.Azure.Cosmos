@@ -81,7 +81,7 @@ type ReadManyBuilder<'T> () =
             options.SessionToken <- sessionToken
             state
 
-let readMany<'T> = ReadManyBuilder<'T> ()
+let readMany<'T> = ReadManyBuilder<'T>()
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
 
@@ -117,7 +117,7 @@ type Microsoft.Azure.Cosmos.Container with
     member container.PlainExecuteAsync<'T>
         (operation : ReadManyOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
         =
-        container.ReadManyItemsAsync<'T> (operation.Items, operation.RequestOptions, cancellationToken = cancellationToken)
+        container.ReadManyItemsAsync<'T>(operation.Items, operation.RequestOptions, cancellationToken = cancellationToken)
 
     /// <summary>
     /// Executes a read many operation, transforms success or failure, and returns <see cref="CosmosResponse{T}"/>.
@@ -129,14 +129,13 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteAsync<'T, 'Result>
         (operation : ReadManyOperation<'T>, success, failure, [<Optional>] cancellationToken : CancellationToken)
         : Task<CosmosResponse<'Result>>
-        =
-        task {
-            try
-                let! result = container.PlainExecuteAsync (operation, cancellationToken)
-                return CosmosResponse.fromFeedResponse (success) result
-            with HandleException ex ->
-                return CosmosResponse.fromException (failure) ex
-        }
+        = task {
+        try
+            let! result = container.PlainExecuteAsync (operation, cancellationToken)
+            return CosmosResponse.fromFeedResponse (success) result
+        with HandleException ex ->
+            return CosmosResponse.fromException (failure) ex
+    }
 
     /// <summary>
     /// Executes a read many operation and returns <see cref="CosmosResponse{ReadManyResult{FeedResponse{T}}}"/>.
@@ -150,7 +149,7 @@ type Microsoft.Azure.Cosmos.Container with
             else
                 ReadManyResult.Ok result
 
-        container.ExecuteAsync<'T, ReadManyResult<FeedResponse<'T>>> (
+        container.ExecuteAsync<'T, ReadManyResult<FeedResponse<'T>>>(
             operation,
             successFn,
             toReadResult ReadManyResult.IncompatibleConsistencyLevel ReadManyResult.NotFound,

@@ -202,11 +202,11 @@ type UpsertConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
-let upsert<'T> = UpsertBuilder<'T> (false)
-let upsertAndRead<'T> = UpsertBuilder<'T> (true)
+let upsert<'T> = UpsertBuilder<'T>(false)
+let upsertAndRead<'T> = UpsertBuilder<'T>(true)
 
-let upsertConcurrenly<'T, 'E> = UpsertConcurrentlyBuilder<'T, 'E> (false)
-let upsertConcurrenlyAndRead<'T, 'E> = UpsertConcurrentlyBuilder<'T, 'E> (true)
+let upsertConcurrenly<'T, 'E> = UpsertConcurrentlyBuilder<'T, 'E>(false)
+let upsertConcurrenlyAndRead<'T, 'E> = UpsertConcurrentlyBuilder<'T, 'E>(true)
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
 
@@ -256,59 +256,54 @@ let rec executeConcurrentlyAsync<'value, 'error>
     (container : Container)
     (operation : UpsertConcurrentlyOperation<'value, 'error>)
     (retryAttempts : int)
-    : Task<CosmosResponse<UpsertConcurrentResult<'value, 'error>>> =
-    task {
+    : Task<CosmosResponse<UpsertConcurrentResult<'value, 'error>>> = task {
 
-        let! itemResult, response = task {
-            let partitionKey =
-                match operation.PartitionKey with
-                | ValueSome partitionKey -> partitionKey
-                | ValueNone -> PartitionKey.None
-
-            try
-                let! response = container.ReadItemAsync<'value> (operation.Id, partitionKey, cancellationToken = ct)
-                let! itemResult = operation.UpdateOrCreate (Some response.Resource)
-                return itemResult, Choice1Of2 response
-            with HandleException ex when ex.StatusCode = HttpStatusCode.NotFound ->
-                let! itemResult = operation.UpdateOrCreate None
-                return itemResult, Choice2Of2 ex
-        }
+    let! itemResult, response = task {
+        let partitionKey =
+            match operation.PartitionKey with
+            | ValueSome partitionKey -> partitionKey
+            | ValueNone -> PartitionKey.None
 
         try
-            match itemResult, response with
-            | Result.Error e, Choice1Of2 response -> return CosmosResponse.fromItemResponse (fun _ -> CustomError e) response
-            | Result.Error e, Choice2Of2 ex -> return CosmosResponse.fromException (fun _ -> CustomError e) ex
-            | Result.Ok item, Choice1Of2 response ->
-                let updateOptions = ItemRequestOptions (IfMatchEtag = response.ETag)
-
-                let! response =
-                    container.UpsertItemAsync<'value> (
-                        item,
-                        operation.PartitionKey |> ValueOption.toNullable,
-                        requestOptions = updateOptions,
-                        cancellationToken = ct
-                    )
-
-                return CosmosResponse.fromItemResponse Ok response
-            | Result.Ok item, Choice2Of2 ex ->
-                let! response =
-                    container.UpsertItemAsync<'value> (
-                        item,
-                        operation.PartitionKey |> ValueOption.toNullable,
-                        cancellationToken = ct
-                    )
-
-                return CosmosResponse.fromItemResponse Ok response
-        with
-        | HandleException ex when
-            ex.StatusCode = HttpStatusCode.PreconditionFailed
-            && retryAttempts = 1
-            ->
-            return CosmosResponse.fromException toUpsertConcurrentlyErrorResult ex
-        | HandleException ex when ex.StatusCode = HttpStatusCode.PreconditionFailed ->
-            return! executeConcurrentlyAsync ct container operation (retryAttempts - 1)
-        | HandleException ex -> return CosmosResponse.fromException toUpsertConcurrentlyErrorResult ex
+            let! response = container.ReadItemAsync<'value>(operation.Id, partitionKey, cancellationToken = ct)
+            let! itemResult = operation.UpdateOrCreate (Some response.Resource)
+            return itemResult, Choice1Of2 response
+        with HandleException ex when ex.StatusCode = HttpStatusCode.NotFound ->
+            let! itemResult = operation.UpdateOrCreate None
+            return itemResult, Choice2Of2 ex
     }
+
+    try
+        match itemResult, response with
+        | Result.Error e, Choice1Of2 response -> return CosmosResponse.fromItemResponse (fun _ -> CustomError e) response
+        | Result.Error e, Choice2Of2 ex -> return CosmosResponse.fromException (fun _ -> CustomError e) ex
+        | Result.Ok item, Choice1Of2 response ->
+            let updateOptions = ItemRequestOptions (IfMatchEtag = response.ETag)
+
+            let! response =
+                container.UpsertItemAsync<'value>(
+                    item,
+                    operation.PartitionKey |> ValueOption.toNullable,
+                    requestOptions = updateOptions,
+                    cancellationToken = ct
+                )
+
+            return CosmosResponse.fromItemResponse Ok response
+        | Result.Ok item, Choice2Of2 ex ->
+            let! response =
+                container.UpsertItemAsync<'value>(item, operation.PartitionKey |> ValueOption.toNullable, cancellationToken = ct)
+
+            return CosmosResponse.fromItemResponse Ok response
+    with
+    | HandleException ex when
+        ex.StatusCode = HttpStatusCode.PreconditionFailed
+        && retryAttempts = 1
+        ->
+        return CosmosResponse.fromException toUpsertConcurrentlyErrorResult ex
+    | HandleException ex when ex.StatusCode = HttpStatusCode.PreconditionFailed ->
+        return! executeConcurrentlyAsync ct container operation (retryAttempts - 1)
+    | HandleException ex -> return CosmosResponse.fromException toUpsertConcurrentlyErrorResult ex
+}
 
 open System.Runtime.InteropServices
 
@@ -323,7 +318,7 @@ type Microsoft.Azure.Cosmos.Container with
     /// <param name="operation">Upsert operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     member container.PlainExecuteAsync<'T> (operation : UpsertOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
-        container.UpsertItemAsync<'T> (
+        container.UpsertItemAsync<'T>(
             operation.Item,
             operation.PartitionKey |> ValueOption.toNullable,
             operation.RequestOptions,
@@ -340,14 +335,13 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteOverwriteAsync<'T, 'Result>
         (operation : UpsertOperation<'T>, succsess, failure, [<Optional>] cancellationToken : CancellationToken)
         : Task<CosmosResponse<'Result>>
-        =
-        task {
-            try
-                let! response = container.PlainExecuteAsync (operation, cancellationToken)
-                return CosmosResponse.fromItemResponse succsess response
-            with HandleException ex ->
-                return CosmosResponse.fromException failure ex
-        }
+        = task {
+        try
+            let! response = container.PlainExecuteAsync (operation, cancellationToken)
+            return CosmosResponse.fromItemResponse succsess response
+        with HandleException ex ->
+            return CosmosResponse.fromException failure ex
+    }
 
     /// <summary>
     /// Executes an upsert operation safely and returns <see cref="CosmosResponse{UpsertResult{T}}"/>.

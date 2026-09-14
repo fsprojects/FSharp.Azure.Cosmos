@@ -119,8 +119,8 @@ type PatchBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
-let patch<'T> = PatchBuilder<'T> (false)
-let patchAndRead<'T> = PatchBuilder<'T> (true)
+let patch<'T> = PatchBuilder<'T>(false)
+let patchAndRead<'T> = PatchBuilder<'T>(true)
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
 
@@ -158,7 +158,7 @@ type Microsoft.Azure.Cosmos.Container with
     /// <param name="operation">Patch operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     member container.PlainExecuteAsync<'T> (operation : PatchOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
-        container.PatchItemAsync<'T> (
+        container.PatchItemAsync<'T>(
             operation.Id,
             operation.PartitionKey,
             operation.Operations.ToImmutableList (),
@@ -176,14 +176,13 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteOverwriteAsync<'T, 'Result>
         (operation : PatchOperation<'T>, success, failure, [<Optional>] cancellationToken : CancellationToken)
         : Task<CosmosResponse<'Result>>
-        =
-        task {
-            try
-                let! response = container.PlainExecuteAsync<'T> (operation, cancellationToken)
-                return CosmosResponse.fromItemResponse success response
-            with HandleException ex ->
-                return CosmosResponse.fromException failure ex
-        }
+        = task {
+        try
+            let! response = container.PlainExecuteAsync<'T>(operation, cancellationToken)
+            return CosmosResponse.fromItemResponse success response
+        with HandleException ex ->
+            return CosmosResponse.fromException failure ex
+    }
 
     /// <summary>
     /// Executes a patch operation safely and returns <see cref="CosmosResponse{PatchResult{T}}"/>.

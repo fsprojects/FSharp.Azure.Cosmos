@@ -93,8 +93,8 @@ type CreateBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
-let create<'T> = CreateBuilder<'T> (false)
-let createAndRead<'T> = CreateBuilder<'T> (true)
+let create<'T> = CreateBuilder<'T>(false)
+let createAndRead<'T> = CreateBuilder<'T>(true)
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
 
@@ -136,7 +136,7 @@ type Microsoft.Azure.Cosmos.Container with
     /// <param name="operation">Create operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     member container.PlainExecuteAsync<'T> (operation : CreateOperation<'T>, [<Optional>] cancellationToken : CancellationToken) =
-        container.CreateItemAsync<'T> (
+        container.CreateItemAsync<'T>(
             operation.Item,
             operation.PartitionKey |> ValueOption.toNullable,
             operation.RequestOptions,
@@ -151,11 +151,10 @@ type Microsoft.Azure.Cosmos.Container with
     member container.ExecuteAsync<'T>
         (operation : CreateOperation<'T>, [<Optional>] cancellationToken : CancellationToken)
         : Task<CosmosResponse<CreateResult<'T>>>
-        =
-        task {
-            try
-                let! response = container.PlainExecuteAsync (operation, cancellationToken)
-                return CosmosResponse.fromItemResponse CreateResult.Ok response
-            with HandleException ex ->
-                return CosmosResponse.fromException toCreateResult ex
-        }
+        = task {
+        try
+            let! response = container.PlainExecuteAsync (operation, cancellationToken)
+            return CosmosResponse.fromItemResponse CreateResult.Ok response
+        with HandleException ex ->
+            return CosmosResponse.fromException toCreateResult ex
+    }
