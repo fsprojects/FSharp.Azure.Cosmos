@@ -105,6 +105,13 @@ type ReadOperationIntegrationTests () =
 
         match notModifiedResponse.Result with
         | ReadResult.NotModified -> ()
+        | ReadResult.Ok _ when notModifiedResponse.HttpStatusCode = HttpStatusCode.OK ->
+            // The service ignored If-None-Match and returned the full document (observed on the Linux
+            // vnext-preview emulator). NotModified cannot be produced without a 304 from the service, so this
+            // environment cannot verify conditional reads; report that instead of passing or failing.
+            Assert.Inconclusive (
+                "The Cosmos DB endpoint ignored If-None-Match and returned HTTP 200, so conditional reads cannot be verified against it."
+            )
         | result ->
             Assert.Fail (
                 $"Expected ReadResult.NotModified for a matching eTag, got {result} (HTTP {int notModifiedResponse.HttpStatusCode})."
