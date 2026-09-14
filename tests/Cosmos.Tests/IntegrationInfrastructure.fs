@@ -60,14 +60,15 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
         || uri.Host.Equals ("127.0.0.1", StringComparison.OrdinalIgnoreCase)
 
     let createHttpClient () =
-        let handler = new HttpClientHandler ()
-
-        handler.ServerCertificateCustomValidationCallback <-
-            (fun request _ _ errors ->
-                match request.RequestUri with
-                | null -> errors = SslPolicyErrors.None
-                | requestUri when errors = SslPolicyErrors.None -> true
-                | requestUri -> isLocalEmulatorHost requestUri
+        let handler =
+            new HttpClientHandler (
+                ServerCertificateCustomValidationCallback =
+                    (fun request _ _ errors ->
+                        match request.RequestUri with
+                        | null -> errors = SslPolicyErrors.None
+                        | requestUri when errors = SslPolicyErrors.None -> true
+                        | requestUri -> isLocalEmulatorHost requestUri
+                    )
             )
 
         new HttpClient (handler, true)
@@ -157,7 +158,7 @@ type IntegrationTestBase<'DatabaseTestApplicationFactory when 'DatabaseTestAppli
         match this.application with
         | ValueNone -> ()
         | ValueSome application ->
-            do! (application :> IAsyncDisposable).DisposeAsync().AsTask()
+            do! (application :> IAsyncDisposable).DisposeAsync()
             this.application <- ValueNone
     }
 

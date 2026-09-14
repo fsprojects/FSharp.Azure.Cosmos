@@ -25,15 +25,17 @@ type IterationExtensionsIntegrationTests () =
             QueryDefinition("SELECT * FROM c WHERE c.partitionKey = @partitionKey").WithParameter("@partitionKey", "integration")
 
         let iterator = container.GetItemQueryIterator<TestItem>(query)
-        let expectedIds = set [ firstItem.id; secondItem.id ]
+        let expectedIds = [| firstItem.id; secondItem.id |]
         let! iteratedItems =
             iterator.AsAsyncEnumerable<TestItem>(this.CancellationToken)
             |> TaskSeq.toListAsync
-        let foundCount =
-            iteratedItems
-            |> Seq.filter (fun item -> expectedIds.Contains item.id)
-            |> Seq.length
-        Assert.AreEqual (2, foundCount, "FeedIterator.AsAsyncEnumerable should iterate seeded items.")
+
+        Assert.HasCount (2, iteratedItems, "FeedIterator.AsAsyncEnumerable should return exactly the seeded items.")
+        CollectionAssert.AreEquivalent (
+            expectedIds,
+            iteratedItems |> List.map _.id |> Array.ofList,
+            "FeedIterator.AsAsyncEnumerable should iterate seeded items without duplicates or omissions."
+        )
     }
 
     [<TestMethod>]
@@ -49,13 +51,15 @@ type IterationExtensionsIntegrationTests () =
                 requestOptions = QueryRequestOptions (PartitionKey = PartitionKey "integration")
             )
 
-        let expectedIds = set [ firstItem.id; secondItem.id ]
+        let expectedIds = [| firstItem.id; secondItem.id |]
         let! iteratedItems =
             queryable.AsAsyncEnumerable<TestItem>(this.CancellationToken)
             |> TaskSeq.toListAsync
-        let foundCount =
-            iteratedItems
-            |> Seq.filter (fun item -> expectedIds.Contains item.id)
-            |> Seq.length
-        Assert.AreEqual (2, foundCount, "IQueryable.AsAsyncEnumerable should iterate seeded items.")
+
+        Assert.HasCount (2, iteratedItems, "IQueryable.AsAsyncEnumerable should return exactly the seeded items.")
+        CollectionAssert.AreEquivalent (
+            expectedIds,
+            iteratedItems |> List.map _.id |> Array.ofList,
+            "IQueryable.AsAsyncEnumerable should iterate seeded items without duplicates or omissions."
+        )
     }
