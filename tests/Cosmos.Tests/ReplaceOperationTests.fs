@@ -145,12 +145,82 @@ type ReplaceOperationIntegrationTests () =
 
         let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
 
+        // Two attempts ran with two different eTags; neither may leak into the caller-owned options.
+        Assert.IsNull (
+            operation.RequestOptions.IfMatchEtag,
+            "Replace concurrently must not write the per-attempt eTag back into the caller's request options."
+        )
+
+        match concurrentResponse.Result with
+        | ReplaceConcurrentResult.Ok returned ->
+            Assert.IsTrue (conflictInjected, "Replace concurrently test should inject a conflicting update at least once.")
+            // replaceConcurrenly disables content response, so an empty Ok proves the builder's options were applied.
+            Assert.IsNull (returned, "Replace concurrently should honor the builder's disabled content response.")
+
+            let! readResponse =
+                container.ExecuteAsync (
+                    read {
+                        id original.id
+                        partitionKey original.partitionKey
+                    },
+                    this.CancellationToken
+                )
+
+            let persisted = CosmosAssert.WantOk (readResponse.Result, "Replaced item should be readable.")
+            Assert.AreEqual ("replace-concurrent-updated", persisted.name, "Replace concurrently should persist updated name.")
+            Assert.AreEqual (original.quantity + 10, persisted.quantity, "Replace concurrently should persist updated quantity.")
+        | result -> Assert.Fail ($"Expected replace concurrently success after retry, got {result}.")
+    }
+
+    [<TestMethod>]
+    member this.``ReplaceAndRead concurrently returns replaced item`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "replace-concurrent-and-read"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let operation = replaceConcurrenlyAndRead<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            update (fun current -> async {
+                return
+                    Result.Ok {
+                        current with
+                            name = "replace-concurrent-and-read-updated"
+                            quantity = current.quantity + 5
+                    }
+            })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
         match concurrentResponse.Result with
         | ReplaceConcurrentResult.Ok updated ->
-            Assert.IsTrue (conflictInjected, "Replace concurrently test should inject a conflicting update at least once.")
-            Assert.AreEqual ("replace-concurrent-updated", updated.name, "Replace concurrently should persist updated name.")
-            Assert.AreEqual (original.quantity + 10, updated.quantity, "Replace concurrently should persist updated quantity.")
-        | result -> Assert.Fail ($"Expected replace concurrently success after retry, got {result}.")
+            Assert.AreEqual (
+                "replace-concurrent-and-read-updated",
+                updated.name,
+                "ReplaceAndRead concurrently should return updated name."
+            )
+            Assert.AreEqual (
+                original.quantity + 5,
+                updated.quantity,
+                "ReplaceAndRead concurrently should return updated quantity."
+            )
+            Assert.AreEqual (
+                HttpStatusCode.OK,
+                concurrentResponse.HttpStatusCode,
+                "ReplaceAndRead concurrently should return HTTP 200."
+            )
+        | result -> Assert.Fail ($"Expected replaceAndRead concurrently success, got {result}.")
     }
 
     [<TestMethod>]
