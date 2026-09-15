@@ -15,11 +15,30 @@ type PatchOperation<'T> = {
     RequestOptions : PatchItemRequestOptions
 }
 
+/// <summary>
+/// A patch of an item of type <typeparamref name="T"/> that is computed from the item's current state and applied with optimistic concurrency.
+/// <para>
+/// Each attempt reads the item, passes it to <see cref="PatchConcurrentlyOperation{T, E}.Update"/> to compute the patch
+/// operations, and applies them only if the item still has the eTag it was read with. After a precondition failure
+/// (HTTP 412) the next attempt starts over with a fresh read. <typeparamref name="E"/> is the type of the error the update function
+/// can return to stop the operation.
+/// </para>
+/// </summary>
 [<Struct>]
 type PatchConcurrentlyOperation<'T, 'E> = {
+    /// Id of the item to patch
     Id : string
+    /// Partition key of the item to patch
     PartitionKey : PartitionKey
+    /// Options applied to every patch attempt; the eTag of each attempt is set on a copy, never on this object
     RequestOptions : PatchItemRequestOptions
+    /// <summary>
+    /// Computes the patch operations to apply from the current item, or returns an error to stop the operation.
+    /// <para>
+    /// Runs once per attempt, so it runs again with the re-read item after every precondition failure (HTTP 412).
+    /// Keep it free of side effects that are unsafe to repeat.
+    /// </para>
+    /// </summary>
     Update : 'T -> Task<Result<PatchOperation list, 'E>>
 }
 
@@ -129,6 +148,10 @@ type PatchBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
+/// <summary>
+/// Computation expression builder for <see cref="PatchConcurrentlyOperation{T, E}"/>.
+/// </summary>
+/// <param name="enableContentResponseOnWrite">Whether a successful patch returns the patched item.</param>
 type PatchConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
     member _.Yield _ =
         {
@@ -166,7 +189,14 @@ type PatchConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
         options.EnableContentResponseOnWrite <- state.RequestOptions.EnableContentResponseOnWrite
         { state with RequestOptions = options }
 
-    /// Sets the function that computes patch operations from the current item
+    /// <summary>
+    /// Sets the function that computes the patch operations to apply from the current item.
+    /// <para>
+    /// The function runs once per attempt: after every precondition failure (HTTP 412) the item is read again and the
+    /// function is called again with the fresh item, so it must not have side effects that are unsafe to repeat.
+    /// Returning an error stops the operation and reports that error through <see cref="PatchConcurrentResult{T, E}"/>.
+    /// </para>
+    /// </summary>
     [<CustomOperation "update">]
     member _.Update (state : PatchConcurrentlyOperation<_, _>, update : 'T -> Task<Result<PatchOperation list, 'E>>) = {
         state with
@@ -232,7 +262,14 @@ type PatchConcurrentlyBuilder<'T, 'E> (enableContentResponseOnWrite : bool) =
 let patch<'T> = PatchBuilder<'T>(false)
 let patchAndRead<'T> = PatchBuilder<'T>(true)
 
+/// <summary>
+/// Builds a <see cref="PatchConcurrentlyOperation{T, E}"/> whose successful result does not include the patched item.
+/// </summary>
 let patchConcurrenly<'T, 'E> = PatchConcurrentlyBuilder<'T, 'E>(false)
+
+/// <summary>
+/// Builds a <see cref="PatchConcurrentlyOperation{T, E}"/> whose successful result includes the patched item.
+/// </summary>
 let patchConcurrenlyAndRead<'T, 'E> = PatchConcurrentlyBuilder<'T, 'E>(true)
 
 // https://docs.microsoft.com/en-us/rest/api/cosmos-db/http-status-codes-for-cosmosdb
@@ -280,6 +317,14 @@ module CosmosException =
 open System.Runtime.InteropServices
 open CosmosException
 
+/// <summary>
+/// Reads the item, computes the patch operations with the operation's update function, and applies them with the
+/// read eTag, starting over on a precondition failure (HTTP 412) while attempts remain.
+/// </summary>
+/// <param name="ct">Cancellation token.</param>
+/// <param name="container">Container that holds the item.</param>
+/// <param name="operation">Patch operation.</param>
+/// <param name="retryAttempts">Number of attempts left, including this one. Values below one make a single attempt.</param>
 let rec executeConcurrentlyAsync<'value, 'error>
     (ct : CancellationToken)
     (container : Container)
@@ -388,7 +433,10 @@ type Microsoft.Azure.Cosmos.Container with
     /// and returns <see cref="CosmosResponse{PatchConcurrentResult{T, E}}"/>.
     /// </summary>
     /// <param name="operation">Patch operation.</param>
-    /// <param name="maxRetryCount">Max retry count. Must be greater than zero. Default is 10.</param>
+    /// <param name="maxRetryCount">
+    /// Maximum number of attempts, including the first one, so <c>1</c> makes a single attempt without retrying.
+    /// Must be greater than zero. Default is 10.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxRetryCount"/> is less than one.</exception>
     member container.ExecuteConcurrentlyAsync<'T, 'E>
@@ -400,7 +448,11 @@ type Microsoft.Azure.Cosmos.Container with
         =
         if maxRetryCount < 1 then
             raise (
-                ArgumentOutOfRangeException (nameof maxRetryCount, maxRetryCount, "Max retry count must be greater than zero.")
+                ArgumentOutOfRangeException (
+                    nameof maxRetryCount,
+                    maxRetryCount,
+                    "The maximum number of attempts, including the first one, must be greater than zero."
+                )
             )
 
         executeConcurrentlyAsync<'T, 'E> cancellationToken container operation maxRetryCount
@@ -408,6 +460,9 @@ type Microsoft.Azure.Cosmos.Container with
     /// <summary>
     /// Executes a patch operation by computing patch operations from the current item
     /// and returns <see cref="CosmosResponse{PatchConcurrentResult{T, E}}"/>.
+    /// <para>
+    /// Makes at most 10 attempts, including the first one.
+    /// </para>
     /// </summary>
     /// <param name="operation">Patch operation.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
