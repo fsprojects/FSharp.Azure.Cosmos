@@ -400,6 +400,46 @@ type BuilderUnitTests () =
         )
 
     [<TestMethod>]
+    member _.``Patch concurrently builders configure update function and response mode`` () : Task = task {
+        let patchConcurrentlyOperation = patchConcurrenly<BuilderTestItem, string> {
+            id "patch-concurrent-id"
+            partitionKey "pk"
+            filterPredicate "FROM c WHERE c.partitionKey = 'pk'"
+            update (fun item -> task { return Result.Ok [ PatchOperation.Replace ("/value", item.value + 1) ] })
+        }
+
+        let patchConcurrentlyAndReadOperation = patchConcurrenlyAndRead<BuilderTestItem, string> {
+            id "patch-concurrent-and-read-id"
+            partitionKey "pk"
+            update (fun item -> task { return Result.Ok [ PatchOperation.Replace ("/value", item.value) ] })
+        }
+
+        let! updateResult = patchConcurrentlyOperation.Update { id = "id"; partitionKey = "pk"; value = 2 }
+
+        Assert.AreEqual ("patch-concurrent-id", patchConcurrentlyOperation.Id, "Patch concurrently builder should set id.")
+        let patchOperations =
+            Assert.WantOk (updateResult, "Patch concurrently builder should set update function.")
+        Assert.HasCount (
+            1,
+            patchOperations,
+            "Patch concurrently builder's update function should return the configured operations."
+        )
+        Assert.AreEqual (
+            "FROM c WHERE c.partitionKey = 'pk'",
+            patchConcurrentlyOperation.RequestOptions.FilterPredicate,
+            "Patch concurrently builder should set filter predicate."
+        )
+        Assert.IsFalse (
+            patchConcurrentlyOperation.RequestOptions.EnableContentResponseOnWrite,
+            "Patch concurrently builder should disable content response."
+        )
+        Assert.IsTrue (
+            patchConcurrentlyAndReadOperation.RequestOptions.EnableContentResponseOnWrite,
+            "Patch concurrently and read builder should enable content response."
+        )
+    }
+
+    [<TestMethod>]
     member _.``Delete builder configures id partition key and request options`` () =
         let operation = delete {
             id "delete-id"

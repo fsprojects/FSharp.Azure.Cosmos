@@ -231,3 +231,312 @@ type PatchOperationIntegrationTests () =
             "Safe patch with a stale eTag should return HTTP 412."
         )
     }
+
+    [<TestMethod>]
+    member this.``Patch concurrently retries and applies update`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "patch-concurrent"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let mutable conflictInjected = false
+
+        let operation = patchConcurrenly<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            update (fun current -> task {
+                if not conflictInjected then
+                    conflictInjected <- true
+
+                    let competingUpdate = { current with name = "competing-patch" }
+
+                    let! competingResponse =
+                        container.ExecuteOverwriteAsync (
+                            patch {
+                                id competingUpdate.id
+                                partitionKey competingUpdate.partitionKey
+                                operation (PatchOperation.Replace ("/name", competingUpdate.name))
+                            },
+                            this.CancellationToken
+                        )
+
+                    CosmosAssert.IsOk (
+                        competingResponse.Result,
+                        "Competing patch should succeed so the retried patch observes a stale ETag."
+                    )
+
+                return
+                    Result.Ok [
+                        PatchOperation.Replace ("/name", "patch-concurrent-updated")
+                        PatchOperation.Replace ("/quantity", current.quantity + 10)
+                    ]
+            })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
+        // Two attempts ran with two different eTags; neither may leak into the caller-owned options.
+        Assert.IsNull (
+            operation.RequestOptions.IfMatchEtag,
+            "Patch concurrently must not write the per-attempt eTag back into the caller's request options."
+        )
+
+        match concurrentResponse.Result with
+        | PatchConcurrentResult.Ok _ ->
+            Assert.IsTrue (conflictInjected, "Patch concurrently test should inject a conflicting update at least once.")
+
+            let! readResponse =
+                container.ExecuteAsync (
+                    read {
+                        id original.id
+                        partitionKey original.partitionKey
+                    },
+                    this.CancellationToken
+                )
+
+            let persisted = CosmosAssert.WantOk (readResponse.Result, "Patched item should be readable.")
+            Assert.AreEqual ("patch-concurrent-updated", persisted.name, "Patch concurrently should persist updated name.")
+            Assert.AreEqual (original.quantity + 10, persisted.quantity, "Patch concurrently should persist updated quantity.")
+        | result -> Assert.Fail ($"Expected patch concurrently success after retry, got {result}.")
+    }
+
+    [<TestMethod>]
+    member this.``PatchAndRead concurrently returns patched item`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "patch-concurrent-and-read"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let operation = patchConcurrenlyAndRead<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            update (fun current -> task {
+                return
+                    Result.Ok [
+                        PatchOperation.Replace ("/name", "patch-concurrent-and-read-updated")
+                        PatchOperation.Replace ("/quantity", current.quantity + 5)
+                    ]
+            })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
+        match concurrentResponse.Result with
+        | PatchConcurrentResult.Ok updated ->
+            Assert.AreEqual (
+                "patch-concurrent-and-read-updated",
+                updated.name,
+                "PatchAndRead concurrently should return updated name."
+            )
+            Assert.AreEqual (original.quantity + 5, updated.quantity, "PatchAndRead concurrently should return updated quantity.")
+            Assert.AreEqual (
+                HttpStatusCode.OK,
+                concurrentResponse.HttpStatusCode,
+                "PatchAndRead concurrently should return HTTP 200."
+            )
+        | result -> Assert.Fail ($"Expected patchAndRead concurrently success, got {result}.")
+    }
+
+    [<TestMethod>]
+    member this.``Patch concurrently returns CustomError when update reports an error`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "patch-concurrent-custom-error"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let operation = patchConcurrenly<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            update (fun _ -> task { return Result.Error "update rejected" })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
+        let customError =
+            CosmosAssert.WantCustomError (
+                concurrentResponse.Result,
+                "Patch concurrently should return PatchConcurrentResult.CustomError when update reports an error."
+            )
+
+        Assert.AreEqual ("update rejected", customError, "Patch concurrently CustomError should carry the reported error.")
+    }
+
+    [<TestMethod>]
+    member this.``Patch concurrently returns ModifiedBefore when retries are exhausted`` () : Task = task {
+        let! container = this.GetContainer ()
+        let original = this.NewItem "patch-concurrent-exhausted"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item original
+                    partitionKey original.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        let operation = patchConcurrenly<TestItem, string> {
+            id original.id
+            partitionKey original.partitionKey
+            update (fun current -> task {
+                // Always inject a competing write first, so the single allowed attempt
+                // (maxRetryCount = 1) always observes a stale ETag and exhausts immediately.
+                let competingUpdate = { current with name = "competing-exhaustion-patch" }
+
+                let! competingResponse =
+                    container.ExecuteOverwriteAsync (
+                        patch {
+                            id competingUpdate.id
+                            partitionKey competingUpdate.partitionKey
+                            operation (PatchOperation.Replace ("/name", competingUpdate.name))
+                        },
+                        this.CancellationToken
+                    )
+
+                CosmosAssert.IsOk (
+                    competingResponse.Result,
+                    "Competing patch should succeed so every attempt observes a stale ETag."
+                )
+
+                return Result.Ok [ PatchOperation.Replace ("/name", "should-not-be-persisted") ]
+            })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 1, this.CancellationToken)
+
+        CosmosAssert.IsModifiedBefore (
+            concurrentResponse.Result,
+            "Patch concurrently should return PatchConcurrentResult.ModifiedBefore once retries are exhausted."
+        )
+    }
+
+    [<TestMethod>]
+    member this.``Patch concurrently returns NotFound for a missing item`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "patch-concurrent-missing"
+
+        let operation = patchConcurrenly<TestItem, string> {
+            id testItem.id
+            partitionKey testItem.partitionKey
+            update (fun _ -> task { return Result.Error "should not be called" })
+        }
+
+        let! concurrentResponse = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+
+        CosmosAssert.IsNotFound (
+            concurrentResponse.Result,
+            "Patch concurrently of a never-created item should return PatchConcurrentResult.NotFound."
+        )
+        Assert.AreEqual (
+            HttpStatusCode.NotFound,
+            concurrentResponse.HttpStatusCode,
+            "Patch concurrently of a missing item should return HTTP 404."
+        )
+    }
+
+    [<TestMethod>]
+    member this.``Patch concurrently rejects a non-positive retry count`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "patch-concurrent-invalid-retry-count"
+
+        let operation = patchConcurrenly<TestItem, string> {
+            id testItem.id
+            partitionKey testItem.partitionKey
+            update (fun _ -> task { return Result.Error "should not be called" })
+        }
+
+        for maxRetryCount in [| 0; -1 |] do
+            let invoke () =
+                Func<Task>(fun () -> task {
+                    let! _ = container.ExecuteConcurrentlyAsync (operation, maxRetryCount, this.CancellationToken)
+                    return ()
+                })
+
+            let! _ =
+                Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(
+                    invoke (),
+                    $"Patch concurrently should throw ArgumentOutOfRangeException for maxRetryCount = %i{maxRetryCount}."
+                )
+
+            ()
+    }
+
+    [<TestMethod>]
+    member this.``Patch concurrently does not intercept exceptions raised by the update function`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "patch-concurrent-update-throws"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item testItem
+                    partitionKey testItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        // Simulates the caller's own update function performing a Cosmos operation that throws with a status code
+        // (412) this function also uses for its own precondition failure. That exception must reach the caller
+        // unchanged instead of being mistaken for this patch's own conflict and retried or converted.
+        let operation = patchConcurrenly<TestItem, string> {
+            id testItem.id
+            partitionKey testItem.partitionKey
+            update (fun _ ->
+                raise (
+                    CosmosException (
+                        "Simulated conflict from the update function's own Cosmos call.",
+                        HttpStatusCode.PreconditionFailed,
+                        0,
+                        "test-activity",
+                        0.0
+                    )
+                )
+            )
+        }
+
+        let! ex =
+            Assert.ThrowsExactlyAsync<CosmosException>(
+                Func<Task>(fun () -> task {
+                    let! _ = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+                    return ()
+                }),
+                "An exception raised by the update function must propagate to the caller, not be reinterpreted as this patch's own precondition failure."
+            )
+
+        Assert.AreEqual (
+            HttpStatusCode.PreconditionFailed,
+            ex.StatusCode,
+            "The propagated exception should be exactly the one the update function raised."
+        )
+    }
