@@ -273,25 +273,37 @@ let rec executeConcurrentlyAsync<'value, 'error>
             return itemResult, Choice2Of2 ex
     }
 
+    // Start from the builder's own options so sessionToken, consistencyLevel, indexingDirective, triggers and
+    // EnableContentResponseOnWrite (upsertConcurrenlyAndRead) reach the service. Each attempt works on a copy:
+    // the options object belongs to the caller, who may reuse the same operation later or run it concurrently.
+    let optionsForAttempt (eTag : string | null) =
+        let options = operation.RequestOptions.ShallowCopy () :?> ItemRequestOptions
+        options.IfMatchEtag <- eTag
+        options
+
     try
         match itemResult, response with
         | Result.Error e, Choice1Of2 response -> return CosmosResponse.fromItemResponse (fun _ -> CustomError e) response
         | Result.Error e, Choice2Of2 ex -> return CosmosResponse.fromException (fun _ -> CustomError e) ex
         | Result.Ok item, Choice1Of2 response ->
-            let updateOptions = ItemRequestOptions (IfMatchEtag = response.ETag)
-
             let! response =
                 container.UpsertItemAsync<'value>(
                     item,
                     operation.PartitionKey |> ValueOption.toNullable,
-                    requestOptions = updateOptions,
+                    requestOptions = optionsForAttempt response.ETag,
                     cancellationToken = ct
                 )
 
             return CosmosResponse.fromItemResponse Ok response
-        | Result.Ok item, Choice2Of2 ex ->
+        | Result.Ok item, Choice2Of2 _ ->
+            // The item did not exist when it was read, so there is no eTag to require; clear any the caller supplied.
             let! response =
-                container.UpsertItemAsync<'value>(item, operation.PartitionKey |> ValueOption.toNullable, cancellationToken = ct)
+                container.UpsertItemAsync<'value>(
+                    item,
+                    operation.PartitionKey |> ValueOption.toNullable,
+                    requestOptions = optionsForAttempt null,
+                    cancellationToken = ct
+                )
 
             return CosmosResponse.fromItemResponse Ok response
     with

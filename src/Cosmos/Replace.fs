@@ -281,10 +281,14 @@ let rec executeConcurrentlyAsync<'value, 'error>
         match itemUpdateResult with
         | Result.Error e -> return CosmosResponse.fromItemResponse (fun _ -> CustomError e) response
         | Result.Ok item ->
-            let updateOptions = new ItemRequestOptions (IfMatchEtag = eTag)
+            // Start from the builder's own options so sessionToken, consistencyLevel, indexingDirective, triggers and
+            // EnableContentResponseOnWrite (replaceConcurrenlyAndRead) reach the service. Each attempt works on a copy:
+            // the options object belongs to the caller, who may reuse the same operation later or run it concurrently.
+            let attemptOptions = operation.RequestOptions.ShallowCopy () :?> ItemRequestOptions
+            attemptOptions.IfMatchEtag <- eTag
 
             let! response =
-                container.ReplaceItemAsync<'value>(item, operation.Id, requestOptions = updateOptions, cancellationToken = ct)
+                container.ReplaceItemAsync<'value>(item, operation.Id, requestOptions = attemptOptions, cancellationToken = ct)
 
             return CosmosResponse.fromItemResponse Ok response
     with
