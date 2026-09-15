@@ -4,20 +4,20 @@ open System.Reflection
 
 [<assembly: AssemblyTitleAttribute("FSharp.Azure.Cosmos")>]
 [<assembly: AssemblyProductAttribute("FSharp.Azure.Cosmos")>]
-[<assembly: AssemblyVersionAttribute("1.0.1")>]
-[<assembly: AssemblyMetadataAttribute("ReleaseDate","2025-08-08T00:00:00.0000000+04:00")>]
-[<assembly: AssemblyFileVersionAttribute("1.0.1")>]
-[<assembly: AssemblyInformationalVersionAttribute("1.0.1")>]
+[<assembly: AssemblyVersionAttribute("1.1.0")>]
+[<assembly: AssemblyMetadataAttribute("ReleaseDate","2026-09-15T00:00:00.0000000+02:00")>]
+[<assembly: AssemblyFileVersionAttribute("1.1.0")>]
+[<assembly: AssemblyInformationalVersionAttribute("1.1.0")>]
 [<assembly: AssemblyMetadataAttribute("ReleaseChannel","release")>]
-[<assembly: AssemblyMetadataAttribute("GitHash","403c778b1892e1686188a30f1bb8e89372d68951")>]
+[<assembly: AssemblyMetadataAttribute("GitHash","fa7f7111518b6990936eea5f335d87ea20f10888")>]
 do ()
 
 module internal AssemblyVersionInformation =
     let [<Literal>] AssemblyTitle = "FSharp.Azure.Cosmos"
     let [<Literal>] AssemblyProduct = "FSharp.Azure.Cosmos"
-    let [<Literal>] AssemblyVersion = "1.0.1"
-    let [<Literal>] AssemblyMetadata_ReleaseDate = "2025-08-08T00:00:00.0000000+04:00"
-    let [<Literal>] AssemblyFileVersion = "1.0.1"
-    let [<Literal>] AssemblyInformationalVersion = "1.0.1"
+    let [<Literal>] AssemblyVersion = "1.1.0"
+    let [<Literal>] AssemblyMetadata_ReleaseDate = "2026-09-15T00:00:00.0000000+02:00"
+    let [<Literal>] AssemblyFileVersion = "1.1.0"
+    let [<Literal>] AssemblyInformationalVersion = "1.1.0"
     let [<Literal>] AssemblyMetadata_ReleaseChannel = "release"
-    let [<Literal>] AssemblyMetadata_GitHash = "403c778b1892e1686188a30f1bb8e89372d68951"
+    let [<Literal>] AssemblyMetadata_GitHash = "fa7f7111518b6990936eea5f335d87ea20f10888"
