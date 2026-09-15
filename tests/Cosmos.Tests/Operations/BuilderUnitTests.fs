@@ -1,6 +1,7 @@
 namespace FSharp.Azure.Cosmos.Tests
 
 open System
+open System.Reflection
 open System.Threading.Tasks
 open FSharp.Azure.Cosmos
 open Microsoft.Azure.Cosmos
@@ -10,6 +11,27 @@ type private BuilderTestItem = { id : string; partitionKey : string; value : int
 
 [<TestClass; UnitTestCategory; BuildersTestCategory>]
 type BuilderUnitTests () =
+
+    static let throughputBucketProperty =
+        let propertyInfo =
+            typeof<RequestOptions>
+                .GetProperty(
+                    "ThroughputBucket",
+                    BindingFlags.Instance
+                    ||| BindingFlags.Public
+                    ||| BindingFlags.NonPublic
+                )
+
+        match propertyInfo with
+        | null -> invalidOp "RequestOptions.ThroughputBucket should exist in the Cosmos SDK package."
+        | propertyInfo -> propertyInfo
+
+    static member private GetThroughputBucket (requestOptions : RequestOptions | null) =
+        Assert.IsNotNull (requestOptions, "Request options should be created before reading the throughput bucket.")
+
+        match throughputBucketProperty.GetValue requestOptions with
+        | null -> Nullable ()
+        | value -> Nullable (unbox<int> value)
 
     [<TestMethod>]
     member _.``Create builders configure operation and content response mode`` () =
@@ -572,3 +594,114 @@ type BuilderUnitTests () =
         Assert.HasCount (1, uniqueKeyDefinition.Paths, "UniqueKey builder should seed a single path via direct Yield.")
         Assert.Contains ("/direct-path", uniqueKeyDefinition.Paths, "UniqueKey builder should seed the given path.")
         Assert.HasCount (1, policy.UniqueKeys, "UniqueKeyPolicy builder should seed a single key via direct Yield.")
+
+    [<TestMethod>]
+    member _.``Create, replace, and upsert builders set throughput bucket`` () =
+        let createOperation = create<string> {
+            item "item"
+            throughputBucket 1
+        }
+
+        let replaceOperation = replace<string> {
+            id "id"
+            item "item"
+            throughputBucket 2
+        }
+
+        let upsertOperation = upsert<string> {
+            item "item"
+            throughputBucket 3
+        }
+
+        Assert.AreEqual (
+            Nullable 1,
+            BuilderUnitTests.GetThroughputBucket createOperation.RequestOptions,
+            "Create builder should set the throughput bucket on ItemRequestOptions."
+        )
+        Assert.AreEqual (
+            Nullable 2,
+            BuilderUnitTests.GetThroughputBucket replaceOperation.RequestOptions,
+            "Replace builder should set the throughput bucket on ItemRequestOptions."
+        )
+        Assert.AreEqual (
+            Nullable 3,
+            BuilderUnitTests.GetThroughputBucket upsertOperation.RequestOptions,
+            "Upsert builder should set the throughput bucket on ItemRequestOptions."
+        )
+
+    [<TestMethod>]
+    member _.``Replace and upsert concurrently builders set throughput bucket`` () =
+        let replaceConcurrentlyOperation = replaceConcurrenly<string, string> {
+            id "id"
+            update (fun item -> async.Return (Result.Ok item))
+            throughputBucket 4
+        }
+
+        let upsertConcurrentlyOperation = upsertConcurrenly<string, string> {
+            id "id"
+            updateOrCreate (fun item -> async.Return (Result.Ok (defaultArg item "item")))
+            throughputBucket 5
+        }
+
+        Assert.AreEqual (
+            Nullable 4,
+            BuilderUnitTests.GetThroughputBucket replaceConcurrentlyOperation.RequestOptions,
+            "Replace concurrently builder should set the throughput bucket on ItemRequestOptions."
+        )
+        Assert.AreEqual (
+            Nullable 5,
+            BuilderUnitTests.GetThroughputBucket upsertConcurrentlyOperation.RequestOptions,
+            "Upsert concurrently builder should set the throughput bucket on ItemRequestOptions."
+        )
+
+    [<TestMethod>]
+    member _.``Delete and read builders create request options for throughput bucket`` () =
+        let deleteOperation = delete {
+            id "id"
+            throughputBucket 6
+        }
+
+        let readOperation = read<string> {
+            id "id"
+            throughputBucket 7
+        }
+
+        let deleteOptions =
+            Assert.WantValueSome (
+                deleteOperation.RequestOptions,
+                "Delete builder should create ItemRequestOptions when throughput bucket is set."
+            )
+
+        Assert.AreEqual (
+            Nullable 6,
+            BuilderUnitTests.GetThroughputBucket deleteOptions,
+            "Delete builder should set the throughput bucket on ItemRequestOptions."
+        )
+        Assert.AreEqual (
+            Nullable 7,
+            BuilderUnitTests.GetThroughputBucket readOperation.RequestOptions,
+            "Read builder should set the throughput bucket on ItemRequestOptions."
+        )
+
+    [<TestMethod>]
+    member _.``Patch and readMany builders set throughput bucket`` () =
+        let patchOperation = patch<string> {
+            id "id"
+            throughputBucket 8
+        }
+
+        let readManyOperation = readMany<string> {
+            item "id" "partition"
+            throughputBucket 9
+        }
+
+        Assert.AreEqual (
+            Nullable 8,
+            BuilderUnitTests.GetThroughputBucket patchOperation.RequestOptions,
+            "Patch builder should set the throughput bucket on PatchItemRequestOptions."
+        )
+        Assert.AreEqual (
+            Nullable 9,
+            BuilderUnitTests.GetThroughputBucket readManyOperation.RequestOptions,
+            "ReadMany builder should set the throughput bucket on ReadManyRequestOptions."
+        )
