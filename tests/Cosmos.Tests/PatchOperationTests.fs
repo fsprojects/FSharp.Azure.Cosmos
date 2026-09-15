@@ -489,3 +489,54 @@ type PatchOperationIntegrationTests () =
 
             ()
     }
+
+    [<TestMethod>]
+    member this.``Patch concurrently does not intercept exceptions raised by the update function`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "patch-concurrent-update-throws"
+
+        let! createResponse =
+            container.ExecuteAsync (
+                create {
+                    item testItem
+                    partitionKey testItem.partitionKey
+                },
+                this.CancellationToken
+            )
+
+        CosmosAssert.IsOk (createResponse.Result, "Seed create should succeed.")
+
+        // Simulates the caller's own update function performing a Cosmos operation that throws with a status code
+        // (412) this function also uses for its own precondition failure. That exception must reach the caller
+        // unchanged instead of being mistaken for this patch's own conflict and retried or converted.
+        let operation = patchConcurrenly<TestItem, string> {
+            id testItem.id
+            partitionKey testItem.partitionKey
+            update (fun _ ->
+                raise (
+                    CosmosException (
+                        "Simulated conflict from the update function's own Cosmos call.",
+                        HttpStatusCode.PreconditionFailed,
+                        0,
+                        "test-activity",
+                        0.0
+                    )
+                )
+            )
+        }
+
+        let! ex =
+            Assert.ThrowsExactlyAsync<CosmosException>(
+                Func<Task>(fun () -> task {
+                    let! _ = container.ExecuteConcurrentlyAsync (operation, 3, this.CancellationToken)
+                    return ()
+                }),
+                "An exception raised by the update function must propagate to the caller, not be reinterpreted as this patch's own precondition failure."
+            )
+
+        Assert.AreEqual (
+            HttpStatusCode.PreconditionFailed,
+            ex.StatusCode,
+            "The propagated exception should be exactly the one the update function raised."
+        )
+    }

@@ -331,9 +331,23 @@ let rec executeConcurrentlyAsync<'value, 'error>
     (operation : PatchConcurrentlyOperation<'value, 'error>)
     (retryAttempts : int)
     : Task<CosmosResponse<PatchConcurrentResult<'value, 'error>>> = task {
-    try
-        let! response =
-            container.ReadItemAsync<'value>(operation.Id, operation.PartitionKey, cancellationToken = ct)
+    // The Cosmos exception handling below must only ever see exceptions raised by the read and patch SDK calls
+    // themselves. operation.Update runs entirely outside both try blocks: if the caller's own callback performs a
+    // Cosmos operation that throws, that exception must propagate to the caller as-is, not be mistaken for this
+    // patch's own conflict/failure and turned into a PatchConcurrentResult or a spurious retry.
+    let! readOutcome = task {
+        try
+            let! response =
+                container.ReadItemAsync<'value>(operation.Id, operation.PartitionKey, cancellationToken = ct)
+
+            return Result.Ok response
+        with HandleException ex ->
+            return Result.Error ex
+    }
+
+    match readOutcome with
+    | Result.Error ex -> return CosmosResponse.fromException toPatchConcurrentlyErrorResult ex
+    | Result.Ok response ->
         let! patchOperationsResult = operation.Update response.Resource
 
         match patchOperationsResult with
@@ -347,27 +361,29 @@ let rec executeConcurrentlyAsync<'value, 'error>
             let attemptOptions = operation.RequestOptions.ShallowCopy () :?> PatchItemRequestOptions
             attemptOptions.IfMatchEtag <- response.ETag
 
-            let! response =
-                container.PatchItemAsync<'value>(
-                    operation.Id,
-                    operation.PartitionKey,
-                    patchOperations.ToImmutableList (),
-                    attemptOptions,
-                    cancellationToken = ct
-                )
+            try
+                let! response =
+                    container.PatchItemAsync<'value>(
+                        operation.Id,
+                        operation.PartitionKey,
+                        patchOperations.ToImmutableList (),
+                        attemptOptions,
+                        cancellationToken = ct
+                    )
 
-            return CosmosResponse.fromItemResponse Ok response
-    with
-    // Any count at or below the last attempt is exhausted, so a non-positive count passed to this public function
-    // stops after one attempt instead of decrementing forever while the item keeps failing the precondition.
-    | HandleException ex when
-        ex.StatusCode = HttpStatusCode.PreconditionFailed
-        && retryAttempts <= 1
-        ->
-        return CosmosResponse.fromException toPatchConcurrentlyErrorResult ex
-    | HandleException ex when ex.StatusCode = HttpStatusCode.PreconditionFailed ->
-        return! executeConcurrentlyAsync ct container operation (retryAttempts - 1)
-    | HandleException ex -> return CosmosResponse.fromException toPatchConcurrentlyErrorResult ex
+                return CosmosResponse.fromItemResponse Ok response
+            with
+            // Any count at or below the last attempt is exhausted, so a non-positive count passed to this public
+            // function stops after one attempt instead of decrementing forever while the item keeps failing the
+            // precondition.
+            | HandleException ex when
+                ex.StatusCode = HttpStatusCode.PreconditionFailed
+                && retryAttempts <= 1
+                ->
+                return CosmosResponse.fromException toPatchConcurrentlyErrorResult ex
+            | HandleException ex when ex.StatusCode = HttpStatusCode.PreconditionFailed ->
+                return! executeConcurrentlyAsync ct container operation (retryAttempts - 1)
+            | HandleException ex -> return CosmosResponse.fromException toPatchConcurrentlyErrorResult ex
 }
 
 type Microsoft.Azure.Cosmos.Container with
