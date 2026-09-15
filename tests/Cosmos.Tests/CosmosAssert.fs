@@ -215,3 +215,32 @@ type CosmosAssert private () =
 
     static member IsModifiedBefore (result : ReplaceConcurrentResult<'T, 'E>, [<Optional>] message) =
         CosmosAssert.WantModifiedBefore (result, message) |> ignore
+
+    static member WantCustomError<'T, 'E> (result : PatchConcurrentResult<'T, 'E>, [<Optional>] message) =
+        match result with
+        | PatchConcurrentResult.CustomError error -> error
+        | _ ->
+            Assert.Fail (CosmosAssert.GetMessageOrDefault message $"Expected PatchConcurrentResult.CustomError but got {result}.")
+            Unchecked.defaultof<_>
+
+    static member WantModifiedBefore<'T, 'E> (result : PatchConcurrentResult<'T, 'E>, [<Optional>] message) =
+        match result with
+        | PatchConcurrentResult.ModifiedBefore response -> response
+        | _ ->
+            Assert.Fail (
+                CosmosAssert.GetMessageOrDefault message $"Expected PatchConcurrentResult.ModifiedBefore but got {result}."
+            )
+            Unchecked.defaultof<_>
+
+    static member IsModifiedBefore (result : PatchConcurrentResult<'T, 'E>, [<Optional>] message) =
+        CosmosAssert.WantModifiedBefore (result, message) |> ignore
+
+    static member WantNotFound<'T, 'E> (result : PatchConcurrentResult<'T, 'E>, [<Optional>] message) =
+        match result with
+        | PatchConcurrentResult.NotFound response -> response
+        | _ ->
+            Assert.Fail (CosmosAssert.GetMessageOrDefault message $"Expected PatchConcurrentResult.NotFound but got {result}.")
+            Unchecked.defaultof<_>
+
+    static member IsNotFound (result : PatchConcurrentResult<'T, 'E>, [<Optional>] message) =
+        CosmosAssert.WantNotFound (result, message) |> ignore

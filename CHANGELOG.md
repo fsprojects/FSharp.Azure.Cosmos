@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+`patchConcurrenly` / `patchConcurrenlyAndRead` computation expressions and `Container.ExecuteConcurrentlyAsync` for `PatchConcurrentlyOperation`: read the item, compute patch operations from it, apply them with the read eTag, retry on 412 (`PatchConcurrentResult`)
+
 ### Changed
 Return `ValueOption` from Cosmos DB exception unwrappers
 
