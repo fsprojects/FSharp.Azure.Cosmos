@@ -405,3 +405,6 @@ tmp/
 temp/
 .fsdocs
 docs/
+
+# Local junction to .github/skills, created by Directory.Build.targets
+/.claude/skills
