@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] - 2026-10-01
 
 ### Added
 * `ResponseMessage.SubStatusCode` extension property and `ResponseMessage.getSubStatusCode` function (`ResponseMessageModule.GetSubStatusCode` for C#) to read the Cosmos DB sub-status code of a stream response
@@ -57,7 +57,8 @@ They allow to handle all the relevant status codes which can be considered as er
 ### Added extension methods to perform queries on Cosmos DB
 * Create `IAsyncEnumerable` (`TaskSeq`) from a `FeedIterator`/`IQueryable`
 * Provide `CancellationToken` to `TaskSeq` using `CancellableTaskSeq` module
-[Unreleased]: https://github.com/fsprojects/FSharp.Azure.Cosmos/compare/releases/1.1.0...HEAD
+[Unreleased]: https://github.com/fsprojects/FSharp.Azure.Cosmos/compare/releases/1.2.0...HEAD
+[1.2.0]: https://github.com/fsprojects/FSharp.Azure.Cosmos/compare/releases/1.1.0...releases/1.2.0
 [1.1.0]: https://github.com/fsprojects/FSharp.Azure.Cosmos/compare/releases/1.0.1...releases/1.1.0
 [1.0.1]: https://github.com/fsprojects/FSharp.Azure.Cosmos/compare/releases/1.0.0...releases/1.0.1
 [1.0.0]: https://github.com/fsprojects/FSharp.Azure.Cosmos/releases/tag/releases/1.0.0
