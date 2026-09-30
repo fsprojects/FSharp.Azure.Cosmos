@@ -43,7 +43,10 @@ type ReadExtensionsTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "ReadExtensions" |] :> IList<string>
 
-/// Categorizes an emulator-backed integration test as covering `IterationExtensions`.
+/// <summary>
+/// Categorizes an emulator-backed integration test as covering the iteration extensions:
+/// <see cref="Microsoft.Azure.Cosmos.FeedIteratorExtensions"/> and <see cref="Microsoft.Azure.Cosmos.QueryableExtensions"/>.
+/// </summary>
 type IterationExtensionsTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "IterationExtensions" |] :> IList<string>
@@ -57,8 +60,11 @@ type CosmosDbEmulatorTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Cosmos DB Emulator" |] :> IList<string>
 
-/// Categorizes `IterationExtensionsUnitTests` as both a fast, emulator-free unit test and coverage for the
-/// `IterationExtensions` component.
+/// <summary>
+/// Categorizes <see cref="IterationExtensionsUnitTests"/> as both a fast, emulator-free unit test and coverage for the
+/// iteration extensions: <see cref="Microsoft.Azure.Cosmos.FeedIteratorExtensions"/> and
+/// <see cref="Microsoft.Azure.Cosmos.QueryableExtensions"/>.
+/// </summary>
 type IterationExtensionsUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit"; "IterationExtensions" |] :> IList<string>
