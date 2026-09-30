@@ -13,6 +13,7 @@
 ```text
 /
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
+│   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
 │   ├── Create.fs        – item creation operations
 │   ├── Read.fs          – single-item read operations

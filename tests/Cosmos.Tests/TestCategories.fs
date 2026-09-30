@@ -64,3 +64,10 @@ type CosmosDbEmulatorTestCategoryAttribute () =
 type UnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit" |] :> IList<string>
+
+/// <summary>
+/// Categorizes a test of the <see cref="FSharp.Azure.Cosmos.ResponseMessageModule"/> module.
+/// </summary>
+type ResponseMessageTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Response message" |] :> IList<string>
