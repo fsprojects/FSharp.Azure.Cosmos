@@ -9,8 +9,11 @@ open FSharp.Control
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
-/// A `FeedResponse` fake implementing the members `Response<'T>`/`FeedResponse<'T>` declare abstract; only
-/// `GetEnumerator` is actually read by `FeedIteratorAsyncEnumerator`, the rest exist to satisfy the base classes.
+/// <summary>
+/// A <see cref="FeedResponse{T}"/> fake implementing the members <see cref="Response{T}"/> and
+/// <see cref="FeedResponse{T}"/> declare abstract; only <see cref="FeedResponse{T}.GetEnumerator"/> is actually read
+/// by <see cref="Microsoft.Azure.Cosmos.FeedIteratorAsyncEnumerator{T}"/>, the rest exist to satisfy the base classes.
+/// </summary>
 type private FakeFeedResponse<'T> (items : 'T list) =
     inherit FeedResponse<'T> ()
 
@@ -23,7 +26,9 @@ type private FakeFeedResponse<'T> (items : 'T list) =
     override _.StatusCode = HttpStatusCode.OK
     override _.Diagnostics = Unchecked.defaultof<CosmosDiagnostics>
 
-/// A `FeedIterator` fake that serves a fixed sequence of pages without a Cosmos DB connection.
+/// <summary>
+/// A <see cref="FeedIterator{T}"/> fake that serves a fixed sequence of pages without a Cosmos DB connection.
+/// </summary>
 type private FakeFeedIterator<'T> (pages : 'T list list) =
     inherit FeedIterator<'T> ()
 
@@ -43,9 +48,12 @@ type private FakeFeedIterator<'T> (pages : 'T list list) =
             remainingPages <- rest
             Task.FromResult (FakeFeedResponse<'T>(page) :> FeedResponse<'T>)
 
-/// Regression coverage for the hand-written `FeedIterator.AsAsyncEnumerable`: it replaced a `taskSeq { }`
-/// implementation that threw `NotImplementedException` in Debug builds, so these tests run against a fake
-/// `FeedIterator` rather than the Cosmos DB Emulator, exercising the same Debug configuration CI builds and tests.
+/// <summary>
+/// Regression coverage for the hand-written <see cref="FeedIterator{T}.AsAsyncEnumerable"/>: it replaced a
+/// <c>taskSeq { }</c> implementation that threw <see cref="NotImplementedException"/> in Debug builds, so these tests
+/// run against a fake <see cref="FeedIterator{T}"/> rather than the Cosmos DB Emulator, exercising the same Debug
+/// configuration CI builds and tests.
+/// </summary>
 [<TestClass; IterationExtensionsUnitTestCategory>]
 type IterationExtensionsUnitTests () =
 
