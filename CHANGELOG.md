@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `ResponseMessage.SubStatusCode` extension property and `ResponseMessage.getSubStatusCode` function (`ResponseMessageModule.GetSubStatusCode` for C#) to read the Cosmos DB sub-status code of a stream response
 * `SubStatusCodes` constants for the Cosmos DB sub-status codes from Microsoft Learn and the official .NET, Python, Java and Rust SDKs, each documented with the HTTP status it goes with
 
+### Fixed
+* `ExistsAsync` intermittently returned `false` for an existing item under concurrent calls: the shared query definition had its `@Id` parameter overwritten by other calls ([#31](https://github.com/fsprojects/FSharp.Azure.Cosmos/issues/31))
+* `ExistsAsync` with a partition key now uses a point read instead of a query, falling back to the query for a prefix of a hierarchical partition key, and throws on failures other than a missing item (including a missing container) instead of reporting the item as missing
+
 ## [1.1.0] - 2026-09-15
 
 ### Added

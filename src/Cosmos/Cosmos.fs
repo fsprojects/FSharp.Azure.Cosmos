@@ -205,8 +205,10 @@ module Operations =
             |]
 
     let internal countQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM c")
-    let internal existsQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM item WHERE item.id = @Id")
-    let internal getExistsQuery id = existsQuery.WithParameter ("@Id", id)
+    // A new definition per call: QueryDefinition.WithParameter mutates the instance and returns it, so a shared
+    // definition lets concurrent calls overwrite each other's @Id and count a different item.
+    let internal getExistsQuery (id : string) =
+        QueryDefinition("SELECT VALUE COUNT(1) FROM item WHERE item.id = @Id").WithParameter("@Id", id)
 
     type Microsoft.Azure.Cosmos.Container with
 
@@ -305,14 +307,41 @@ module Operations =
 
         /// <summary>
         /// Checks if an item with specified Id exists in the container partition with specified key.
+        /// <para>
+        /// A full partition key and an Id identify at most one item, so the check is a point read: it is exact,
+        /// and its request charge depends only on the item size and the consistency level (1 RU for a 1 KB item,
+        /// twice as much with strong or bounded staleness consistency).
+        /// </para>
+        /// <para>
+        /// A prefix of a hierarchical partition key cannot be point-read; the service rejects it as a bad request,
+        /// and the check falls back to a query scoped to that prefix, matching the Id anywhere beneath it.
+        /// </para>
         /// </summary>
         /// <param name="id">Item Id</param>
-        /// <param name="partitionKey">Partition key</param>
+        /// <param name="partitionKey">Full partition key, or a prefix of a hierarchical partition key</param>
         /// <param name="cancellationToken">Cancellation token</param>
+        /// <exception cref="CosmosException">
+        /// Thrown when the check fails for a reason other than the item not existing, for example throttling,
+        /// authorization or a missing container.
+        /// </exception>
         member container.ExistsAsync
             (id : string, partitionKey : PartitionKey, [<Optional>] cancellationToken : CancellationToken)
-            =
-            container.ExistsAsync (id, QueryRequestOptions (PartitionKey = partitionKey), cancellationToken)
+            = task {
+            use! response = container.ReadItemStreamAsync (id, partitionKey, cancellationToken = cancellationToken)
+            match response.StatusCode, response.SubStatusCode with
+            | HttpStatusCode.NotFound, SubStatusCodes.Unknown -> return false
+            | HttpStatusCode.BadRequest, _ ->
+                // A prefix of a hierarchical key is rejected as a bad request, but the sub-status differs between
+                // backends (1001 from the service and the Windows emulator, 0 from the Linux vNext emulator), so any
+                // 400 falls back to the query that preceded the point read. A request that is really invalid fails
+                // there too and is propagated.
+                return! container.ExistsAsync (id, QueryRequestOptions (PartitionKey = partitionKey), cancellationToken)
+            | _ ->
+                // Any other failure (throttling, auth, a missing container reported as 404 with a sub-status)
+                // must not be reported as a missing item
+                response.EnsureSuccessStatusCode () |> ignore
+                return true
+        }
 
         /// <summary>
         /// Checks whether an item with the specified Id exists and is not marked as deleted.
