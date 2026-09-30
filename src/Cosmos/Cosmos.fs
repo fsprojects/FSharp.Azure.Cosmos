@@ -210,15 +210,6 @@ module Operations =
     let internal getExistsQuery (id : string) =
         QueryDefinition("SELECT VALUE COUNT(1) FROM item WHERE item.id = @Id").WithParameter("@Id", id)
 
-    /// Reads the sub-status code of a stream response; 0 when the response has none, as for a missing item.
-    let internal getSubStatusCode (response : ResponseMessage) =
-        match response.Headers["x-ms-substatus"] with
-        | null -> 0
-        | value ->
-            match Int32.TryParse value with
-            | true, subStatusCode -> subStatusCode
-            | false, _ -> 0
-
     type Microsoft.Azure.Cosmos.Container with
 
         /// <summary>
@@ -336,8 +327,8 @@ module Operations =
             (id : string, partitionKey : PartitionKey, [<Optional>] cancellationToken : CancellationToken)
             = task {
             use! response = container.ReadItemStreamAsync (id, partitionKey, cancellationToken = cancellationToken)
-            match response.StatusCode, getSubStatusCode response with
-            | HttpStatusCode.NotFound, 0 -> return false
+            match response.StatusCode, response.SubStatusCode with
+            | HttpStatusCode.NotFound, SubStatusCodes.Unknown -> return false
             | HttpStatusCode.BadRequest, _ ->
                 // A prefix of a hierarchical key is rejected as a bad request, but the sub-status differs between
                 // backends (1001 from the service and the Windows emulator, 0 from the Linux vNext emulator), so any
