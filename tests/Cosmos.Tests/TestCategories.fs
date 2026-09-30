@@ -69,8 +69,10 @@ type IterationExtensionsUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit"; "IterationExtensions" |] :> IList<string>
 
-/// Categorizes `ResponseMessageTests` as both a fast, emulator-free unit test and coverage for the
-/// `ResponseMessage` module.
+/// <summary>
+/// Categorizes <see cref="ResponseMessageTests"/> as both a fast, emulator-free unit test and coverage for the
+/// <see cref="FSharp.Azure.Cosmos.ResponseMessageModule"/> module.
+/// </summary>
 type ResponseMessageUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit"; "ResponseMessage" |] :> IList<string>
