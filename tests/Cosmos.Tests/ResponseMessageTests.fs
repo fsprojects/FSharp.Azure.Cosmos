@@ -4,6 +4,7 @@ open System
 open System.Net
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
+open FSharp.Azure.Cosmos
 
 open FSharp.Azure.Cosmos
 
