@@ -1,0 +1,1116 @@
+/// <summary>
+/// Cosmos DB sub-status codes, returned in the <c>x-ms-substatus</c> header.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A sub-status only has a meaning together with the HTTP status code: some numbers are reused for different
+/// statuses, for example 1002 is <see cref="SubStatusCodes.ReadSessionNotAvailable"/> with 404 and
+/// <see cref="SubStatusCodes.PartitionKeyRangeGone"/> with 410. Match on both.
+/// </para>
+/// <para>
+/// Sources of the codes: Microsoft Learn (the REST API HTTP status codes page, the troubleshooting guides and the
+/// throughput buckets FAQ), the <c>SubStatusCodes</c> enumeration of the .NET SDK and the sub-status tables of the
+/// official Python, Java and Rust SDKs. The names follow the .NET SDK, with its typos fixed.
+/// </para>
+/// <para>
+/// The HTTP status of each code is the one stated by Microsoft Learn or by the SDK sources; for the customer-managed
+/// key codes it comes from the data plane scenario of the customer-managed key troubleshooting guide. A status
+/// marked <i>inferred</i> is not stated by any of these sources and is derived from the family of the code, so treat
+/// it as a hint.
+/// </para>
+/// <para>
+/// Codes generated only by the Java or Rust SDK clients are not included, because the .NET SDK never returns them.
+/// The service can return codes that are not listed here.
+/// </para>
+/// </remarks>
+[<RequireQualifiedAccess>]
+module FSharp.Azure.Cosmos.SubStatusCodes
+
+// No sub-status
+
+/// <summary>No sub-status: the response has no <c>x-ms-substatus</c> header or it is 0.</summary>
+[<Literal>]
+let Unknown = 0
+
+// 204 No Content
+
+/// With 204 No Content: the replica has not reached the target LSN of a head request.
+[<Literal>]
+let MissedTargetLsn = 2001
+
+/// With 204 No Content: the replica is more than 100 LSNs behind the target of a head request.
+[<Literal>]
+let MissedTargetLsnOver100 = 2002
+
+/// With 204 No Content: the replica is more than 1000 LSNs behind the target of a head request.
+[<Literal>]
+let MissedTargetLsnOver1000 = 2003
+
+/// With 204 No Content: the replica is more than 10000 LSNs behind the target of a head request.
+[<Literal>]
+let MissedTargetLsnOver10000 = 2004
+
+/// With 204 No Content: the replica has not reached the target global committed LSN of a head request.
+[<Literal>]
+let MissedTargetGlobalCommittedLsn = 2011
+
+/// With 204 No Content: the replica is more than 100 global committed LSNs behind the target of a head request.
+[<Literal>]
+let MissedTargetGlobalCommittedLsnOver100 = 2012
+
+/// With 204 No Content: the replica is more than 1000 global committed LSNs behind the target of a head request.
+[<Literal>]
+let MissedTargetGlobalCommittedLsnOver1000 = 2013
+
+/// With 204 No Content: the replica is more than 10000 global committed LSNs behind the target of a head request.
+[<Literal>]
+let MissedTargetGlobalCommittedLsnOver10000 = 2014
+
+// 400 Bad Request
+
+/// With 400 Bad Request: the partition key does not match the item or the container's partition key definition.
+[<Literal>]
+let PartitionKeyMismatch = 1001
+
+/// With 400 Bad Request: the cross-partition query cannot be served.
+[<Literal>]
+let CrossPartitionQueryNotServable = 1004
+
+/// With 400 Bad Request: the partition key definition is not specified.
+[<Literal>]
+let PartitionKeyDefinitionNotSpecified = 1013
+
+/// With 400 Bad Request: the schema owner id does not match.
+[<Literal>]
+let SchemaOwnerIdMismatch = 1016
+
+/// With 400 Bad Request: the schema hash or id does not match.
+[<Literal>]
+let SchemaHashOrIdMismatch = 1017
+
+/// With 400 Bad Request: the partition key definition is missing for an autoscale (autopilot) container.
+[<Literal>]
+let PartitionKeyDefinitionMissingForAutopilot = 1018
+
+/// With 400 Bad Request: the container resource id does not match the one the client cached, for example after the
+/// container was re-created with the same name.
+[<Literal>]
+let CollectionRidMismatch = 1024
+
+/// With 400 Bad Request: the HTTP listener failed.
+[<Literal>]
+let HttpListenerException = 1101
+
+/// With 400 Bad Request: a transaction is already active.
+[<Literal>]
+let TransactionAlreadyActive = 1102
+
+/// With 400 Bad Request: the transaction id is invalid.
+[<Literal>]
+let InvalidTransactionId = 1103
+
+/// With 400 Bad Request: a transaction across containers is not supported.
+[<Literal>]
+let CrossCollectionTransactionNotSupported = 1104
+
+/// With 400 Bad Request: the topology change request is invalid.
+[<Literal>]
+let InvalidTopologyChangeRequest = 1105
+
+/// With 400 Bad Request: another throughput replace operation is in progress.
+[<Literal>]
+let AnotherOfferReplaceOperationIsInProgress = 3205
+
+/// <summary>With 400 Bad Request (<i>inferred</i>): the thin client proxy does not allow multiple accounts on the same
+/// connection.</summary>
+[<Literal>]
+let ThinProxyMultipleAccountsNotAllowed = 13000
+
+/// <summary>With 400 Bad Request (<i>inferred</i>): generated by the .NET SDK: the continuation token is
+/// malformed.</summary>
+[<Literal>]
+let MalformedContinuationToken = 20007
+
+/// With 400 Bad Request: a stored procedure, trigger or user-defined function failed to compile.
+[<Literal>]
+let ScriptCompileError = 65535
+
+// 401 Unauthorized
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the authorization header is missing.</summary>
+[<Literal>]
+let MissingAuthHeader = 5000
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the authorization header has an invalid format.</summary>
+[<Literal>]
+let InvalidAuthHeaderFormat = 5001
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): Microsoft Entra ID authentication is disabled for the
+/// account.</summary>
+[<Literal>]
+let AadAuthDisabled = 5002
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token has an invalid format.</summary>
+[<Literal>]
+let AadTokenInvalidFormat = 5003
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token has an invalid signature.</summary>
+[<Literal>]
+let AadTokenInvalidSignature = 5004
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token is not valid yet.</summary>
+[<Literal>]
+let AadTokenNotYetValid = 5005
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token has expired.</summary>
+[<Literal>]
+let AadTokenExpired = 5006
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token has an invalid issuer.</summary>
+[<Literal>]
+let AadTokenInvalidIssuer = 5007
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token has an invalid audience.</summary>
+[<Literal>]
+let AadTokenInvalidAudience = 5008
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token has an invalid scope.</summary>
+[<Literal>]
+let AadTokenInvalidScope = 5009
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token could not be obtained.</summary>
+[<Literal>]
+let FailedToGetAadToken = 5010
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token has no object identifier.</summary>
+[<Literal>]
+let AadTokenMissingObjectIdentifier = 5011
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): SAS token authentication is disabled for the account.</summary>
+[<Literal>]
+let SasTokenAuthDisabled = 5012
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token was revoked.</summary>
+[<Literal>]
+let AadTokenRevoked = 5013
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the Microsoft Entra ID token has an invalid signing key.</summary>
+[<Literal>]
+let AadTokenInvalidSigningKey = 5200
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): the groups of the Microsoft Entra ID token could not be
+/// expanded.</summary>
+[<Literal>]
+let AadTokenGroupExpansionError = 5201
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): key-based (local) authentication is disabled for the
+/// account.</summary>
+[<Literal>]
+let LocalAuthDisabled = 5202
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): Microsoft Fabric: the token could not be validated.</summary>
+[<Literal>]
+let FabricTokenValidationFailed = 6053
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): Microsoft Fabric: the application id is invalid.</summary>
+[<Literal>]
+let InvalidFabricAppId = 6054
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): Microsoft Fabric: the tenant id is invalid.</summary>
+[<Literal>]
+let InvalidFabricTenantId = 6055
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): Microsoft Fabric: the artifact id is invalid.</summary>
+[<Literal>]
+let InvalidFabricArtifactId = 6056
+
+/// <summary>With 401 Unauthorized (<i>inferred</i>): generated by the thin client proxy.</summary>
+[<Literal>]
+let ThinProxyGenerated401 = 13008
+
+// 403 Forbidden
+
+/// With 403 Forbidden: a write was sent to a region that no longer accepts writes during a manual failover.
+[<Literal>]
+let WriteForbidden = 3
+
+/// With 403 Forbidden: the provisioning limit is reached.
+[<Literal>]
+let ProvisionLimitReached = 1005
+
+/// With 403 Forbidden: the database account is not found.
+[<Literal>]
+let DatabaseAccountNotFound = 1008
+
+/// With 403 Forbidden: the container definition in the request is the same as the existing one.
+[<Literal>]
+let RedundantCollectionPut = 1009
+
+/// With 403 Forbidden: the quota of containers in a shared throughput database is exceeded.
+[<Literal>]
+let SharedThroughputDatabaseQuotaExceeded = 1010
+
+/// With 403 Forbidden: the shared throughput offer does not need to grow.
+[<Literal>]
+let SharedThroughputOfferGrowNotNeeded = 1011
+
+/// With 403 Forbidden: the database definition in the request is the same as the existing one.
+[<Literal>]
+let RedundantDatabasePut = 1012
+
+/// With 403 Forbidden: the logical partition reached its maximum size.
+[<Literal>]
+let PartitionKeyQuotaExceeded = 1014
+
+/// With 403 Forbidden: replacing the throughput of an autoscale offer is disabled.
+[<Literal>]
+let OfferReplaceDisabledAutoscaleOffer = 1015
+
+/// With 403 Forbidden: the number of containers in a shared throughput database is exceeded.
+[<Literal>]
+let SharedThroughputDatabaseCollectionCountExceeded = 1019
+
+/// With 403 Forbidden: the number of shared throughput databases is exceeded.
+[<Literal>]
+let SharedThroughputDatabaseCountExceeded = 1020
+
+/// With 403 Forbidden: an internal compute error occurred.
+[<Literal>]
+let ComputeInternalError = 1021
+
+/// With 403 Forbidden: the client id does not match.
+[<Literal>]
+let ClientIdMismatch = 1026
+
+/// With 403 Forbidden: a unique index re-indexing is in progress.
+[<Literal>]
+let UniqueIndexReindexInProgress = 1027
+
+/// With 403 Forbidden: the account throughput cap is exceeded.
+[<Literal>]
+let ThroughputCapQuotaExceeded = 1028
+
+/// With 403 Forbidden: the throughput cap value is invalid.
+[<Literal>]
+let InvalidThroughputCapValue = 1029
+
+/// With 403 Forbidden: a system partition key is not allowed.
+[<Literal>]
+let SystemPartitionKeyNotAllowed = 1031
+
+/// With 403 Forbidden: the limit of delete-by-partition-key requests is exceeded.
+[<Literal>]
+let PartitionKeyDeleteRequestLimitExceeded = 1032
+
+/// With 403 Forbidden: the partition is leaked.
+[<Literal>]
+let LeakedPartition = 1033
+
+/// With 403 Forbidden: the resource is soft-deleted.
+[<Literal>]
+let ResourceSoftDeleted = 1034
+
+/// With 403 Forbidden: the condition of a conditional patch is not met.
+[<Literal>]
+let PatchConditionNotMet = 1110
+
+/// With 403 Forbidden, customer-managed keys: Azure Cosmos DB cannot get the Microsoft Entra ID access token for the
+/// Key Vault.
+[<Literal>]
+let AadTokenAcquisitionFailed = 4000
+
+/// With 403 Forbidden, customer-managed keys: the Microsoft Entra ID service is unavailable.
+[<Literal>]
+let AadServiceUnavailable = 4001
+
+/// With 403 Forbidden, customer-managed keys: the Key Vault does not grant Azure Cosmos DB access, or the key is
+/// disabled.
+[<Literal>]
+let KeyVaultAccessDenied = 4002
+
+/// With 403 Forbidden, customer-managed keys: the key is not found in the Key Vault.
+[<Literal>]
+let KeyVaultKeyNotFound = 4003
+
+/// With 403 Forbidden, customer-managed keys: the Key Vault service is unavailable.
+[<Literal>]
+let KeyVaultServiceUnavailable = 4004
+
+/// With 403 Forbidden, customer-managed keys: the Key Vault cannot wrap or unwrap the key.
+[<Literal>]
+let KeyVaultWrapUnwrapFailure = 4005
+
+/// With 403 Forbidden, customer-managed keys: the Key Vault key URL is invalid, for example it includes the key
+/// version.
+[<Literal>]
+let InvalidKeyVaultKeyUrl = 4006
+
+/// With 403 Forbidden, customer-managed keys: internal server error, the input bytes are not in the base64 format.
+[<Literal>]
+let InvalidInputBytes = 4007
+
+/// With 403 Forbidden, customer-managed keys: the Key Vault returned an internal service error.
+[<Literal>]
+let KeyVaultInternalServerError = 4008
+
+/// With 403 Forbidden, customer-managed keys: the Key Vault DNS name cannot be resolved.
+[<Literal>]
+let KeyVaultDnsNotResolved = 4009
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: the Key Vault certificate URL is
+/// invalid.</summary>
+[<Literal>]
+let InvalidKeyVaultCertUrl = 4010
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: the Key Vault key and certificate URLs are
+/// invalid.</summary>
+[<Literal>]
+let InvalidKeyVaultKeyAndCertUrl = 4011
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: the customer key was rotated.</summary>
+[<Literal>]
+let CustomerKeyRotated = 4012
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: a request parameter is missing.</summary>
+[<Literal>]
+let MissingRequestParameter = 4013
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: the Key Vault secret URL is invalid.</summary>
+[<Literal>]
+let InvalidKeyVaultSecretUrl = 4014
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: the account has no default identity.</summary>
+[<Literal>]
+let UndefinedDefaultIdentity = 4015
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: a network security perimeter denies outbound
+/// access to the Key Vault.</summary>
+[<Literal>]
+let KeyVaultOutboundDeniedByNsp = 4016
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: the Key Vault is not found.</summary>
+[<Literal>]
+let KeyVaultNotFound = 4017
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: the key is disabled or expired.</summary>
+[<Literal>]
+let KeyDisabledOrExpired = 4018
+
+/// <summary>With 403 Forbidden (<i>inferred</i>), customer-managed keys: the master service is unavailable.</summary>
+[<Literal>]
+let MasterServiceUnavailable = 4019
+
+/// With 403 Forbidden: the request cannot be authorized by a Microsoft Entra ID token in the data plane.
+[<Literal>]
+let AadRequestNotAuthorized = 5300
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): role-based access control does not authorize the metadata
+/// request.</summary>
+[<Literal>]
+let RbacUnauthorizedMetadataRequest = 5301
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): role-based access control does not authorize the name-based data
+/// request.</summary>
+[<Literal>]
+let RbacUnauthorizedNameBasedDataRequest = 5302
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): role-based access control does not authorize the resource-id-based
+/// data request.</summary>
+[<Literal>]
+let RbacUnauthorizedRidBasedDataRequest = 5303
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): role-based access control cannot resolve the resource id.</summary>
+[<Literal>]
+let RbacRidCannotBeResolved = 5304
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): role-based access control has no user id for the request.</summary>
+[<Literal>]
+let RbacMissingUserId = 5305
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): role-based access control has no action for the request.</summary>
+[<Literal>]
+let RbacMissingAction = 5306
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): a network security perimeter denies the inbound request.</summary>
+[<Literal>]
+let NspInboundDenied = 5307
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): role-based access control did not authorize the request.</summary>
+[<Literal>]
+let RbacRequestWasNotAuthorized = 5400
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): Microsoft Fabric: the permissions are insufficient.</summary>
+[<Literal>]
+let InsufficientFabricPermissions = 6050
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): Microsoft Fabric: authorization failed.</summary>
+[<Literal>]
+let FabricAuthorizationFailed = 6051
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): Microsoft Fabric: the operation is not supported.</summary>
+[<Literal>]
+let FabricOperationUnsupported = 6052
+
+/// <summary>With 403 Forbidden (<i>inferred</i>): the public endpoint of the thin client proxy is disabled.</summary>
+[<Literal>]
+let ThinProxyPublicEndpointDisabled = 13001
+
+// 404 Not Found
+
+/// With 404 Not Found: the read session is not available for the session token.
+[<Literal>]
+let ReadSessionNotAvailable = 1002
+
+/// With 404 Not Found: the owner resource, a database or container, does not exist.
+[<Literal>]
+let OwnerResourceNotFound = 1003
+
+/// With 404 Not Found: the container create operation is still in progress; retry the read until it succeeds.
+[<Literal>]
+let ContainerCreateInProgress = 1013
+
+/// With 404 Not Found: the store is not ready.
+[<Literal>]
+let StoreNotReady = 1023
+
+/// With 404 Not Found: the authorization token is not found in the cache.
+[<Literal>]
+let AuthTokenNotFoundInCache = 1030
+
+/// With 404 Not Found: the container of a migrating partition was deleted.
+[<Literal>]
+let PartitionMigratingCollectionDeleted = 1031
+
+/// With 404 Not Found: the source partition of a partition migration was deleted in the master partition.
+[<Literal>]
+let PartitionMigrationSourcePartitionDeletedInMaster = 1034
+
+/// With 404 Not Found: the partition of a shared throughput database is not found during a partition migration.
+[<Literal>]
+let PartitionMigrationSharedThroughputDatabasePartitionNotFound = 1035
+
+/// With 404 Not Found: the partition resource is not found during a partition migration.
+[<Literal>]
+let PartitionMigrationPartitionResourceNotFound = 1036
+
+/// With 404 Not Found: a partition migration failed to update DNS.
+[<Literal>]
+let PartitionMigrationFailedToUpdateDns = 1037
+
+// 408 Request Timeout
+
+/// With 408 Request Timeout: the request was preempted.
+[<Literal>]
+let RequestPreempted = 1900
+
+/// <summary>With 408 Request Timeout (<i>inferred</i>): generated by the thin client proxy.</summary>
+[<Literal>]
+let ThinProxyGenerated408 = 13009
+
+// 409 Conflict
+
+/// With 409 Conflict: the operation conflicts with a control plane operation.
+[<Literal>]
+let ConflictWithControlPlane = 1006
+
+/// With 409 Conflict: the document counts of the source and target partitions of a partition migration do not match.
+[<Literal>]
+let PartitionMigrationDocumentCountMismatchSourceTarget = 3050
+
+/// With 409 Conflict: the document counts of the target partition replicas of a partition migration do not match.
+[<Literal>]
+let PartitionMigrationDocumentCountMismatchTargetReplicas = 3051
+
+/// With 409 Conflict: a database with the name already exists.
+[<Literal>]
+let DatabaseNameAlreadyExists = 3206
+
+/// With 409 Conflict: a configuration with the name already exists.
+[<Literal>]
+let ConfigurationNameAlreadyExists = 3207
+
+/// With 409 Conflict: the item violates a unique key constraint.
+[<Literal>]
+let UniqueIndexConflict = 3301
+
+/// With 409 Conflict: the partition key hash collides for the id.
+[<Literal>]
+let PartitionKeyHashCollisionForId = 3302
+
+/// With 409 Conflict: incremental backup to the Azure Backup vault is paused.
+[<Literal>]
+let AzureBackupVaultIncrementalBackupPaused = 3303
+
+/// With 409 Conflict: restore from an incremental Azure Backup vault backup is disabled.
+[<Literal>]
+let AzureBackupVaultIncrementalBackupRestoreDisabled = 3304
+
+/// <summary>With 409 Conflict (<i>inferred</i>): the initial request of a retriable write has already
+/// completed.</summary>
+[<Literal>]
+let InitialRetriableWriteRequestCompleted = 5401
+
+/// <summary>With 409 Conflict (<i>inferred</i>): the retriable write request is a duplicate.</summary>
+[<Literal>]
+let DuplicateRetriableWriteRequest = 5402
+
+/// <summary>With 409 Conflict (<i>inferred</i>): the operation conflicts with another operation in the user
+/// transaction.</summary>
+[<Literal>]
+let ConflictOperationInUserTransaction = 5403
+
+/// <summary>With 409 Conflict (<i>inferred</i>): truncating a container is not allowed during a merge.</summary>
+[<Literal>]
+let CollectionTruncateNotAllowedDuringMerge = 6300
+
+// 410 Gone
+
+/// With 410 Gone: the client's name cache is stale.
+[<Literal>]
+let NameCacheIsStale = 1000
+
+/// With 410 Gone: the partition key range is gone, for example after a split.
+[<Literal>]
+let PartitionKeyRangeGone = 1002
+
+/// With 410 Gone: a partition split is completing.
+[<Literal>]
+let CompletingSplit = 1007
+
+/// With 410 Gone: a partition migration is completing.
+[<Literal>]
+let CompletingPartitionMigration = 1008
+
+/// With 410 Gone: the lease is not found.
+[<Literal>]
+let LeaseNotFound = 1022
+
+/// With 410 Gone: the archival partition is not present.
+[<Literal>]
+let ArchivalPartitionNotPresent = 1024
+
+// 412 Precondition Failed
+
+/// With 412 Precondition Failed: splitting is disabled.
+[<Literal>]
+let SplitIsDisabled = 2001
+
+/// With 412 Precondition Failed: the containers in the partition were updated.
+[<Literal>]
+let CollectionsInPartitionGotUpdated = 2002
+
+/// With 412 Precondition Failed: the partition key ranges lock cannot be acquired.
+[<Literal>]
+let CannotAcquirePartitionKeyRangesLock = 2003
+
+/// With 412 Precondition Failed: the resource is not found.
+[<Literal>]
+let ResourceNotFound = 2004
+
+/// With 412 Precondition Failed: the offer owner lock cannot be acquired.
+[<Literal>]
+let CannotAcquireOfferOwnerLock = 2005
+
+/// With 412 Precondition Failed: the partition key range lock cannot be acquired.
+[<Literal>]
+let CannotAcquirePartitionKeyRangeLock = 2007
+
+/// With 412 Precondition Failed: the partition lock cannot be acquired.
+[<Literal>]
+let CannotAcquirePartitionLock = 2008
+
+/// With 412 Precondition Failed: a storage split conflicts with an n-way throughput split.
+[<Literal>]
+let StorageSplitConflictingWithNWayThroughputSplit = 2011
+
+/// With 412 Precondition Failed: merging is disabled.
+[<Literal>]
+let MergeIsDisabled = 2012
+
+/// With 412 Precondition Failed: the tombstone records are not found.
+[<Literal>]
+let TombstoneRecordsNotFound = 2015
+
+/// With 412 Precondition Failed: the account status is invalid.
+[<Literal>]
+let InvalidAccountStatus = 2016
+
+/// With 412 Precondition Failed: the throughput offer validation failed.
+[<Literal>]
+let OfferValidationFailed = 2017
+
+/// With 412 Precondition Failed: the master partition access lock cannot be acquired.
+[<Literal>]
+let CannotAcquireMasterPartitionAccessLock = 2018
+
+/// With 412 Precondition Failed: the in-account restore lock cannot be acquired.
+[<Literal>]
+let CannotAcquireInAccountRestoreLock = 2019
+
+/// With 412 Precondition Failed: the container state changed.
+[<Literal>]
+let CollectionStateChanged = 2020
+
+/// With 412 Precondition Failed: the throughput offer was scaled up by the user.
+[<Literal>]
+let OfferScaledUpByUser = 2021
+
+/// With 412 Precondition Failed: the log store load balance lock cannot be acquired.
+[<Literal>]
+let CannotAcquireLogStoreLoadBalanceLock = 2101
+
+/// With 412 Precondition Failed: the container resource ids do not match on a migrate partition request during a
+/// migration.
+[<Literal>]
+let MismatchingCollectionRidsOnMigratePartitionDuringMigration = 5325
+
+/// With 412 Precondition Failed: the partition is not in the migrating status for a migrate partition request.
+[<Literal>]
+let PartitionNotInMigratingStatusForMigratePartitionRequest = 5326
+
+/// With 412 Precondition Failed: the partition resource is missing when completing a migration.
+[<Literal>]
+let MissingPartitionResourceOnCompleteMigration = 5327
+
+/// With 412 Precondition Failed: the partition resource is missing when aborting a migration.
+[<Literal>]
+let MissingPartitionResourceOnAbortMigration = 5328
+
+// 413 Request Entity Too Large
+
+/// With 413 Request Entity Too Large: the transaction limit is exceeded.
+[<Literal>]
+let TransactionLimitExceeded = 3401
+
+/// With 413 Request Entity Too Large: the batch response size is exceeded.
+[<Literal>]
+let BatchResponseSizeExceeded = 3402
+
+// 429 Too Many Requests
+
+/// With 429 Too Many Requests: throttled by the Bw-tree I/O rate limiter.
+[<Literal>]
+let BwTreeIoRateLimiter = 3073
+
+/// With 429 Too Many Requests: the staleness exceeded its bound.
+[<Literal>]
+let StalenessExceededBound = 3074
+
+/// With 429 Too Many Requests: the replication queue is full.
+[<Literal>]
+let ReplicationQueueFull = 3075
+
+/// With 429 Too Many Requests: throttled by back pressure from a full Bw-tree log.
+[<Literal>]
+let BwTreeLogFullBackpressure = 3076
+
+/// With 429 Too Many Requests: throttled by the connection rate limiter.
+[<Literal>]
+let ConnectionRateLimiter = 3077
+
+/// With 429 Too Many Requests: throttled by the composite replicator.
+[<Literal>]
+let XpCompositeReplicator = 3078
+
+/// With 429 Too Many Requests: throttled for an unexpected reason.
+[<Literal>]
+let Unexpected = 3079
+
+/// With 429 Too Many Requests: throttled by an asynchronous reader-writer lock.
+[<Literal>]
+let AsyncReaderWriterLock = 3080
+
+/// With 429 Too Many Requests: throttled by a service module.
+[<Literal>]
+let ServiceModule = 3081
+
+/// With 429 Too Many Requests: a value does not match its expected bound.
+[<Literal>]
+let ValueDoesNotMatchExpectedBound = 3082
+
+/// With 429 Too Many Requests: a sink partition value does not match its expected bound.
+[<Literal>]
+let SinkPartitionValueDoesNotMatchExpectedBound = 3083
+
+/// With 429 Too Many Requests: too many concurrent stored procedure executions.
+[<Literal>]
+let StoredProcedureConcurrency = 3084
+
+/// With 429 Too Many Requests: throttled by the RNTBD client channel.
+[<Literal>]
+let RntbdClientChannel = 3085
+
+/// With 429 Too Many Requests: throttled by back pressure from the log flush queue depth.
+[<Literal>]
+let LogFlushQueueDepthBackpressure = 3086
+
+/// With 429 Too Many Requests: throttled by back pressure from the checkpoint queue depth.
+[<Literal>]
+let CheckpointQueueDepthBackpressure = 3087
+
+/// With 429 Too Many Requests: throttled because of a partition split.
+[<Literal>]
+let ThrottleDueToSplit = 3088
+
+/// With 429 Too Many Requests: the AE queue is full.
+[<Literal>]
+let AeQueueFull = 3089
+
+/// With 429 Too Many Requests: a quota is exceeded.
+[<Literal>]
+let QuotaExceeded = 3090
+
+/// With 429 Too Many Requests: the container quota is exceeded.
+[<Literal>]
+let CollectionQuotaExceeded = 3091
+
+/// With 429 Too Many Requests: a system resource is unavailable.
+[<Literal>]
+let SystemResourceUnavailable = 3092
+
+/// With 429 Too Many Requests: the partitioned resource quota is exceeded.
+[<Literal>]
+let PartitionedResourceQuotaExceeded = 3093
+
+/// With 429 Too Many Requests: throttled because of resource exhaustion.
+[<Literal>]
+let ThrottleDueToResourceExhaustion = 3094
+
+/// With 429 Too Many Requests: throttled because the staging index queue is full.
+[<Literal>]
+let ThrottleDueToStagingIndexQueueFull = 3095
+
+/// With 429 Too Many Requests: throttled by replication back pressure.
+[<Literal>]
+let ThrottleDueToReplicationBackpressure = 3096
+
+/// With 429 Too Many Requests: the container quota of an autoscale (autopilot) container is exceeded.
+[<Literal>]
+let CollectionQuotaExceededAutopilot = 3097
+
+/// With 429 Too Many Requests: the log store has no free segments.
+[<Literal>]
+let LogStoreNoFreeSegments = 3098
+
+/// With 429 Too Many Requests: throttled by a blob read.
+[<Literal>]
+let ThrottledByBlobRead = 3099
+
+/// With 429 Too Many Requests: the operation log is too big.
+[<Literal>]
+let OperationLogSizeTooBig = 3100
+
+/// With 429 Too Many Requests: the archival partition has not caught up yet.
+[<Literal>]
+let ArchivalPartitionPendingCatchup = 3101
+
+/// With 429 Too Many Requests: throttled by traffic regulation.
+[<Literal>]
+let ThrottleDueToTrafficRegulation = 3102
+
+/// With 429 Too Many Requests: throttled because of transport buffer usage.
+[<Literal>]
+let ThrottleDueToTransportBufferUsage = 3103
+
+/// With 429 Too Many Requests: the request units per second budget is exceeded.
+[<Literal>]
+let RuBudgetExceeded = 3200
+
+/// With 429 Too Many Requests: the gateway throttled the request.
+[<Literal>]
+let GatewayThrottled = 3201
+
+/// With 429 Too Many Requests: the request units per minute limit of the partition is exceeded.
+[<Literal>]
+let RupmPartitionLimitExceeded = 3202
+
+/// With 429 Too Many Requests: the shared request units per minute budget is exceeded.
+[<Literal>]
+let RupmSharedBudgetExceeded = 3203
+
+/// With 429 Too Many Requests: throttled because the throughput offer is scaling down.
+[<Literal>]
+let ThrottledOfferScaleDown = 3204
+
+/// With 429 Too Many Requests: the prepare time limit is exceeded.
+[<Literal>]
+let PrepareTimeLimitExceeded = 3207
+
+/// With 429 Too Many Requests: the client TCP channel is full.
+[<Literal>]
+let ClientTcpChannelFull = 3208
+
+/// With 429 Too Many Requests: the Bw-tree term count limit is exceeded.
+[<Literal>]
+let BwTermCountLimitExceeded = 3209
+
+/// With 429 Too Many Requests: the request units per second budget of the master partition is exceeded.
+[<Literal>]
+let RuBudgetExceededForMaster = 3210
+
+/// With 429 Too Many Requests: throttled because the log of a revoked encrypted store is not empty.
+[<Literal>]
+let ThrottleDueToEncryptedRevokedStoreLogNotEmpty = 3211
+
+/// With 429 Too Many Requests: the throughput bucket exceeded its configured maximum throughput.
+[<Literal>]
+let ThroughputBucketMaxThroughputExceeded = 3212
+
+/// With 429 Too Many Requests: the throughput bucket configuration was changed more than once in 10 minutes.
+[<Literal>]
+let ThroughputBucketConfigurationChangeThrottled = 3213
+
+/// With 429 Too Many Requests: a hot partition key is throttled.
+[<Literal>]
+let HotPartitionKeyThrottled = 3214
+
+/// With 429 Too Many Requests: the Microsoft Fabric capacity unit budget is exceeded.
+[<Literal>]
+let MicrosoftFabricCuBudgetExceeded = 3300
+
+/// <summary>With 429 Too Many Requests (<i>inferred</i>): the thin client proxy throttled the request.</summary>
+[<Literal>]
+let ThinProxyRequestThrottled = 13010
+
+// 449 Retry With
+
+/// With 449 Retry With: the Microsoft Entra ID group of role-based access control is unavailable.
+[<Literal>]
+let RbacAadGroupUnavailable = 5350
+
+/// With 449 Retry With: the Azure role-based access control access decision is unavailable.
+[<Literal>]
+let AzureRbacAccessDecisionUnavailable = 5351
+
+/// With 449 Retry With: a distributed transaction coordinator race conflict occurred.
+[<Literal>]
+let DtcCoordinatorRaceConflict = 5352
+
+/// <summary>With 449 Retry With (<i>inferred</i>): the response of a retriable write request expired in the primary
+/// cache.</summary>
+[<Literal>]
+let RetriableWriteRequestResponseExpiredInPrimaryCache = 5404
+
+// 500 Internal Server Error
+
+/// With 500 Internal Server Error: the configuration name is not empty.
+[<Literal>]
+let ConfigurationNameNotEmpty = 3001
+
+/// With 500 Internal Server Error: the configuration operation was cancelled.
+[<Literal>]
+let ConfigurationOperationCancelled = 3002
+
+/// With 500 Internal Server Error: the account configuration is invalid.
+[<Literal>]
+let InvalidAccountConfiguration = 3003
+
+/// With 500 Internal Server Error: the federation does not exist or is locked.
+[<Literal>]
+let FederationDoesNotExistOrIsLocked = 3004
+
+/// With 500 Internal Server Error: a partition failover failed.
+[<Literal>]
+let PartitionFailoverError = 3010
+
+/// With 500 Internal Server Error: the operation manager dequeue pump stopped.
+[<Literal>]
+let OperationManagerDequeuePumpStopped = 3021
+
+/// With 500 Internal Server Error: the operation was cancelled without a rollback.
+[<Literal>]
+let OperationCancelledWithNoRollback = 3042
+
+/// With 500 Internal Server Error: a partition split timed out.
+[<Literal>]
+let SplitTimedOut = 3043
+
+/// With 500 Internal Server Error: role-based access control is disabled because of the Azure Resource Manager path.
+[<Literal>]
+let RbacDisabledDueToArmPath = 5360
+
+/// With 500 Internal Server Error: the distributed transaction coordinator ledger failed.
+[<Literal>]
+let DtcLedgerFailure = 5411
+
+/// With 500 Internal Server Error: the distributed transaction coordinator account configuration failed.
+[<Literal>]
+let DtcAccountConfigFailure = 5412
+
+/// With 500 Internal Server Error: the distributed transaction coordinator dispatch failed.
+[<Literal>]
+let DtcDispatchFailure = 5413
+
+/// With 500 Internal Server Error: the distributed transaction coordinator rolled the operation back.
+[<Literal>]
+let DtcOperationRolledBack = 5415
+
+/// <summary>With 500 Internal Server Error (<i>inferred</i>): generated by the thin client proxy.</summary>
+[<Literal>]
+let ThinProxyGenerated500 = 13011
+
+// 503 Service Unavailable
+
+/// With 503 Service Unavailable: there are not enough bindable partitions.
+[<Literal>]
+let InsufficientBindablePartitions = 1007
+
+/// With 503 Service Unavailable: the compute federation is not found.
+[<Literal>]
+let ComputeFederationNotFound = 1012
+
+/// With 503 Service Unavailable: a gone exception was not resolved by retries.
+[<Literal>]
+let GoneException = 1337
+
+/// With 503 Service Unavailable: the quorum is not met.
+[<Literal>]
+let QuorumNotMet = 1338
+
+/// With 503 Service Unavailable: there are too many tentative writes to a satellite region.
+[<Literal>]
+let TooManyTentativeWritesToSatelliteRegion = 1339
+
+/// With 503 Service Unavailable: the aggregated health state is an error.
+[<Literal>]
+let AggregatedHealthStateError = 6001
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): the application health state is an error.</summary>
+[<Literal>]
+let ApplicationHealthStateError = 6002
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): the health state is an error.</summary>
+[<Literal>]
+let HealthStateError = 6003
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): an unhealthy event was found.</summary>
+[<Literal>]
+let UnhealthyEventFound = 6004
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): the cluster health is empty.</summary>
+[<Literal>]
+let ClusterHealthEmpty = 6005
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): an allocation failed.</summary>
+[<Literal>]
+let AllocationFailed = 6006
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): the operation result is null.</summary>
+[<Literal>]
+let OperationResultNull = 6007
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): the operation result is unexpected.</summary>
+[<Literal>]
+let OperationResultUnexpected = 6008
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): the health of the fabric nodes is an error.</summary>
+[<Literal>]
+let FabricNodesHealthError = 6009
+
+/// With 503 Service Unavailable: the operation is paused.
+[<Literal>]
+let OperationPaused = 9001
+
+/// With 503 Service Unavailable: the service is offline.
+[<Literal>]
+let ServiceIsOffline = 9002
+
+/// With 503 Service Unavailable: the capacity is insufficient.
+[<Literal>]
+let InsufficientCapacity = 9003
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): generated by the thin client proxy.</summary>
+[<Literal>]
+let ThinProxyGenerated503 = 13012
+
+/// With 503 Service Unavailable: the client failed to connect and all retries failed.
+[<Literal>]
+let ClientConnectivityFailure = 20001
+
+/// With 503 Service Unavailable: the client timed out and all retries failed.
+[<Literal>]
+let ClientTimeout = 20002
+
+/// With 503 Service Unavailable: an operating system I/O error occurred on the client.
+[<Literal>]
+let ClientOperatingSystemIoError = 20003
+
+/// With 503 Service Unavailable: the client machine's CPU is overloaded.
+[<Literal>]
+let ClientCpuOverload = 20004
+
+/// With 503 Service Unavailable: the client machine's thread pool is starved.
+[<Literal>]
+let ClientThreadStarvation = 20005
+
+/// With 503 Service Unavailable: the connection was interrupted or terminated unexpectedly.
+[<Literal>]
+let ConnectionClosed = 20006
+
+/// <summary>With 503 Service Unavailable (<i>inferred</i>): generated by the .NET SDK: the write region barrier changed
+/// in the middle of the operation.</summary>
+[<Literal>]
+let WriteRegionBarrierChangedMidOperation = 20913
+
+/// With 503 Service Unavailable: this and every greater sub-status is a transient service condition.
+[<Literal>]
+let TransientServiceConditionStart = 21001
+
+/// With 503 Service Unavailable: the name cache stayed stale after the SDK retry limit.
+[<Literal>]
+let NameCacheIsStaleExceededRetryLimit = 21001
+
+/// With 503 Service Unavailable: the partition key range stayed gone after the SDK retry limit.
+[<Literal>]
+let PartitionKeyRangeGoneExceededRetryLimit = 21002
+
+/// With 503 Service Unavailable: a partition split was still completing after the SDK retry limit.
+[<Literal>]
+let CompletingSplitExceededRetryLimit = 21003
+
+/// With 503 Service Unavailable: a partition migration was still completing after the SDK retry limit.
+[<Literal>]
+let CompletingPartitionMigrationExceededRetryLimit = 21004
+
+/// With 503 Service Unavailable: a 410 Gone from the service that SDK retries did not resolve.
+[<Literal>]
+let ServerGenerated410 = 21005
+
+/// With 503 Service Unavailable: the global strong write barrier is not met.
+[<Literal>]
+let GlobalStrongWriteBarrierNotMet = 21006
+
+/// With 503 Service Unavailable: the read quorum is not met.
+[<Literal>]
+let ReadQuorumNotMet = 21007
+
+/// With 503 Service Unavailable: a 503 Service Unavailable from the service.
+[<Literal>]
+let ServerGenerated503 = 21008
+
+/// With 503 Service Unavailable: no valid store response was received.
+[<Literal>]
+let NoValidStoreResponse = 21009
+
+/// With 503 Service Unavailable: the barrier request was throttled.
+[<Literal>]
+let BarrierThrottled = 21011
+
+/// With 503 Service Unavailable: the n-region commit write barrier is not met.
+[<Literal>]
+let NRegionCommitWriteBarrierNotMet = 21012
+
+/// With 503 Service Unavailable: the write barrier request was throttled.
+[<Literal>]
+let WriteBarrierThrottled = 21013
+
+/// With 503 Service Unavailable: the routing map snapshot is inconsistent.
+[<Literal>]
+let RoutingMapSnapshotInconsistent = 21015
+
+// Generated by the client SDKs
+
+/// Generated by the client SDK, not the service, when the container has no throughput offer: the Python SDK pairs it
+/// with 404 Not Found, the Java SDK with 400 Bad Request.
+[<Literal>]
+let ThroughputOfferNotFound = 10004

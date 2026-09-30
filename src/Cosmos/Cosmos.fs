@@ -60,9 +60,51 @@ module internal RequestOptions =
         setter options
         options
 
+/// <summary>
+/// Extensions for <see cref="ResponseMessage"/>, the response of the SDK's stream APIs.
+/// </summary>
+// ModuleSuffix: without it the module compiles to FSharp.Azure.Cosmos.ResponseMessage, which makes every
+// ResponseMessage in C# code opening both namespaces ambiguous with Microsoft.Azure.Cosmos.ResponseMessage.
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module ResponseMessage =
+
+    /// <summary>
+    /// Gets the Cosmos DB sub-status code of a stream response, which
+    /// <see cref="ResponseMessage"/> does not expose, unlike <see cref="CosmosException.SubStatusCode"/>.
+    /// <para>
+    /// The sub-status tells apart responses that share a status code: for example, a 404 without one is
+    /// a missing item, while a 404 with <see cref="SubStatusCodes.OwnerResourceNotFound"/> is a missing
+    /// database or container. The known values are in <see cref="SubStatusCodes"/>.
+    /// </para>
+    /// </summary>
+    /// <param name="response">Stream response</param>
+    /// <returns>The sub-status code, or 0 when the response has none.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="response"/> is <see langword="null"/>.</exception>
+    [<CompiledName "GetSubStatusCode">]
+    let getSubStatusCode (response : ResponseMessage) =
+        ArgumentNullException.ThrowIfNull response
+        match response.Headers["x-ms-substatus"] with
+        | null -> SubStatusCodes.Unknown
+        | value ->
+            match Int32.TryParse value with
+            | true, subStatusCode -> subStatusCode
+            | false, _ -> SubStatusCodes.Unknown
 
 [<AutoOpen>]
 module Operations =
+
+    open ResponseMessage
+
+    type ResponseMessage with
+
+        /// <summary>
+        /// Gets the Cosmos DB sub-status code of the response, or 0 when the response has none.
+        /// <para>
+        /// C# callers use <see cref="ResponseMessageModule.GetSubStatusCode"/> instead,
+        /// since F# extension properties are not visible to C#.
+        /// </para>
+        /// </summary>
+        member response.SubStatusCode = getSubStatusCode response
 
     let internal canHandleStatusCode statusCode =
         match statusCode with
