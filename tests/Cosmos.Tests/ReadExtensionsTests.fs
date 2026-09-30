@@ -50,6 +50,50 @@ type ReadExtensionsIntegrationTests () =
     }
 
     [<TestMethod>]
+    member this.``ExistsAsync returns the result for its own id when called concurrently`` () : Task = task {
+        let! container = this.GetContainer ()
+        let seededItems = [| for i in 1..10 -> this.NewItem $"concurrent-exists-{i}" |]
+        do! this.SeedItemsAsync (container, seededItems)
+
+        // Interleave existing and missing ids so that a query sent with another call's id changes the result,
+        // and repeat them to widen the window in which calls overlap
+        let expectations = [|
+            for _ in 1..10 do
+                for item in seededItems do
+                    struct (item.id, true)
+                    struct ($"{item.id}-missing", false)
+        |]
+
+        // Task.Run so that the calls really overlap on different threads instead of starting one after another
+        let! results =
+            expectations
+            |> Array.map (fun struct (id, _) ->
+                Task.Run<bool>(fun () -> container.ExistsAsync (id, cancellationToken = this.CancellationToken))
+            )
+            |> Task.WhenAll
+
+        let mismatches = [|
+            for struct (id, expected), actual in Array.zip expectations results do
+                if expected <> actual then
+                    $"{id}: expected {expected}, got {actual}"
+        |]
+
+        Assert.IsEmpty (mismatches, "Concurrent ExistsAsync calls should each check their own id.")
+    }
+
+    [<TestMethod>]
+    member this.``ExistsAsync with partition key returns false for an item in another partition`` () : Task = task {
+        let! container = this.GetContainer ()
+        let testItem = this.NewItem "exists-other-partition"
+        do! this.SeedItemsAsync (container, [ testItem ])
+
+        let! exists =
+            container.ExistsAsync (testItem.id, PartitionKey $"{testItem.partitionKey}-other", this.CancellationToken)
+
+        Assert.IsFalse (exists, "ExistsAsync should return false when the item is in a different partition.")
+    }
+
+    [<TestMethod>]
     member this.``ExistsAsync and IsNotDeletedAsync match an id present in more than one partition`` () : Task = task {
         let! container = this.GetContainer ()
         let firstItem = this.NewItem "shared-id"

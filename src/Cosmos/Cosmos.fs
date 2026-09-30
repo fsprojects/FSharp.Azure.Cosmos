@@ -205,8 +205,10 @@ module Operations =
             |]
 
     let internal countQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM c")
-    let internal existsQuery = QueryDefinition ("SELECT VALUE COUNT(1) FROM item WHERE item.id = @Id")
-    let internal getExistsQuery id = existsQuery.WithParameter ("@Id", id)
+    // A new definition per call: QueryDefinition.WithParameter mutates the instance and returns it, so a shared
+    // definition lets concurrent calls overwrite each other's @Id and count a different item.
+    let internal getExistsQuery (id : string) =
+        QueryDefinition("SELECT VALUE COUNT(1) FROM item WHERE item.id = @Id").WithParameter("@Id", id)
 
     type Microsoft.Azure.Cosmos.Container with
 
@@ -305,14 +307,26 @@ module Operations =
 
         /// <summary>
         /// Checks if an item with specified Id exists in the container partition with specified key.
+        /// <para>
+        /// Id and partition key identify at most one item, so this is a point read rather than a query:
+        /// it is exact and costs a single request unit.
+        /// </para>
         /// </summary>
         /// <param name="id">Item Id</param>
         /// <param name="partitionKey">Partition key</param>
         /// <param name="cancellationToken">Cancellation token</param>
+        /// <exception cref="CosmosException">Thrown when the read fails with a status other than <c>404 Not Found</c>.</exception>
         member container.ExistsAsync
             (id : string, partitionKey : PartitionKey, [<Optional>] cancellationToken : CancellationToken)
-            =
-            container.ExistsAsync (id, QueryRequestOptions (PartitionKey = partitionKey), cancellationToken)
+            = task {
+            use! response = container.ReadItemStreamAsync (id, partitionKey, cancellationToken = cancellationToken)
+            match response.StatusCode with
+            | HttpStatusCode.NotFound -> return false
+            | _ ->
+                // Any other failure (throttling, timeout, auth) must not be reported as a missing item
+                response.EnsureSuccessStatusCode () |> ignore
+                return true
+        }
 
         /// <summary>
         /// Checks whether an item with the specified Id exists and is not marked as deleted.
