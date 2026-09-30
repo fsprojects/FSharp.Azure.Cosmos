@@ -68,3 +68,9 @@ type CosmosDbEmulatorTestCategoryAttribute () =
 type IterationExtensionsUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit"; "IterationExtensions" |] :> IList<string>
+
+/// Categorizes `ResponseMessageTests` as both a fast, emulator-free unit test and coverage for the
+/// `ResponseMessage` module.
+type ResponseMessageUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Unit"; "ResponseMessage" |] :> IList<string>
