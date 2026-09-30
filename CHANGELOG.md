@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 * `ResponseMessage.SubStatusCode` extension property and `ResponseMessage.getSubStatusCode` function (`ResponseMessageModule.GetSubStatusCode` for C#) to read the Cosmos DB sub-status code of a stream response
-* `SubStatusCodes` constants for the sub-status codes documented on Microsoft Learn
+* `SubStatusCodes` constants for the Cosmos DB sub-status codes from Microsoft Learn and the official .NET, Python, Java and Rust SDKs, each documented with the HTTP status it goes with
 
 ## [1.1.0] - 2026-09-15
 
