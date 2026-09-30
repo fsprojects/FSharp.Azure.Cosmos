@@ -43,7 +43,10 @@ type ReadExtensionsTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Read extensions" |] :> IList<string>
 
-/// Categorizes a test of `IterationExtensions`.
+/// <summary>
+/// Categorizes a test of the iteration extensions:
+/// <see cref="Microsoft.Azure.Cosmos.FeedIteratorExtensions"/> and <see cref="Microsoft.Azure.Cosmos.QueryableExtensions"/>.
+/// </summary>
 type IterationExtensionsTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Iteration extensions" |] :> IList<string>
