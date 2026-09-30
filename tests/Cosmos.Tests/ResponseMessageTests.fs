@@ -2,9 +2,10 @@ namespace FSharp.Azure.Cosmos.Tests
 
 open System
 open System.Net
-open FSharp.Azure.Cosmos
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
+
+open FSharp.Azure.Cosmos
 
 [<TestClass; ResponseMessageUnitTestCategory>]
 type ResponseMessageTests () =
