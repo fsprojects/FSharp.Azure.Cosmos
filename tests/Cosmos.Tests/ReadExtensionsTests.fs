@@ -67,7 +67,7 @@ type ReadExtensionsIntegrationTests () =
         // Task.Run so that the calls really overlap on different threads instead of starting one after another
         let! results =
             expectations
-            |> Array.map (fun struct (id, _) ->
+            |> Seq.map (fun struct (id, _) ->
                 Task.Run<bool>(fun () -> container.ExistsAsync (id, cancellationToken = this.CancellationToken))
             )
             |> Task.WhenAll
@@ -92,6 +92,76 @@ type ReadExtensionsIntegrationTests () =
 
         Assert.IsFalse (exists, "ExistsAsync should return false when the item is in a different partition.")
     }
+
+    /// <summary>
+    /// Creates a container with a two-level hierarchical partition key, <c>/partitionKey</c> then <c>/subKey</c>.
+    /// <see cref="TestItem"/> has no <c>subKey</c> field, so its full key ends with a None level, as in issue #31.
+    /// </summary>
+    member private this.GetHierarchicalContainer () : Task<Container> = task {
+        let database =
+            this.Application.Database
+            |> ValueOption.defaultWith (fun () -> invalidOp "Database is not initialized.")
+        let! response =
+            database.CreateContainerIfNotExistsAsync (
+                ContainerProperties ("hierarchical-tests", [| "/partitionKey"; "/subKey" |]),
+                cancellationToken = this.CancellationToken
+            )
+        return response.Container
+    }
+
+    [<TestMethod>]
+    member this.``ExistsAsync with a full hierarchical partition key checks the item by point read`` () : Task = task {
+        let! container = this.GetHierarchicalContainer ()
+        let testItem = this.NewItem "hierarchical-full"
+        let fullKey = PartitionKeyBuilder().Add(testItem.partitionKey).AddNoneType().Build()
+        let! _ = container.CreateItemAsync (testItem, fullKey, cancellationToken = this.CancellationToken)
+
+        let! exists = container.ExistsAsync (testItem.id, fullKey, this.CancellationToken)
+        let! missingExists = container.ExistsAsync ($"{testItem.id}-missing", fullKey, this.CancellationToken)
+
+        Assert.IsTrue (exists, "ExistsAsync should return true for an existing item with a full hierarchical key.")
+        Assert.IsFalse (missingExists, "ExistsAsync should return false for a missing item with a full hierarchical key.")
+    }
+
+    [<TestMethod>]
+    member this.``ExistsAsync with a hierarchical partition key prefix matches the item beneath it`` () : Task = task {
+        let! container = this.GetHierarchicalContainer ()
+        let testItem = this.NewItem "hierarchical-prefix"
+        let fullKey = PartitionKeyBuilder().Add(testItem.partitionKey).AddNoneType().Build()
+        let! _ = container.CreateItemAsync (testItem, fullKey, cancellationToken = this.CancellationToken)
+
+        let prefixKey = PartitionKeyBuilder().Add(testItem.partitionKey).Build()
+        let! exists = container.ExistsAsync (testItem.id, prefixKey, this.CancellationToken)
+        let! missingExists = container.ExistsAsync ($"{testItem.id}-missing", prefixKey, this.CancellationToken)
+
+        Assert.IsTrue (exists, "ExistsAsync should return true for an existing item beneath a partition key prefix.")
+        Assert.IsFalse (missingExists, "ExistsAsync should return false for a missing item beneath a partition key prefix.")
+    }
+
+    [<TestMethod>]
+    member this.``ExistsAsync with partition key throws instead of returning false when the container does not exist`` () : Task =
+        task {
+            let! container = this.GetContainer ()
+            let missingContainer = container.Database.GetContainer "missing-container"
+            let testItem = this.NewItem "missing-container"
+
+            // The service answers 404 here as well, with a sub-status that tells it apart from a missing item
+            let! thrown =
+                Assert.ThrowsExactlyAsync<CosmosException>(
+                    Func<Task>(fun () -> task {
+                        let! _ =
+                            missingContainer.ExistsAsync (
+                                testItem.id,
+                                PartitionKey testItem.partitionKey,
+                                this.CancellationToken
+                            )
+                        return ()
+                    }),
+                    "ExistsAsync should propagate a failure that is not a missing item."
+                )
+
+            Assert.AreEqual (HttpStatusCode.NotFound, thrown.StatusCode, "The propagated failure should keep its status code.")
+        }
 
     [<TestMethod>]
     member this.``ExistsAsync and IsNotDeletedAsync match an id present in more than one partition`` () : Task = task {
