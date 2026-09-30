@@ -308,8 +308,9 @@ module Operations =
         /// <summary>
         /// Checks if an item with specified Id exists in the container partition with specified key.
         /// <para>
-        /// A full partition key and an Id identify at most one item, so the check is a point read: it is exact
-        /// and costs a single request unit.
+        /// A full partition key and an Id identify at most one item, so the check is a point read: it is exact,
+        /// and its request charge depends only on the item size and the consistency level (1 RU for a 1 KB item,
+        /// twice as much with strong or bounded staleness consistency).
         /// </para>
         /// <para>
         /// A prefix of a hierarchical partition key cannot be point-read; the service rejects it as a bad request,
