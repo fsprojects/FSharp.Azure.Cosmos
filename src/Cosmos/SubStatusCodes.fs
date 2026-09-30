@@ -8,9 +8,10 @@
 /// <see cref="SubStatusCodes.PartitionKeyRangeGone"/> with 410. Match on both.
 /// </para>
 /// <para>
-/// Sources: the REST API HTTP status codes page, the Azure Cosmos DB troubleshooting guides, the throughput buckets
-/// FAQ and the <c>SubStatusCodes</c> reference of the Python SDK. Codes without a documented HTTP status are
-/// listed as documented, without one.
+/// Sources of the codes: the REST API HTTP status codes page, the Azure Cosmos DB troubleshooting guides, the
+/// throughput buckets FAQ and the <c>SubStatusCodes</c> reference of the Python SDK. Where Microsoft Learn names a
+/// code without its HTTP status, the status comes from the official Python, Java and Rust SDK sources, and for the
+/// customer-managed key codes from the data plane scenario of the customer-managed key troubleshooting guide.
 /// </para>
 /// </remarks>
 [<RequireQualifiedAccess>]
@@ -52,7 +53,7 @@ let CrossPartitionQueryNotServable = 1004
 [<Literal>]
 let ProvisionLimitReached = 1005
 
-/// The operation conflicts with a control plane operation.
+/// With 409 Conflict: the operation conflicts with a control plane operation.
 [<Literal>]
 let ConflictWithControlPlane = 1006
 
@@ -72,15 +73,15 @@ let CompletingPartitionMigration = 1008
 [<Literal>]
 let DatabaseAccountNotFound = 1008
 
-/// The container definition in the request is the same as the existing one.
+/// With 403 Forbidden: the container definition in the request is the same as the existing one.
 [<Literal>]
 let RedundantCollectionPut = 1009
 
-/// The quota of containers in a shared throughput database is exceeded.
+/// With 403 Forbidden: the quota of containers in a shared throughput database is exceeded.
 [<Literal>]
 let SharedThroughputDatabaseQuotaExceeded = 1010
 
-/// The shared throughput offer does not need to grow.
+/// With 403 Forbidden: the shared throughput offer does not need to grow.
 [<Literal>]
 let SharedThroughputOfferGrowNotNeeded = 1011
 
@@ -92,7 +93,8 @@ let ContainerCreateInProgress = 1013
 [<Literal>]
 let PartitionKeyQuotaExceeded = 1014
 
-/// The container resource id does not match.
+/// With 400 Bad Request: the container resource id does not match the one the client cached, for example after
+/// the container was re-created with the same name.
 [<Literal>]
 let CollectionRidMismatch = 1024
 
@@ -104,43 +106,43 @@ let ThroughputBucketMaxThroughputExceeded = 3212
 [<Literal>]
 let ThroughputBucketConfigurationChangeThrottled = 3213
 
-/// Customer-managed keys: Azure Cosmos DB cannot get the Microsoft Entra ID access token for the Key Vault.
+/// With 403 Forbidden, customer-managed keys: Azure Cosmos DB cannot get the Microsoft Entra ID access token for the Key Vault.
 [<Literal>]
 let AadTokenAcquisitionFailed = 4000
 
-/// Customer-managed keys: the Microsoft Entra ID service is unavailable.
+/// With 403 Forbidden, customer-managed keys: the Microsoft Entra ID service is unavailable.
 [<Literal>]
 let AadServiceUnavailable = 4001
 
-/// Customer-managed keys: the Key Vault does not grant Azure Cosmos DB access, or the key is disabled.
+/// With 403 Forbidden, customer-managed keys: the Key Vault does not grant Azure Cosmos DB access, or the key is disabled.
 [<Literal>]
 let KeyVaultAccessDenied = 4002
 
-/// Customer-managed keys: the key is not found in the Key Vault.
+/// With 403 Forbidden, customer-managed keys: the key is not found in the Key Vault.
 [<Literal>]
 let KeyVaultKeyNotFound = 4003
 
-/// Customer-managed keys: the Key Vault service is unavailable.
+/// With 403 Forbidden, customer-managed keys: the Key Vault service is unavailable.
 [<Literal>]
 let KeyVaultServiceUnavailable = 4004
 
-/// Customer-managed keys: the Key Vault cannot wrap or unwrap the key.
+/// With 403 Forbidden, customer-managed keys: the Key Vault cannot wrap or unwrap the key.
 [<Literal>]
 let KeyVaultWrapUnwrapFailure = 4005
 
-/// Customer-managed keys: the Key Vault key URL is invalid, for example it includes the key version.
+/// With 403 Forbidden, customer-managed keys: the Key Vault key URL is invalid, for example it includes the key version.
 [<Literal>]
 let InvalidKeyVaultKeyUrl = 4006
 
-/// Customer-managed keys: internal server error, the input bytes are not in the base64 format.
+/// With 403 Forbidden, customer-managed keys: internal server error, the input bytes are not in the base64 format.
 [<Literal>]
 let InvalidInputBytes = 4007
 
-/// Customer-managed keys: the Key Vault returned an internal service error.
+/// With 403 Forbidden, customer-managed keys: the Key Vault returned an internal service error.
 [<Literal>]
 let KeyVaultInternalServerError = 4008
 
-/// Customer-managed keys: the Key Vault DNS name cannot be resolved.
+/// With 403 Forbidden, customer-managed keys: the Key Vault DNS name cannot be resolved.
 [<Literal>]
 let KeyVaultDnsNotResolved = 4009
 
@@ -148,7 +150,8 @@ let KeyVaultDnsNotResolved = 4009
 [<Literal>]
 let AadRequestNotAuthorized = 5300
 
-/// The throughput offer is not found.
+/// Generated by the client SDK, not the service, when the container has no throughput offer: the Python SDK
+/// pairs it with 404 Not Found, the Java SDK with 400 Bad Request.
 [<Literal>]
 let ThroughputOfferNotFound = 10004
 
