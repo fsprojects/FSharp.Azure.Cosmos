@@ -4,4 +4,12 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
     </PropertyGroup>
+
+    <!--
+      Every test project shares the test infrastructure (fixtures, emulator budget, assertion helpers); the
+      infrastructure project itself is excluded, because a project cannot reference itself.
+    -->
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'FSharp.Azure.Cosmos.Tests.Infrastructure'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)Cosmos.Tests.Infrastructure/FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj" />
+    </ItemGroup>
 </Project>

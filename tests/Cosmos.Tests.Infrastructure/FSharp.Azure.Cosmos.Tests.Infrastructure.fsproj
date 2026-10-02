@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Tests.Infrastructure</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      A library shared by the test projects, not a test application: tests/Directory.Build.props marks every project
+      under tests/ as a test project, so this one opts out explicitly. Otherwise `dotnet test` on the solution would try
+      to run it under Microsoft.Testing.Platform. It references MSTest.TestFramework only, never the MSTest metapackage,
+      for the same reason.
+    -->
+    <IsTestProject>false</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="TestCategories.fs" />
+    <Compile Include="Assert.fs" />
+    <Compile Include="FakeFeed.fs" />
+    <Compile Include="IntegrationInfrastructure.fs" />
+    <Compile Include="CosmosAssert.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" />
+    <PackageReference Include="MSTest.TestFramework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cosmos\FSharp.Azure.Cosmos.fsproj" />
+  </ItemGroup>
+
+</Project>
