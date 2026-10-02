@@ -57,6 +57,14 @@ type ValidationTestCategoryAttribute () =
     override _.TestCategories = [| "Validation" |] :> IList<string>
 
 /// <summary>
+/// Categorizes <see cref="IcedTasksProbeTests"/> as both a fast, emulator-free unit test and the probe that gates the
+/// use of IcedTasks computation expressions in library code.
+/// </summary>
+type IcedTasksProbeTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Unit"; "IcedTasksProbe" |] :> IList<string>
+
+/// <summary>
 /// Categorizes <see cref="IterationExtensionsUnitTests"/> as both a fast, emulator-free unit test and coverage for the
 /// iteration extensions: <see cref="Microsoft.Azure.Cosmos.FeedIteratorExtensions"/> and
 /// <see cref="Microsoft.Azure.Cosmos.QueryableExtensions"/>.
