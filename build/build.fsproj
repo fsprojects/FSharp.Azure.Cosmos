@@ -35,6 +35,5 @@
     <PackageReference Include="NuGet.Protocol" />
     <PackageReference Include="Octokit" />
     <PackageReference Include="System.Drawing.Common" />
-    <PackageReference Include="System.Formats.Asn1" />
   </ItemGroup>
 </Project>
