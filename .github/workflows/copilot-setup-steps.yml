@@ -44,7 +44,6 @@ jobs:
           global-json-file: global.json
           dotnet-version: |
             10.x
-            8.x
 
       - name: Setup Azure Cosmos DB Emulator
         uses: ./.github/actions/setup-cosmos-emulator
