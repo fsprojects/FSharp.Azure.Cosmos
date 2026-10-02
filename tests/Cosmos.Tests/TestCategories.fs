@@ -75,7 +75,7 @@ type ResponseMessageUnitTestCategoryAttribute () =
 
 /// <summary>
 /// Categorizes the tests of the shared test infrastructure as fast, emulator-free unit tests:
-/// <see cref="DatabaseIdentifierTests"/> and <see cref="LeftoverSweepTests"/>.
+/// <see cref="DatabaseIdentifierTests"/>, <see cref="PartitionBudgetTests"/> and <see cref="LeftoverSweepTests"/>.
 /// </summary>
 type TestInfrastructureUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()

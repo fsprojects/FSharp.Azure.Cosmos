@@ -64,6 +64,40 @@ let key =
     |> ValueOption.defaultValue DefaultKey
 
 /// <summary>
+/// The environment variable that overrides <see cref="DefaultPartitionCount"/>.
+/// </summary>
+[<Literal>]
+let PartitionCountVariable = "COSMOS_EMULATOR_PARTITION_COUNT"
+
+/// <summary>
+/// The default <c>/PartitionCount</c> of the Windows emulator. How many partitions one container costs on each
+/// emulator is not settled yet: every <see cref="DatabaseTestApplicationFactory"/> counts one per container.
+/// </summary>
+[<Literal>]
+let DefaultPartitionCount = 25
+
+/// <summary>
+/// Reads the number of partitions the emulator offers, which bounds how many test containers exist at the same
+/// time: the value of <see cref="PartitionCountVariable"/> when it is set, otherwise
+/// <see cref="DefaultPartitionCount"/>.
+/// </summary>
+/// <remarks>
+/// A function rather than a value, so that a malformed variable fails the fixtures that need the
+/// <see cref="PartitionBudget"/> and not everything else that touches this module, such as the emulator-free tests
+/// through <see cref="deleteLeftoverDatabasesAsync"/>.
+/// </remarks>
+/// <exception cref="InvalidOperationException">
+/// <see cref="PartitionCountVariable"/> is set to something other than a positive integer.
+/// </exception>
+let readPartitionCount () : int =
+    match readVariable PartitionCountVariable with
+    | ValueNone -> DefaultPartitionCount
+    | ValueSome text ->
+        match Int32.TryParse (text, NumberStyles.None, CultureInfo.InvariantCulture) with
+        | true, count when count > 0 -> count
+        | _ -> invalidOp $"{PartitionCountVariable} must be a positive integer, but it is '{text}'."
+
+/// <summary>
 /// The environment variable that overrides <see cref="DefaultLeftoverAgeMinutes"/>.
 /// </summary>
 [<Literal>]

@@ -23,6 +23,7 @@
     <Compile Include="CosmosNameTests.fs" />
     <Compile Include="ResponseMessageTests.fs" />
     <Compile Include="DatabaseIdentifierTests.fs" />
+    <Compile Include="PartitionBudgetTests.fs" />
     <Compile Include="LeftoverSweepTests.fs" />
     <Compile Include="OperationTestInfrastructure.fs" />
     <Compile Include="CreateOperationTests.fs" />
