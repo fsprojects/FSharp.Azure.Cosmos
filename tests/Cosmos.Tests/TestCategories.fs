@@ -2,6 +2,7 @@
 // component, in the same order as the string constants they replace used to be declared in. An abstract
 // MSTest attribute whose TestCategories list is picked up by --filter TestCategory=... exactly like
 // [<TestCategory>]'s, but self-sufficient: no separate string constant needed to know what to pass it.
+// The categories every test project shares, such as the Cosmos DB Emulator one, live in the test infrastructure project.
 namespace FSharp.Azure.Cosmos.Tests
 
 open System.Collections.Generic
@@ -54,11 +55,6 @@ type IterationExtensionsTestCategoryAttribute () =
 type ValidationTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Validation" |] :> IList<string>
-
-/// Categorizes a test as needing the Cosmos DB Emulator, the way the shared integration test base class does.
-type CosmosDbEmulatorTestCategoryAttribute () =
-    inherit TestCategoryBaseAttribute ()
-    override _.TestCategories = [| "Cosmos DB Emulator" |] :> IList<string>
 
 /// <summary>
 /// Categorizes <see cref="IterationExtensionsUnitTests"/> as both a fast, emulator-free unit test and coverage for the

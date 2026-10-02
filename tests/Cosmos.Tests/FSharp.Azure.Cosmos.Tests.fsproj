@@ -21,9 +21,6 @@
     <Compile Include="IterationExtensionsUnitTests.fs" />
     <Compile Include="CosmosNameTests.fs" />
     <Compile Include="ResponseMessageTests.fs" />
-    <Compile Include="IntegrationInfrastructure.fs" />
-    <Compile Include="Assert.fs" />
-    <Compile Include="CosmosAssert.fs" />
     <Compile Include="OperationTestInfrastructure.fs" />
     <Compile Include="CreateOperationTests.fs" />
     <Compile Include="ReadOperationTests.fs" />

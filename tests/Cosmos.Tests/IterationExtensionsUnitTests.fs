@@ -2,51 +2,11 @@ namespace FSharp.Azure.Cosmos.Tests
 
 open System
 open System.Collections.Generic
-open System.Net
 open System.Threading
 open System.Threading.Tasks
 open FSharp.Control
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
-
-/// <summary>
-/// A <see cref="FeedResponse{T}"/> fake implementing the members <see cref="Response{T}"/> and
-/// <see cref="FeedResponse{T}"/> declare abstract; only <see cref="FeedResponse{T}.GetEnumerator"/> is actually read
-/// by <see cref="Microsoft.Azure.Cosmos.FeedIteratorAsyncEnumerator{T}"/>, the rest exist to satisfy the base classes.
-/// </summary>
-type private FakeFeedResponse<'T> (items : 'T list) =
-    inherit FeedResponse<'T> ()
-
-    override _.Count = items.Length
-    override _.ContinuationToken = null
-    override _.IndexMetrics = null
-    override _.GetEnumerator () = (items :> 'T seq).GetEnumerator()
-    override _.Headers = Headers ()
-    override _.Resource = items :> 'T seq
-    override _.StatusCode = HttpStatusCode.OK
-    override _.Diagnostics = Unchecked.defaultof<CosmosDiagnostics>
-
-/// <summary>
-/// A <see cref="FeedIterator{T}"/> fake that serves a fixed sequence of pages without a Cosmos DB connection.
-/// </summary>
-type private FakeFeedIterator<'T> (pages : 'T list list) =
-    inherit FeedIterator<'T> ()
-
-    let mutable remainingPages = pages
-
-    member val ReadNextCallCount = 0 with get, set
-
-    override _.HasMoreResults = not remainingPages.IsEmpty
-
-    override this.ReadNextAsync (cancellationToken : CancellationToken) =
-        cancellationToken.ThrowIfCancellationRequested ()
-        this.ReadNextCallCount <- this.ReadNextCallCount + 1
-
-        match remainingPages with
-        | [] -> raise (InvalidOperationException "ReadNextAsync called with no pages remaining.")
-        | page :: rest ->
-            remainingPages <- rest
-            Task.FromResult (FakeFeedResponse<'T>(page) :> FeedResponse<'T>)
 
 /// <summary>
 /// Regression coverage for the hand-written <see cref="FeedIterator{T}.AsAsyncEnumerable"/>: it replaced a
