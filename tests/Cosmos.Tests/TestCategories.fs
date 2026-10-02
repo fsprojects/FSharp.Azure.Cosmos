@@ -72,3 +72,11 @@ type IterationExtensionsUnitTestCategoryAttribute () =
 type ResponseMessageUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit"; "ResponseMessage" |] :> IList<string>
+
+/// <summary>
+/// Categorizes the tests of the shared test infrastructure as fast, emulator-free unit tests:
+/// <see cref="DatabaseIdentifierTests"/> and <see cref="LeftoverSweepTests"/>.
+/// </summary>
+type TestInfrastructureUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Unit"; "TestInfrastructure" |] :> IList<string>
