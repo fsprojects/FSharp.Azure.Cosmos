@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+* BREAKING: the package targets `net10.0` only and no longer supports `net8.0`, which makes this a major release
 * BREAKING: `Microsoft.Azure.Cosmos` updated from 3.60.0 to 3.62.0, which becomes the minimum version for consumers. Its release notes list a breaking change of their own: thin client mode is enabled by default and does not support resource-token authentication (opt out with `AZURE_COSMOS_THIN_CLIENT_ENABLED=false`)
 
 ## [1.2.0] - 2026-10-01
