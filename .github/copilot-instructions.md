@@ -26,6 +26,7 @@
 │   ├── TaskSeq.fs       – TaskSeq integration
 │   └── UniqueKey.fs     – unique key helpers
 ├── tests/Cosmos.Tests/  – MSTest integration test project
+├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
 ├── build/               – FAKE build scripts
 └── docsSrc/             – FSharp.Formatting documentation source
 ```
@@ -228,6 +229,11 @@ module MyTypeExtensions =
 * The emulator must be running locally or installed via the `copilot-setup-steps.yml` workflow.
 * Emulator endpoint: `https://127.0.0.1:8081`
 * Emulator primary key: `C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==`
+* `COSMOS_EMULATOR_ENDPOINT` overrides the emulator endpoint the tests connect to.
+* `COSMOS_EMULATOR_KEY` overrides the emulator key the tests authenticate with.
+* `COSMOS_EMULATOR_PARTITION_COUNT` is the number of partitions the emulator offers (default `25`, the Windows emulator's default `/PartitionCount`); the fixtures keep at most that many test containers at a time, one partition each.
+* `COSMOS_TEST_LEFTOVER_AGE_MINUTES` is how many minutes a `fsac-test-` database must stay unmodified before the leftover sweep of `[<AssemblyInitialize>]` and `[<AssemblyCleanup>]` deletes it (default `60`), so that the live databases of another test process on the same emulator are kept; `0` deletes every test database and is safe only while no other test process uses the emulator.
+* Every test project under `tests/` references `tests/Cosmos.Tests.Infrastructure` through `tests/Directory.Build.props`; a new test project gets it without a `ProjectReference` of its own.
 * `CollectionAssert` cannot work with F# lists – use F# array syntax (`[| ... |]`) instead.
 * `StringAssert` has overloads with `StringComparison`.
 * Use `Assert.Contains` instead of `Assert.IsTrue (str.Contains ..., "message")`, and do not put the actual value into the message.
