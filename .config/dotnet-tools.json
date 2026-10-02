@@ -10,7 +10,7 @@
       "rollForward": false
     },
     "fsharp-analyzers": {
-      "version": "0.31.0",
+      "version": "0.41.0",
       "commands": [
         "fsharp-analyzers"
       ],
@@ -24,7 +24,7 @@
       "rollForward": false
     },
     "fantomas": {
-      "version": "8.0.5",
+      "version": "8.0.10",
       "commands": [
         "fantomas"
       ],

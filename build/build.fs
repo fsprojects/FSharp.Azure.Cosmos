@@ -175,9 +175,9 @@ module FSharpAnalyzers =
             member s.Usage = ""
 
 
-module DocsTool =
-    let quoted s = $"\"%s{s}\""
+let quoted s = $"\"%s{s}\""
 
+module DocsTool =
     let fsDocsDotnetOptions (o : DotNet.Options) = { o with WorkingDirectory = rootDirectory }
 
     let fsDocsBuildParams configuration (p : Fsdocs.BuildCommandParams) = {
@@ -370,12 +370,12 @@ let dotnetTest ctx =
             "--coverage-output-format"
             "cobertura"
             "--results-directory"
-            testResultsDir
+            quoted testResultsDir
     ]
 
     !!testsGlob
     |> Seq.iter (fun testProject ->
-        [ "--project"; testProject; yield! args ]
+        [ "--project"; quoted testProject; yield! args ]
         |> String.concat " "
         |> DotNet.exec id "test"
         |> failOnBadExitAndPrint
