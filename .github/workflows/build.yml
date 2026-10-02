@@ -24,7 +24,6 @@ jobs:
           global-json-file: global.json
           dotnet-version: |
             10.x
-            8.x
 
       - name: Install Azure Cosmos DB Emulator (Windows)
         id: install_cosmos_windows
