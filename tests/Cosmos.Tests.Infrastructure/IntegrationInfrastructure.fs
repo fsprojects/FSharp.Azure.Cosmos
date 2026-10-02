@@ -2,8 +2,6 @@ namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System
 open System.Net
-open System.Net.Http
-open System.Net.Security
 open System.Threading
 open System.Threading.Tasks
 
@@ -11,36 +9,6 @@ open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
 open FSharp.Azure.Cosmos.Tests
-
-/// Extensions of the MSTest test context used by the integration test fixtures.
-[<AutoOpen>]
-module TestContextExtensions =
-
-    type TestContext with
-
-        /// <summary>
-        /// Builds the identifier of the database a test creates from the test name and its data row.
-        /// </summary>
-        member ctx.GetTestDatabaseIdentifier () =
-            match ctx.TestData with
-            | null -> ctx.TestName
-            | testData ->
-                let dataHash =
-                    testData
-                    |> Array.fold
-                        (fun acc item ->
-                            let itemHash =
-                                match item with
-                                | null -> 0
-                                | item -> item.GetHashCode ()
-
-                            HashCode.Combine (acc, itemHash)
-                        )
-                        0
-                    |> int64
-                    |> abs
-
-                $"{ctx.TestName}_{dataHash}"
 
 /// <summary>
 /// The base class of every test class: holds the <see cref="TestContext"/> MSTest injects.
@@ -63,41 +31,8 @@ type TestBase () =
 /// test and deleted after it. Scenarios derive from it and override <see cref="SeedDataAsync"/>.
 /// </summary>
 type DatabaseTestApplicationFactory (testContext : TestContext) =
-    [<Literal>]
-    let endpoint = "https://127.0.0.1:8081"
-
-    [<Literal>]
-    let primaryKey =
-        "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw=="
-
-    let buildDatabaseId () = testContext.GetTestDatabaseIdentifier ()
-
-    let databaseId = buildDatabaseId ()
-
-    let isLocalEmulatorHost (uri : Uri) =
-        uri.Host.Equals ("localhost", StringComparison.OrdinalIgnoreCase)
-        || uri.Host.Equals ("127.0.0.1", StringComparison.OrdinalIgnoreCase)
-
-    let createHttpClient () =
-        let handler =
-            new HttpClientHandler (
-                ServerCertificateCustomValidationCallback =
-                    (fun request _ _ errors ->
-                        match request.RequestUri with
-                        | null -> errors = SslPolicyErrors.None
-                        | requestUri when errors = SslPolicyErrors.None -> true
-                        | requestUri -> isLocalEmulatorHost requestUri
-                    )
-            )
-
-        new HttpClient (handler, true)
-
-    let client =
-        new CosmosClient (
-            endpoint,
-            primaryKey,
-            CosmosClientOptions (ConnectionMode = ConnectionMode.Gateway, HttpClientFactory = Func<HttpClient> createHttpClient)
-        )
+    let databaseId = DatabaseIdentifier.ofTestContext testContext
+    let client = Emulator.createClient ()
     let mutable database = ValueNone
 
     /// <summary>
@@ -117,12 +52,25 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
     member _.Database = database
 
     /// <summary>
-    /// Creates the database of this fixture.
+    /// Creates the database of this fixture, empty: a database of the same identifier that an earlier run left behind
+    /// is deleted and created anew.
     /// </summary>
     member _.InitializeAsync (cancellationToken : CancellationToken) : Task = task {
-        let! createdDatabase =
-            client.CreateDatabaseIfNotExistsAsync (databaseId, cancellationToken = cancellationToken)
-        database <- ValueSome createdDatabase.Database
+        let! response = client.CreateDatabaseIfNotExistsAsync (databaseId, cancellationToken = cancellationToken)
+
+        if response.StatusCode = HttpStatusCode.Created then
+            database <- ValueSome response.Database
+        else
+            // The identifier is stable, so this is the database of this very test from an earlier run that
+            // was aborted, or whose cleanup failed, too recently for the leftover sweep to delete it. Its
+            // containers and items would make the test fail, such as a seed that conflicts with an item
+            // the earlier run created, so the test starts over with an empty database.
+            testContext.WriteLine
+                $"Recreating the test database '{databaseId}' that an earlier run of this test left behind."
+
+            let! _ = response.Database.DeleteAsync (cancellationToken = cancellationToken)
+            let! recreated = client.CreateDatabaseAsync (databaseId, cancellationToken = cancellationToken)
+            database <- ValueSome recreated.Database
     }
 
     /// <summary>

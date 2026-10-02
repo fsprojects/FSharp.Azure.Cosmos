@@ -62,3 +62,11 @@ type ValidationTestCategoryAttribute () =
 type ResponseMessageTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Response message" |] :> IList<string>
+
+/// <summary>
+/// Categorizes a test of the shared test infrastructure: <see cref="DatabaseIdentifierTests"/> and
+/// <see cref="LeftoverSweepTests"/>.
+/// </summary>
+type TestInfrastructureTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Test infrastructure" |] :> IList<string>

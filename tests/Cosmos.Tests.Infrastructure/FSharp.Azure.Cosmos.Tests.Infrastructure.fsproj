@@ -19,6 +19,8 @@
     <Compile Include="TestCategories.fs" />
     <Compile Include="Assert.fs" />
     <Compile Include="FakeFeed.fs" />
+    <Compile Include="DatabaseIdentifier.fs" />
+    <Compile Include="Emulator.fs" />
     <Compile Include="IntegrationInfrastructure.fs" />
     <Compile Include="CosmosAssert.fs" />
   </ItemGroup>

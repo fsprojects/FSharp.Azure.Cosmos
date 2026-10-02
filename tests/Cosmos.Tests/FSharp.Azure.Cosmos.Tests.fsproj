@@ -18,9 +18,12 @@
 
   <ItemGroup>
     <Compile Include="TestCategories.fs" />
+    <Compile Include="TestAssembly.fs" />
     <Compile Include="IterationExtensionsUnitTests.fs" />
     <Compile Include="CosmosNameTests.fs" />
     <Compile Include="ResponseMessageTests.fs" />
+    <Compile Include="DatabaseIdentifierTests.fs" />
+    <Compile Include="LeftoverSweepTests.fs" />
     <Compile Include="OperationTestInfrastructure.fs" />
     <Compile Include="CreateOperationTests.fs" />
     <Compile Include="ReadOperationTests.fs" />
