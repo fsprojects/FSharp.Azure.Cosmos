@@ -1,6 +1,6 @@
 <Project>
   <ItemGroup Label="Microsoft">
-    <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.60.0" />
+    <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.62.0" />
     <PackageVersion Include="MSBuild.StructuredLogger" Version="2.2.472" />
     <PackageVersion Include="System.Drawing.Common" Version="9.0.5" />
     <PackageVersion Include="System.Formats.Asn1" Version="9.0.5" />
