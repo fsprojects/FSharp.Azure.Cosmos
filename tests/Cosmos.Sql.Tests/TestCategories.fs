@@ -16,3 +16,12 @@ type CollectionsUnitTestCategoryAttribute () =
 
     /// <inheritdoc />
     override _.TestCategories = [| "Unit"; "Collections" |] :> IList<string>
+
+/// <summary>
+/// Categorizes a unit test of the syntax tree: <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.SyntaxTests"/>.
+/// </summary>
+type SyntaxTreeUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Unit"; "SyntaxTree" |] :> IList<string>
