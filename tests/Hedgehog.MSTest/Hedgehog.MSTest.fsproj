@@ -21,6 +21,7 @@
     -->
     <IsTestProject>false</IsTestProject>
     <IsPackable>false</IsPackable>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <!--
@@ -30,6 +31,15 @@
   -->
   <ItemGroup>
     <Compile Remove="$(MSBuildThisFileDirectory)..\..\src\Shared\ValueCollections.fs" />
+  </ItemGroup>
+
+  <!--
+    The adapter's own tests drive the runner (InternalLogic) without MSTest. The SDK turns this item into the attribute
+    only while it generates the assembly information, which Directory.Build.props turns off for the AssemblyInfo.fs that
+    FAKE writes into the src projects, so this project turns it back on (GenerateAssemblyInfo).
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Hedgehog.MSTest.Tests" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,6 +52,8 @@
     <Compile Include="PropertyContext.fs" />
     <Compile Include="ReflectionHelpers.fs" />
     <Compile Include="InternalLogic.fs" />
+    <Compile Include="PropertyAttribute.fs" />
+    <Compile Include="PropertiesAttribute.fs" />
   </ItemGroup>
 
   <ItemGroup>

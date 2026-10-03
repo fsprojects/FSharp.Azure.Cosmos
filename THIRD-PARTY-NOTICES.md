@@ -10,7 +10,8 @@ to it in a header comment. The rest of the repository is covered by [LICENSE](LI
   (Hedgehog 2.0.4; the repository has no tag for this release)
 * Copied into: `tests/Hedgehog.MSTest` (the Hedgehog MSTest adapter), from `src/Hedgehog.NUnit`: `Prelude.fs`,
   `ReflectionHelpers.fs`, `AutoGenConfig.fs`, `IPropertyAttribute.fs`, `RecheckAttribute.fs`, `GenAttribute.fs`,
-  `GenAttribute.Prelude.fs`, `PropertyContext.fs` and `InternalLogic.fs`
+  `GenAttribute.Prelude.fs`, `PropertyContext.fs`, `InternalLogic.fs`, `PropertiesAttribute.fs` and, adapted from
+  NUnit to MSTest, `PropertyAttribute.fs`
 * License: Apache License, Version 2.0
 
 ```text
