@@ -25,6 +25,8 @@
     <Compile Include="EquatableArrayTests.fs" />
     <Compile Include="EquatableArrayModuleTests.fs" />
     <Compile Include="ImmutableArrayPatternsTests.fs" />
+    <Compile Include="PrinterTests.fs" />
+    <Compile Include="InlineTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
