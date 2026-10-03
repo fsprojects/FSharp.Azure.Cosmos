@@ -20,6 +20,8 @@
 
   <ItemGroup>
     <Compile Include="TestCategories.fs" />
+    <Compile Include="Ast.fs" />
+    <Compile Include="SyntaxTests.fs" />
     <Compile Include="EquatableArrayTests.fs" />
   </ItemGroup>
 
