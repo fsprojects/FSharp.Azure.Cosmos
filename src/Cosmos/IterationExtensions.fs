@@ -6,6 +6,7 @@ open System.Runtime.InteropServices
 open System.Threading
 open System.Threading.Tasks
 open Microsoft.Azure.Cosmos
+open IcedTasks
 
 /// <summary>
 /// Enumerates the items of every page of a <see cref="FeedIterator{T}" />.
@@ -30,28 +31,29 @@ type internal FeedIteratorAsyncEnumerator<'T> (iterator : FeedIterator<'T>, canc
         /// <inheritdoc />
         member _.Current = current
 
+        // The valueTask builder produces the ValueTask<bool> itself instead of a Task wrapped in one. It is safe in
+        // Debug too, where the compiler leaves every resumable computation expression to its builder's dynamic
+        // implementation (dotnet/fsharp#20466): each call builds and starts a new value, and every valueTask probe in
+        // IcedTasksProbeTests passes in both Debug and Release.
         /// <inheritdoc />
-        member _.MoveNextAsync () =
-            let moveNext = task {
-                let mutable found = false
-                let mutable exhausted = false
+        member _.MoveNextAsync () = valueTask {
+            let mutable found = false
+            let mutable exhausted = false
 
-                while not (found || exhausted) do
-                    match page with
-                    | ValueSome items when items.MoveNext () ->
-                        cancellationToken.ThrowIfCancellationRequested ()
-                        current <- items.Current
-                        found <- true
-                    | _ when iterator.HasMoreResults ->
-                        disposePage ()
-                        let! response = iterator.ReadNextAsync cancellationToken
-                        page <- ValueSome (response.GetEnumerator ())
-                    | _ -> exhausted <- true
+            while not (found || exhausted) do
+                match page with
+                | ValueSome items when items.MoveNext () ->
+                    cancellationToken.ThrowIfCancellationRequested ()
+                    current <- items.Current
+                    found <- true
+                | _ when iterator.HasMoreResults ->
+                    disposePage ()
+                    let! response = iterator.ReadNextAsync cancellationToken
+                    page <- ValueSome (response.GetEnumerator ())
+                | _ -> exhausted <- true
 
-                return found
-            }
-
-            ValueTask<bool>(moveNext)
+            return found
+        }
 
         /// <inheritdoc />
         member _.DisposeAsync () =
