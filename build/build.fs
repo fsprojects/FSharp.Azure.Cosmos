@@ -42,9 +42,16 @@ let testsCodeGlob =
 
 let srcGlob = rootDirectory </> "src/**/*.??proj"
 
-let testsGlob = rootDirectory </> "tests/**/*.??proj"
+/// Every project under tests/, the helper libraries shared by the test projects included
+let testsDirectoryGlob = rootDirectory </> "tests/**/*.??proj"
 
-let srcAndTest = !!srcGlob ++ testsGlob
+/// <summary>
+/// The test applications only: helper libraries such as the test infrastructure do not end in <c>.Tests</c>,
+/// so <c>dotnet test</c> and <c>dotnet watch test</c> never try to run them.
+/// </summary>
+let testsGlob = rootDirectory </> "tests/**/*.Tests.??proj"
+
+let srcAndTest = !!srcGlob ++ testsDirectoryGlob
 
 let distDir = rootDirectory </> "dist"
 
@@ -246,7 +253,7 @@ let clean _ =
     [ "bin"; "temp"; distDir; coverageReportDir; testResultsDir ]
     |> Shell.cleanDirs
 
-    !!srcGlob ++ testsGlob
+    !!srcGlob ++ testsDirectoryGlob
     |> Seq.collect (fun p ->
         [ "bin"; "obj" ]
         |> Seq.map (fun sp -> IO.Path.GetDirectoryName p </> sp)
@@ -394,8 +401,8 @@ let generateCoverageReport _ =
         sprintf "-targetdir:\"%s\"" coverageReportDir
         // Add source dir
         sprintf "-sourcedirs:\"%s\"" sourceDirs
-        // Ignore test assemblies
-        sprintf "-assemblyfilters:\"%s\"" "-*.Tests"
+        // Ignore test assemblies and the helper libraries they share
+        sprintf "-assemblyfilters:\"%s\"" "-*.Tests;-*.Tests.Infrastructure"
         // Generate HTML and Cobertura reports
         sprintf "-reporttypes:%s" "Html;Cobertura"
     ]
@@ -615,10 +622,15 @@ let initTargets (ctx : Context.FakeExecutionContext) =
             && String.Equals (value, "PublishToGitHub", StringComparison.OrdinalIgnoreCase)
         )
 
-    /// Defines a dependency - y is dependent on x. Finishes the chain.
+    /// <summary>
+    /// Defines a dependency - <paramref name="y"/> is dependent on <paramref name="x"/>. Finishes the chain.
+    /// </summary>
     let (==>!) x y = x ==> y |> ignore
 
-    /// Defines a soft dependency. x must run before y, if it is present, but y does not require x to be run. Finishes the chain.
+    /// <summary>
+    /// Defines a soft dependency. <paramref name="x"/> must run before <paramref name="y"/>, if it is present, but
+    /// <paramref name="y"/> does not require <paramref name="x"/> to be run. Finishes the chain.
+    /// </summary>
     let (?=>!) x y = x ?=> y |> ignore
     //-----------------------------------------------------------------------------
     // Hide Secrets in Logger
