@@ -5,8 +5,14 @@
     <AssemblyName>$(AssemblyBaseName).Sql</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Deterministic>true</Deterministic>
-    <!-- Not packed until the syntax tree, the printer and the validator are in: the collection types alone are no package -->
-    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet">
+    <PackageId>FSharp.Azure.Cosmos.Sql</PackageId>
+    <Title>FSharp.Azure.Cosmos.Sql</Title>
+    <Summary>Syntax tree, printer, validator and function catalog of the Azure Cosmos DB NoSQL query language</Summary>
+    <Description>An immutable syntax tree of the Azure Cosmos DB NoSQL query language that mirrors the grammar of the .NET SDK, a deterministic printer with a parameterized and an inline mode, a validator for the rules the grammar cannot express and the catalog of the built-in functions as data. It has no dependency on the Azure Cosmos DB SDK.</Description>
+    <PackageTags>$(PackageTags);SQL;Query;Syntax tree</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -27,6 +33,11 @@
     <Compile Include="Inline.fs" />
     <Compile Include="Printer.fs" />
     <Compile Include="Validator.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The grammar, node inventory, printer rules and function names come from the Azure Cosmos DB .NET SDK (MIT) -->
+    <None Include="..\..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />
   </ItemGroup>
 
   <ItemGroup>
