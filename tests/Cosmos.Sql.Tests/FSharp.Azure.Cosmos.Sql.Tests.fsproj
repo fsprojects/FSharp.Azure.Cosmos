@@ -26,6 +26,7 @@
     <Compile Include="PrinterTests.fs" />
     <Compile Include="InlineTests.fs" />
     <Compile Include="CatalogTests.fs" />
+    <Compile Include="ValidatorTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

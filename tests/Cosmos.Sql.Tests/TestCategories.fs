@@ -42,3 +42,12 @@ type SyntaxTreeUnitTestCategoryAttribute () =
 
     /// <inheritdoc />
     override _.TestCategories = [| "Unit"; "SyntaxTree" |] :> IList<string>
+
+/// <summary>
+/// Categorizes a unit test of the validator: <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.ValidatorTests"/>.
+/// </summary>
+type ValidatorUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Unit"; "Validator" |] :> IList<string>

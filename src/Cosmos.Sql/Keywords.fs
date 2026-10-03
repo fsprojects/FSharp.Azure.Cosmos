@@ -1,4 +1,5 @@
-/// The reserved words of the query language and the identifier rule of its grammar.
+/// The reserved words of the query language and the identifier rule, used by the validator to check aliases and by the
+/// printer to decide when a property name can be written with a dot.
 [<RequireQualifiedAccess>]
 module FSharp.Azure.Cosmos.Sql.Keywords
 
