@@ -27,9 +27,12 @@
     <Compile Include="ImmutableArrayPatternsTests.fs" />
     <Compile Include="PrinterTests.fs" />
     <Compile Include="InlineTests.fs" />
+    <Compile Include="CatalogTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Only for the catalog test that compares the catalog with the function names of the SDK version in use -->
+    <PackageReference Include="Microsoft.Azure.Cosmos" />
     <PackageReference Include="MSTest" />
   </ItemGroup>
 
