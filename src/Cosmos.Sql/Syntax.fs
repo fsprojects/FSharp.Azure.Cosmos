@@ -146,7 +146,9 @@ type SortOrder =
 /// </summary>
 [<RequireQualifiedAccess>]
 type FunctionRef =
-    /// A built-in function; the query language compares function names case-insensitively.
+    /// <summary>
+    /// A built-in function, looked up case-insensitively in <see cref="P:FSharp.Azure.Cosmos.Sql.Catalog.byName"/>.
+    /// </summary>
     | BuiltIn of name : string
     /// <summary>
     /// A user-defined function, written with the <c>udf.</c> prefix.
@@ -242,7 +244,10 @@ type ScalarExpression =
     /// followed by <c>ESCAPE "escape"</c>.
     /// </summary>
     | Like of value : ScalarExpression * pattern : ScalarExpression * negated : bool * escape : string voption
-    /// A call of a built-in or user-defined function.
+    /// <summary>
+    /// A call of a built-in or user-defined function. <see cref="M:FSharp.Azure.Cosmos.Sql.Catalog.call(System.String,System.Collections.Immutable.ImmutableArray{FSharp.Azure.Cosmos.Sql.ScalarExpression})"/>
+    /// builds calls of built-in functions after checking their arity.
+    /// </summary>
     | FunctionCall of func : FunctionRef * arguments : EquatableArray<ScalarExpression>
     /// <summary>An array literal, <c>[a, b]</c>.</summary>
     | ArrayCreate of items : EquatableArray<ScalarExpression>

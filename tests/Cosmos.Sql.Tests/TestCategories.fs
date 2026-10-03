@@ -6,6 +6,15 @@ open System.Collections.Generic
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
 /// <summary>
+/// Categorizes a unit test of the function catalog: <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.CatalogTests"/>.
+/// </summary>
+type CatalogUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Unit"; "Catalog" |] :> IList<string>
+
+/// <summary>
 /// Categorizes a unit test of the collection types that the syntax tree is built from:
 /// <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.EquatableArrayTests"/>.
 /// </summary>

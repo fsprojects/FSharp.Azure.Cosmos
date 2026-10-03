@@ -20,6 +20,9 @@
     <Compile Include="ImmutableArrayPatterns.fs" />
     <Compile Include="Syntax.fs" />
     <Compile Include="Keywords.fs" />
+    <Compile Include="FunctionSpec.fs" />
+    <Compile Include="CatalogData.fs" />
+    <Compile Include="Catalog.fs" />
     <Compile Include="ValidationError.fs" />
     <Compile Include="Inline.fs" />
     <Compile Include="Printer.fs" />
