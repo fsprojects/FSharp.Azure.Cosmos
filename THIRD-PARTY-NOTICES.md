@@ -9,7 +9,11 @@ original copyright notices and licences are reproduced here.
 * Licence: MIT
 * Used in `FSharp.Azure.Cosmos.Sql` (`src/Cosmos.Sql`) and its tests (`tests/Cosmos.Sql.Tests`):
   * the node inventory of the syntax tree, after the classes in `Microsoft.Azure.Cosmos/src/SqlObjects` and the
-    grammar `Microsoft.Azure.Cosmos/src/Query/Core/Parser/sql.g4`.
+    grammar `Microsoft.Azure.Cosmos/src/Query/Core/Parser/sql.g4`;
+  * the printing rules, after `Microsoft.Azure.Cosmos/src/SqlObjects/Visitors/SqlObjectTextSerializer.cs`;
+  * expected query texts in the tests, from the baselines in
+    `Microsoft.Azure.Cosmos/tests/Microsoft.Azure.Cosmos.Tests/BaselineTest/TestBaseline` and
+    `Microsoft.Azure.Cosmos/tests/Microsoft.Azure.Cosmos.EmulatorTests/BaselineTest/TestBaseline`.
 
 ```text
 MIT License

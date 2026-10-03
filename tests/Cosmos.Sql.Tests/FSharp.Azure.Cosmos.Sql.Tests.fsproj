@@ -23,6 +23,8 @@
     <Compile Include="Ast.fs" />
     <Compile Include="SyntaxTests.fs" />
     <Compile Include="EquatableArrayTests.fs" />
+    <Compile Include="PrinterTests.fs" />
+    <Compile Include="InlineTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
