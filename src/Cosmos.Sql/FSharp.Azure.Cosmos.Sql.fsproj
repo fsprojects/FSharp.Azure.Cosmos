@@ -18,6 +18,8 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="EquatableArray.fs" />
     <Compile Include="ImmutableArrayPatterns.fs" />
+    <Compile Include="Syntax.fs" />
+    <Compile Include="Keywords.fs" />
   </ItemGroup>
 
   <ItemGroup>

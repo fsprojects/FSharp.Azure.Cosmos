@@ -8,6 +8,7 @@
     <File Path="Directory.Packages.props" />
     <File Path="global.json" />
     <File Path="README.md" />
+    <File Path="THIRD-PARTY-NOTICES.md" />
   </Folder>
   <Project Path="build/build.fsproj" />
   <Project Path="src/Cosmos.Sql/FSharp.Azure.Cosmos.Sql.fsproj" />
