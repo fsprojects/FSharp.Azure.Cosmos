@@ -18,6 +18,16 @@ type CollectionsTestCategoryAttribute () =
     override _.TestCategories = [| "Collections" |] :> IList<string>
 
 /// <summary>
+/// Categorizes a test of the printer and its inline mode:
+/// <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.PrinterTests"/> and <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.InlineTests"/>.
+/// </summary>
+type PrinterTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Printer" |] :> IList<string>
+
+/// <summary>
 /// Categorizes a test of the syntax tree: <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.SyntaxTests"/>.
 /// </summary>
 type SyntaxTreeTestCategoryAttribute () =
