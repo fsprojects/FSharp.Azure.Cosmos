@@ -26,19 +26,42 @@ let private forAll (predicate : 'T -> bool) (items : EquatableArray<'T>) =
 
     result
 
+let private tryPick (picker : 'T -> 'Result voption) (items : EquatableArray<'T>) =
+    let mutable result = ValueNone
+    let mutable index = 0
+
+    while result.IsNone && index < items.Length do
+        result <- picker items[index]
+        index <- index + 1
+
+    result
+
 /// <summary>
 /// Whether <paramref name="expression"/> is a constant that can replace a parameter: a literal, or an array or object
-/// literal whose elements are constants.
+/// literal whose elements are constants. A number has to be finite: the query language has no literal for NaN or an
+/// infinity.
 /// </summary>
 /// <param name="expression">The expression to check.</param>
 let rec isConstant (expression : ScalarExpression) =
     match expression with
+    | ScalarExpression.Literal (Literal.Float value) -> Double.IsFinite value
     | ScalarExpression.Literal _ -> true
     | ScalarExpression.ArrayCreate items -> items |> forAll isConstant
     | ScalarExpression.ObjectCreate properties ->
         properties
         |> forAll (fun struct (_, value) -> isConstant value)
     | _ -> false
+
+/// The first number in a constant that is no finite number, to tell a constant that is refused for it from one that is
+/// refused for holding something else.
+let rec private firstNonFinite (expression : ScalarExpression) : float voption =
+    match expression with
+    | ScalarExpression.Literal (Literal.Float value) when not (Double.IsFinite value) -> ValueSome value
+    | ScalarExpression.ArrayCreate items -> items |> tryPick firstNonFinite
+    | ScalarExpression.ObjectCreate properties ->
+        properties
+        |> tryPick (fun struct (_, value) -> firstNonFinite value)
+    | _ -> ValueNone
 
 /// Rewrites a query or a scalar expression with the inline values of its parameters, collecting the errors.
 type private Substitution (encode : ParameterName -> ScalarExpression voption) =
@@ -73,12 +96,21 @@ type private Substitution (encode : ParameterName -> ScalarExpression voption) =
         | ScalarExpression.ParameterRef name ->
             match encodeOnce name with
             | ValueSome value when isConstant value -> value
-            | ValueSome _ ->
-                fail
-                    ValidationErrorCode.InlineValueNotConstant
-                    name
-                    ($"The inline value of the parameter %s{name.Value} is not a constant: "
-                     + "a literal, or an array or object literal of constants.")
+            | ValueSome value ->
+                let nonFinite = firstNonFinite value
+
+                if nonFinite.IsSome then
+                    fail
+                        ValidationErrorCode.NonFiniteNumber
+                        name
+                        ($"The inline value of the parameter %s{name.Value} holds the number "
+                         + $"%s{nonFinite.Value.ToString (CultureInfo.InvariantCulture)}, which is not a finite number.")
+                else
+                    fail
+                        ValidationErrorCode.InlineValueNotConstant
+                        name
+                        ($"The inline value of the parameter %s{name.Value} is not a constant: "
+                         + "a literal, or an array or object literal of constants.")
 
                 expression
             | ValueNone ->
@@ -261,7 +293,8 @@ let rec ofJsonElement (element : JsonElement) : ScalarExpression =
             // The service keeps a number as a double, so the nearest double is the value it reads from these digits
             // as well; keeping the digits would only make the query text differ from what the service compares.
             // Double.Parse rather than GetDouble, which throws for a number beyond the range of a double; the
-            // resulting infinity is rejected by the validator
+            // resulting infinity is refused where it is used: by the validator in a query, by this pass as the value
+            // of a parameter
             ScalarExpression.Literal (
                 Literal.Float (Double.Parse (element.GetRawText (), NumberStyles.Float, CultureInfo.InvariantCulture))
             )

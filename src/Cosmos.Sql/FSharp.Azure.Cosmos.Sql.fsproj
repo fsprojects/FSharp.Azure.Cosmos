@@ -26,6 +26,7 @@
     <Compile Include="ValidationError.fs" />
     <Compile Include="Inline.fs" />
     <Compile Include="Printer.fs" />
+    <Compile Include="Validator.fs" />
   </ItemGroup>
 
   <ItemGroup>

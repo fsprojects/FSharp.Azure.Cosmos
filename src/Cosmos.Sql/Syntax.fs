@@ -9,7 +9,7 @@ namespace FSharp.Azure.Cosmos.Sql
 /// written with a dot, stored without any quoting.
 /// <para>
 /// Mirrors <a href="https://github.com/Azure/azure-cosmos-dotnet-v3/blob/3.62.0/Microsoft.Azure.Cosmos/src/SqlObjects/SqlIdentifier.cs">SqlIdentifier</a>.
-/// A valid identifier matches the pattern <c>[A-Za-z_][A-Za-z_0-9]*</c> and is not one of the reserved words in
+/// The validator checks every identifier against the pattern <c>[A-Za-z_][A-Za-z_0-9]*</c> and the reserved words in
 /// <see cref="P:FSharp.Azure.Cosmos.Sql.Keywords.reserved"/>.
 /// </para>
 /// </summary>
@@ -29,7 +29,7 @@ type Identifier =
 /// expects it.
 /// <para>
 /// Mirrors <a href="https://github.com/Azure/azure-cosmos-dotnet-v3/blob/3.62.0/Microsoft.Azure.Cosmos/src/SqlObjects/SqlParameter.cs">SqlParameter</a>.
-/// A valid name matches the pattern <c>@[A-Za-z_][A-Za-z_0-9]*</c>.
+/// The validator checks every name against the pattern <c>@[A-Za-z_][A-Za-z_0-9]*</c>.
 /// </para>
 /// </summary>
 [<Struct>]
@@ -64,9 +64,15 @@ type Literal =
     | Null
     /// <summary>The literal <c>undefined</c>.</summary>
     | Undefined
-    /// An integer, written in full.
+    /// <summary>
+    /// An integer. The validator rejects a value outside -2^53..2^53, which a JSON number cannot hold exactly, unless
+    /// <see cref="P:FSharp.Azure.Cosmos.Sql.ValidationOptions.AllowLossyInt64"/> is set; parameters are never range checked.
+    /// </summary>
     | Int of int64
-    /// A double-precision number, written in the round-trip format of the invariant culture.
+    /// <summary>
+    /// A double-precision number. The validator rejects <see cref="F:System.Double.NaN"/> and the infinities, which have
+    /// no literal form.
+    /// </summary>
     | Float of float
     /// A string, written in double quotes with the escaping of the SDK's printer.
     | String of string
@@ -169,7 +175,7 @@ type FunctionRef =
 /// </summary>
 [<RequireQualifiedAccess>]
 type SpecValue =
-    /// An integer literal.
+    /// An integer literal; the validator rejects a negative one.
     | Literal of int64
     /// A parameter.
     | Parameter of ParameterName
@@ -232,7 +238,7 @@ type ScalarExpression =
     | Coalesce of left : ScalarExpression * right : ScalarExpression
     /// <summary>
     /// <c>(needle IN (haystack))</c> or, when <paramref name="negated"/>, <c>(needle NOT IN (haystack))</c>. The grammar
-    /// requires at least one element in <paramref name="haystack"/>.
+    /// and the validator require at least one element in <paramref name="haystack"/>.
     /// </summary>
     | In of needle : ScalarExpression * negated : bool * haystack : EquatableArray<ScalarExpression>
     /// <summary>
