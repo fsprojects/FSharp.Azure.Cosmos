@@ -11,5 +11,6 @@
   </Folder>
   <Project Path="build/build.fsproj" />
   <Project Path="src/Cosmos/FSharp.Azure.Cosmos.fsproj" />
+  <Project Path="tests/Cosmos.Tests.Infrastructure/FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj" />
   <Project Path="tests/Cosmos.Tests/FSharp.Azure.Cosmos.Tests.fsproj" />
 </Solution>

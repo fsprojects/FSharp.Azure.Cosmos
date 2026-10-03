@@ -95,19 +95,15 @@ type ReadExtensionsIntegrationTests () =
 
     /// <summary>
     /// Creates a container with a two-level hierarchical partition key, <c>/partitionKey</c> then <c>/subKey</c>.
-    /// <see cref="TestItem"/> has no <c>subKey</c> field, so its full key ends with a None level, as in issue #31.
+    /// <see cref="TestItem"/> has no <c>subKey</c> field, so its full key ends with a level added by
+    /// <see cref="PartitionKeyBuilder.AddNoneType"/>, as in issue #31.
     /// </summary>
-    member private this.GetHierarchicalContainer () : Task<Container> = task {
-        let database =
-            this.Application.Database
-            |> ValueOption.defaultWith (fun () -> invalidOp "Database is not initialized.")
-        let! response =
-            database.CreateContainerIfNotExistsAsync (
-                ContainerProperties ("hierarchical-tests", [| "/partitionKey"; "/subKey" |]),
-                cancellationToken = this.CancellationToken
-            )
-        return response.Container
-    }
+    member private this.GetHierarchicalContainer () : Task<Container> =
+        // Through the fixture, which counts the container against the partition budget and serialises its creation
+        this.Application.GetOrCreateContainerAsync (
+            ContainerProperties ("hierarchical-tests", [| "/partitionKey"; "/subKey" |]),
+            this.CancellationToken
+        )
 
     [<TestMethod>]
     member this.``ExistsAsync with a full hierarchical partition key checks the item by point read`` () : Task = task {

@@ -3,6 +3,7 @@
     "path": "FSharp.Azure.Cosmos.slnx",
     "projects": [
       "src\\Cosmos\\FSharp.Azure.Cosmos.fsproj",
+      "tests\\Cosmos.Tests.Infrastructure\\FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj",
       "tests\\Cosmos.Tests\\FSharp.Azure.Cosmos.Tests.fsproj"
     ]
   }
