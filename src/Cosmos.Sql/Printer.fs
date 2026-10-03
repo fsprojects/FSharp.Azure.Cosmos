@@ -36,7 +36,9 @@ type PropertyStyle =
 /// <c>udf.</c> prefix.
 /// </para>
 /// <para>
-/// Printing is total: every tree is written, valid or not. There are two modes: the parameterized mode of
+/// Printing is total: every tree is written, valid or not.
+/// <see cref="M:FSharp.Azure.Cosmos.Sql.SqlQueryModule.validate(FSharp.Azure.Cosmos.Sql.SqlQuery)"/> decides whether
+/// the text is a valid query. There are two modes: the parameterized mode of
 /// <see cref="M:FSharp.Azure.Cosmos.Sql.Printer.print(FSharp.Azure.Cosmos.Sql.PropertyStyle,FSharp.Azure.Cosmos.Sql.SqlQuery)"/>
 /// writes parameters as <c>@name</c>, and the inline mode of
 /// <see cref="M:FSharp.Azure.Cosmos.Sql.Printer.printInline(FSharp.Azure.Cosmos.Sql.PropertyStyle,Microsoft.FSharp.Core.FSharpFunc{FSharp.Azure.Cosmos.Sql.ParameterName,Microsoft.FSharp.Core.FSharpValueOption{FSharp.Azure.Cosmos.Sql.ScalarExpression}},FSharp.Azure.Cosmos.Sql.SqlQuery)"/>

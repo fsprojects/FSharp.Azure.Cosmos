@@ -156,6 +156,40 @@ type InlineTests () =
             )
 
     [<TestMethod>]
+    member _.``An inline value that holds a number that is not finite is refused, wherever the number is`` () =
+        use beyondDouble = JsonDocument.Parse "1e400"
+
+        let cases = [|
+            struct ("NaN", number Double.NaN)
+            struct ("an infinity", number Double.PositiveInfinity)
+            struct ("a negative infinity", number Double.NegativeInfinity)
+            struct ("an infinity in an array", arrayOf [| integer 1L; number Double.PositiveInfinity |])
+            struct ("NaN in an array in an object", objectOf [| struct ("k", arrayOf [| number Double.NaN |]) |])
+            struct ("a JSON number beyond a double", Inline.ofJsonElement beyondDouble.RootElement)
+        |]
+
+        for struct (case, value) in cases do
+            let encode = encoder [ struct ("@p", value) ]
+
+            match Printer.printPredicateInline PropertyStyle.Brackets encode (Identifier "c") (param "@p") with
+            | Ok text -> Assert.Fail $"%s{case} has no literal, so the predicate should not be written, but it was: %s{text}"
+            | Error errors ->
+                let error = Assert.ContainsSingle (errors, $"%s{case} should be reported once.")
+
+                Assert.AreEqual (
+                    ValidationErrorCode.NonFiniteNumber,
+                    error.Code,
+                    $"%s{case} should be reported as a number that is not finite."
+                )
+
+                Assert.Contains (
+                    "@p",
+                    error.Message,
+                    StringComparison.Ordinal,
+                    $"The message about %s{case} should name the parameter."
+                )
+
+    [<TestMethod>]
     member _.``A parameter used several times gets one value, and its encoder is asked once`` () =
         let asked = ref 0
 
@@ -198,6 +232,17 @@ type InlineTests () =
 
         Assert.IsFalse (Inline.isConstant (param "@p"), "A parameter should not be a constant.")
         Assert.IsFalse (Inline.isConstant (arrayOf [| alias "c" |]), "An array with a reference should not be a constant.")
+
+        Assert.IsFalse (Inline.isConstant (number Double.NaN), "NaN has no literal, so it should not be a constant.")
+        Assert.IsFalse (
+            Inline.isConstant (number Double.NegativeInfinity),
+            "An infinity has no literal, so it should not be a constant."
+        )
+
+        Assert.IsFalse (
+            Inline.isConstant (objectOf [| struct ("k", arrayOf [| number Double.NaN |]) |]),
+            "NaN inside an array inside an object should not be a constant."
+        )
 
     [<TestMethod>]
     member _.``JSON values become the literals that print the same JSON`` () =

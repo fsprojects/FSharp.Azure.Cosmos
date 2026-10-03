@@ -42,6 +42,8 @@ let tryFind (name : string) =
 /// checking that the catalog knows the function, specifies it and accepts the number of arguments.
 /// <para>
 /// The call uses the catalog's spelling of the name, so the printed text does not depend on how the caller spelled it.
+/// Where a call may appear, such as a scoring function only in <c>ORDER BY RANK</c>, is checked by
+/// <see cref="M:FSharp.Azure.Cosmos.Sql.SqlQueryModule.validate(FSharp.Azure.Cosmos.Sql.SqlQuery)"/>.
 /// </para>
 /// </summary>
 /// <param name="name">The name of the function, in any letter case.</param>
