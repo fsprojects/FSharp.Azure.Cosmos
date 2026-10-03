@@ -12,6 +12,10 @@ to it in a header comment. The rest of the repository is covered by [LICENSE](LI
   `ReflectionHelpers.fs`, `AutoGenConfig.fs`, `IPropertyAttribute.fs`, `RecheckAttribute.fs`, `GenAttribute.fs`,
   `GenAttribute.Prelude.fs`, `PropertyContext.fs`, `InternalLogic.fs`, `PropertiesAttribute.fs` and, adapted from
   NUnit to MSTest, `PropertyAttribute.fs`
+* Ported into: `tests/Hedgehog.MSTest.Tests` (the adapter's suite), rewritten for MSTest, from
+  `tests/Hedgehog.Xunit.Tests.FSharp/PropertyTests.fs`, `tests/Hedgehog.NUnit.Tests.FSharp/PropertyTests.fs` and
+  `tests/Hedgehog.NUnit.Tests.FSharp/GenAttributePreludeTests.fs`: `Common.fs`, `PropertyTests.fs` and
+  `GenAttributePreludeTests.fs`
 * License: Apache License, Version 2.0
 
 ```text

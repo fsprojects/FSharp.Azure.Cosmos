@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The suite of the Hedgehog MSTest adapter: upstream's Hedgehog.Xunit and Hedgehog.NUnit tests rewritten for MSTest,
+    plus tests of what the adapter adds or does differently. A copy of it is part of the upstream pull request of the
+    adapter (https://github.com/hedgehogqa/fsharp-hedgehog/pull/487). Like the adapter, it follows the coding guidelines
+    of this repository, its formatting and nullness checking included. It references no project of this repository but
+    the adapter, so tests/Directory.Build.props leaves the Cosmos test infrastructure out of it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+
+    <OutputType>Exe</OutputType>
+    <EnableMSTestRunner>true</EnableMSTestRunner>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="testconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Common.fs" />
+    <Compile Include="Harness.fs" />
+    <Compile Include="PropertyTests.fs" />
+    <Compile Include="GenAttributePreludeTests.fs" />
+    <Compile Include="MSTestTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hedgehog" />
+    <PackageReference Include="MSTest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hedgehog.MSTest\Hedgehog.MSTest.fsproj" />
+  </ItemGroup>
+
+</Project>

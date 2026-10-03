@@ -5,7 +5,8 @@
       "src\\Cosmos\\FSharp.Azure.Cosmos.fsproj",
       "tests\\Cosmos.Tests.Infrastructure\\FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj",
       "tests\\Cosmos.Tests\\FSharp.Azure.Cosmos.Tests.fsproj",
-      "tests\\Hedgehog.MSTest\\Hedgehog.MSTest.fsproj"
+      "tests\\Hedgehog.MSTest\\Hedgehog.MSTest.fsproj",
+      "tests\\Hedgehog.MSTest.Tests\\Hedgehog.MSTest.Tests.fsproj"
     ]
   }
 }
