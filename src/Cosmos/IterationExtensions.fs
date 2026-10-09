@@ -6,14 +6,16 @@ open System.Runtime.InteropServices
 open System.Threading
 open System.Threading.Tasks
 open Microsoft.Azure.Cosmos
+open IcedTasks
 
 /// <summary>
 /// Enumerates the items of every page of a <see cref="FeedIterator{T}" />.
 /// </summary>
 /// <remarks>
-/// Implemented by hand rather than with a <c>taskSeq { }</c> computation expression: <c>taskSeq</c> has no
-/// dynamic implementation, so it throws <see cref="NotImplementedException" /> whenever the compiler does not
-/// turn it into a static state machine, which is the case for assemblies built without optimizations (Debug).
+/// Implemented by hand rather than with the <see cref="P:FSharp.Control.TaskSeqBuilderModule.taskSeq" /> computation
+/// expression, which has no dynamic implementation, so it throws <see cref="NotImplementedException" /> whenever the
+/// compiler does not turn it into a static state machine, which is the case for assemblies built without optimizations
+/// (Debug).
 /// </remarks>
 [<Sealed>]
 type internal FeedIteratorAsyncEnumerator<'T> (iterator : FeedIterator<'T>, cancellationToken : CancellationToken) =
@@ -30,28 +32,35 @@ type internal FeedIteratorAsyncEnumerator<'T> (iterator : FeedIterator<'T>, canc
         /// <inheritdoc />
         member _.Current = current
 
-        /// <inheritdoc />
-        member _.MoveNextAsync () =
-            let moveNext = task {
-                let mutable found = false
-                let mutable exhausted = false
+        /// <summary>
+        /// Advances to the next item, reading the next page from the <see cref="FeedIterator{T}" /> once the current
+        /// page is exhausted, and checks the <see cref="CancellationToken" /> before it returns each item.
+        /// </summary>
+        /// <remarks>
+        /// Built with <see cref="P:IcedTasks.ValueTasks.ValueTasks.ValueTaskBuilderModule.valueTask" />, which produces
+        /// the <see cref="ValueTask{T}" /> itself instead of wrapping a <see cref="Task{T}" /> in one. It is safe in Debug
+        /// builds too, where the compiler leaves every resumable computation expression to its builder's dynamic
+        /// implementation (dotnet/fsharp#20466): each call builds and starts a new value, and every probe of that builder
+        /// in <see cref="T:FSharp.Azure.Cosmos.Tests.IcedTasksProbeTests" /> passes in both Debug and Release.
+        /// </remarks>
+        member _.MoveNextAsync () = valueTask {
+            let mutable found = false
+            let mutable exhausted = false
 
-                while not (found || exhausted) do
-                    match page with
-                    | ValueSome items when items.MoveNext () ->
-                        cancellationToken.ThrowIfCancellationRequested ()
-                        current <- items.Current
-                        found <- true
-                    | _ when iterator.HasMoreResults ->
-                        disposePage ()
-                        let! response = iterator.ReadNextAsync cancellationToken
-                        page <- ValueSome (response.GetEnumerator ())
-                    | _ -> exhausted <- true
+            while not (found || exhausted) do
+                match page with
+                | ValueSome items when items.MoveNext () ->
+                    cancellationToken.ThrowIfCancellationRequested ()
+                    current <- items.Current
+                    found <- true
+                | _ when iterator.HasMoreResults ->
+                    disposePage ()
+                    let! response = iterator.ReadNextAsync cancellationToken
+                    page <- ValueSome (response.GetEnumerator ())
+                | _ -> exhausted <- true
 
-                return found
-            }
-
-            ValueTask<bool>(moveNext)
+            return found
+        }
 
         /// <inheritdoc />
         member _.DisposeAsync () =
@@ -72,11 +81,12 @@ type internal FeedIteratorAsyncEnumerable<'T> (iterator : FeedIterator<'T>, canc
     interface IAsyncEnumerable<'T> with
 
         /// <summary>
-        /// Creates the enumerator, resolving which cancellation token it observes.
+        /// Creates the enumerator, resolving which <see cref="CancellationToken" /> it observes.
         /// </summary>
         /// <remarks>
-        /// Mirrors the <see cref="EnumeratorCancellationAttribute" /> contract the previous <c>taskSeq { }</c>
-        /// implementation got from the compiler for free: <paramref name="enumeratorCancellationToken" /> -
+        /// Mirrors the <see cref="EnumeratorCancellationAttribute" /> contract the previous implementation with
+        /// <see cref="P:FSharp.Control.TaskSeqBuilderModule.taskSeq" /> got from the compiler for free:
+        /// <paramref name="enumeratorCancellationToken" /> -
         /// typically supplied by
         /// <see cref="System.Threading.Tasks.TaskAsyncEnumerableExtensions.WithCancellation" /> on an
         /// <c>await foreach</c> - is honored only when the caller of <see cref="AsAsyncEnumerable" /> left its
