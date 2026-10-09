@@ -19,6 +19,7 @@
   <ItemGroup>
     <Compile Include="TestCategories.fs" />
     <Compile Include="TestAssembly.fs" />
+    <Compile Include="IcedTasksProbeTests.fs" />
     <Compile Include="IterationExtensionsUnitTests.fs" />
     <Compile Include="CosmosNameTests.fs" />
     <Compile Include="ResponseMessageTests.fs" />
@@ -39,6 +40,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Referenced directly rather than through the library: the probe tests gate whether library code may use IcedTasks at all. -->
+    <PackageReference Include="IcedTasks" />
     <PackageReference Include="MSTest" />
     <PackageReference Include="Unquote" />
   </ItemGroup>
