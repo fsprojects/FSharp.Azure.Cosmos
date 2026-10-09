@@ -12,9 +12,10 @@ open IcedTasks
 /// Enumerates the items of every page of a <see cref="FeedIterator{T}" />.
 /// </summary>
 /// <remarks>
-/// Implemented by hand rather than with a <c>taskSeq { }</c> computation expression: <c>taskSeq</c> has no
-/// dynamic implementation, so it throws <see cref="NotImplementedException" /> whenever the compiler does not
-/// turn it into a static state machine, which is the case for assemblies built without optimizations (Debug).
+/// Implemented by hand rather than with the <see cref="P:FSharp.Control.TaskSeqBuilderModule.taskSeq" /> computation
+/// expression, which has no dynamic implementation, so it throws <see cref="NotImplementedException" /> whenever the
+/// compiler does not turn it into a static state machine, which is the case for assemblies built without optimizations
+/// (Debug).
 /// </remarks>
 [<Sealed>]
 type internal FeedIteratorAsyncEnumerator<'T> (iterator : FeedIterator<'T>, cancellationToken : CancellationToken) =
@@ -80,11 +81,12 @@ type internal FeedIteratorAsyncEnumerable<'T> (iterator : FeedIterator<'T>, canc
     interface IAsyncEnumerable<'T> with
 
         /// <summary>
-        /// Creates the enumerator, resolving which cancellation token it observes.
+        /// Creates the enumerator, resolving which <see cref="CancellationToken" /> it observes.
         /// </summary>
         /// <remarks>
-        /// Mirrors the <see cref="EnumeratorCancellationAttribute" /> contract the previous <c>taskSeq { }</c>
-        /// implementation got from the compiler for free: <paramref name="enumeratorCancellationToken" /> -
+        /// Mirrors the <see cref="EnumeratorCancellationAttribute" /> contract the previous implementation with
+        /// <see cref="P:FSharp.Control.TaskSeqBuilderModule.taskSeq" /> got from the compiler for free:
+        /// <paramref name="enumeratorCancellationToken" /> -
         /// typically supplied by
         /// <see cref="System.Threading.Tasks.TaskAsyncEnumerableExtensions.WithCancellation" /> on an
         /// <c>await foreach</c> - is honored only when the caller of <see cref="AsAsyncEnumerable" /> left its
