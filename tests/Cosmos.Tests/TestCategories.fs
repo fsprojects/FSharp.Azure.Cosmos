@@ -57,6 +57,14 @@ type ValidationTestCategoryAttribute () =
     override _.TestCategories = [| "Validation" |] :> IList<string>
 
 /// <summary>
+/// Categorizes <see cref="IcedTasksProbeTests"/>, the probes that decide which IcedTasks computation expressions the
+/// library code can use.
+/// </summary>
+type IcedTasksProbeTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "IcedTasks probe" |] :> IList<string>
+
+/// <summary>
 /// Categorizes a test of the <see cref="FSharp.Azure.Cosmos.ResponseMessageModule"/> module.
 /// </summary>
 type ResponseMessageTestCategoryAttribute () =
