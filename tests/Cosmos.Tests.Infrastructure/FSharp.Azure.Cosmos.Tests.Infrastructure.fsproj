@@ -27,6 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Referenced directly although the library references it too: the fixtures use valueTaskUnit themselves, so they must not depend on what the library happens to reference. -->
+    <PackageReference Include="IcedTasks" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />
     <PackageReference Include="MSTest.TestFramework" />
   </ItemGroup>

@@ -9,6 +9,8 @@ open System.Threading.Tasks
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
+open IcedTasks
+
 open FSharp.Azure.Cosmos.Tests
 
 /// <summary>
@@ -202,16 +204,14 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
 
     interface IAsyncDisposable with
         /// <inheritdoc />
-        member this.DisposeAsync () =
-            task {
-                try
-                    // Read at cleanup time: MSTest gives [<TestCleanup>] a fresh token source, so a test that timed out
-                    // still deletes its database
-                    do! this.CleanupAsync testContext.CancellationToken
-                finally
-                    client.Dispose ()
-            }
-            |> ValueTask
+        member this.DisposeAsync () = valueTaskUnit {
+            try
+                // Read at cleanup time: MSTest gives [<TestCleanup>] a fresh token source, so a test that timed out
+                // still deletes its database
+                do! this.CleanupAsync testContext.CancellationToken
+            finally
+                client.Dispose ()
+        }
 
 /// <summary>
 /// The base class of emulator-backed test classes: creates the fixture of every test, a
