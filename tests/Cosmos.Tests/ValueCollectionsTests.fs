@@ -2,6 +2,9 @@ namespace FSharp.Azure.Cosmos.Tests
 
 open System
 open Microsoft.VisualStudio.TestTools.UnitTesting
+open Hedgehog
+open Hedgehog.FSharp
+open Hedgehog.MSTest
 open FSharp.Azure.Cosmos
 
 // The functions of FSharp.Core, which the shadows hide under the short module names
@@ -9,218 +12,156 @@ module CoreSeq = Microsoft.FSharp.Collections.Seq
 module CoreList = Microsoft.FSharp.Collections.List
 module CoreArray = Microsoft.FSharp.Collections.Array
 
-/// Collects the answers of a shadow that differ from those of FSharp.Core, so that a failure names all of them at once.
-type private Differences () =
+/// <summary>
+/// Generates an array of up to eight integers from 0 to 4 for a parameter of a property of
+/// <see cref="ValueCollectionsTests"/>.
+/// <para>
+/// With so few values an array of two or more elements usually repeats one, and about one array in ten is empty and
+/// one in ten holds a single element, which are the inputs on which the functions that look an element up differ.
+/// </para>
+/// </summary>
+type SmallItemsAttribute () =
+    inherit GenAttribute<int array> ()
 
-    let found = ResizeArray<string>()
-
-    /// Records the call when the shadow does not answer what FSharp.Core answers.
-    member _.Expect (call : string, expected : 'T option, actual : 'T voption) =
-        let agrees =
-            match expected, actual with
-            | Some expectedValue, ValueSome actualValue -> expectedValue = actualValue
-            | None, ValueNone -> true
-            | _ -> false
-
-        if not agrees then
-            found.Add $"%s{call}: FSharp.Core gives %A{expected}, the shadow gives %A{actual}"
-
-    /// The recorded differences.
-    member _.Found = found
+    /// <inheritdoc />
+    override _.Generator =
+        Gen.int32 (Range.constant 0 4)
+        |> Gen.array (Range.constant 0 8)
 
 /// <summary>
 /// Emulator-free coverage of <see cref="T:FSharp.Azure.Cosmos.ValueCollections"/>: every function that shadows one of
 /// <see cref="T:Microsoft.FSharp.Collections.SeqModule"/>, <see cref="T:Microsoft.FSharp.Collections.ListModule"/> or
 /// <see cref="T:Microsoft.FSharp.Collections.ArrayModule"/> answers what that function answers, as a
 /// <see cref="T:Microsoft.FSharp.Core.FSharpValueOption`1"/> or in struct tuples.
+/// <para>
+/// The function of FSharp.Core is the oracle of its shadow, so the comparisons are properties: Hedgehog generates the
+/// collections, indexes and predicates, and a difference is reported with the smallest input that shows it.
+/// </para>
 /// </summary>
 [<TestClass; ValueCollectionsUnitTestCategory>]
 type ValueCollectionsTests () =
 
-    // Empty, one element, repeated elements and a longer run
-    static let samples = [| [||]; [| 7 |]; [| 1; 2; 3; 2; 1 |]; [| 4; 4 |]; [| 0..9 |] |]
+    /// Fails unless the shadow answers what the function of FSharp.Core answers.
+    static let agree (call : string) (expected : 'T option) (actual : 'T voption) =
+        Assert.AreEqual (
+            ValueOption.ofOption expected,
+            actual,
+            $"%s{call} should answer what the function of FSharp.Core answers."
+        )
 
-    static let predicates = [|
-        struct ("never", (fun (_ : int) -> false))
-        struct ("always", (fun (_ : int) -> true))
-        struct ("even", (fun (item : int) -> item % 2 = 0))
-        struct ("two", (fun (item : int) -> item = 2))
-    |]
+    /// The pairs of FSharp.Core as the struct tuples that a shadow returns.
+    static let structPairs (pairs : (int * int) seq) =
+        pairs
+        |> Seq.map (fun (left, right) -> struct (left, right))
+        |> Seq.toArray
 
-    // Before the first element, inside the samples and past the end of most of them
-    static let indexes = [| -1; 0; 1; 4; 5 |]
+    [<Property>]
+    member _.``tryHead, tryLast and tryExactlyOne answer what the functions of FSharp.Core answer``
+        ([<SmallItems>] items : int array)
+        =
+        // A sequence that is not an array, so that nothing can answer from the length of the array
+        let source = items |> Seq.map id
+        let list = List.ofArray items
 
-    [<TestMethod>]
-    member _.``Seq shadows answer what the functions of FSharp.Core answer`` () =
-        let differences = Differences ()
+        agree "Seq.tryHead" (CoreSeq.tryHead source) (Seq.tryHead source)
+        agree "Seq.tryLast" (CoreSeq.tryLast source) (Seq.tryLast source)
+        agree "Seq.tryExactlyOne" (CoreSeq.tryExactlyOne source) (Seq.tryExactlyOne source)
 
-        for sample in samples do
-            // A sequence that is not an array, so that nothing can answer from the length of the array
-            let source = sample |> Seq.map id
+        agree "List.tryHead" (CoreList.tryHead list) (List.tryHead list)
+        agree "List.tryLast" (CoreList.tryLast list) (List.tryLast list)
+        agree "List.tryExactlyOne" (CoreList.tryExactlyOne list) (List.tryExactlyOne list)
 
-            differences.Expect ($"tryHead %A{sample}", CoreSeq.tryHead source, Seq.tryHead source)
-            differences.Expect ($"tryLast %A{sample}", CoreSeq.tryLast source, Seq.tryLast source)
-            differences.Expect ($"tryExactlyOne %A{sample}", CoreSeq.tryExactlyOne source, Seq.tryExactlyOne source)
+        agree "Array.tryHead" (CoreArray.tryHead items) (Array.tryHead items)
+        agree "Array.tryLast" (CoreArray.tryLast items) (Array.tryLast items)
+        agree "Array.tryExactlyOne" (CoreArray.tryExactlyOne items) (Array.tryExactlyOne items)
 
-            for index in indexes do
-                differences.Expect ($"tryItem %d{index} %A{sample}", CoreSeq.tryItem index source, Seq.tryItem index source)
+    // The index starts before the first element and ends past the last one of the longest array
+    [<Property>]
+    member _.``tryItem answers what the functions of FSharp.Core answer``
+        ([<SmallItems>] items : int array, [<Int(-1, 8)>] index : int)
+        =
+        let source = items |> Seq.map id
+        let list = List.ofArray items
 
-            for struct (name, predicate) in predicates do
-                differences.Expect (
-                    $"tryFind %s{name} %A{sample}",
-                    CoreSeq.tryFind predicate source,
-                    Seq.tryFind predicate source
-                )
+        agree "Seq.tryItem" (CoreSeq.tryItem index source) (Seq.tryItem index source)
+        agree "List.tryItem" (CoreList.tryItem index list) (List.tryItem index list)
+        agree "Array.tryItem" (CoreArray.tryItem index items) (Array.tryItem index items)
 
-                differences.Expect (
-                    $"tryFindBack %s{name} %A{sample}",
-                    CoreSeq.tryFindBack predicate source,
-                    Seq.tryFindBack predicate source
-                )
+    // The predicate holds for the elements up to the threshold: for none at -1, for all at 4, and in between for
+    // elements of different values, so that the first match and the last one differ in value and in index
+    [<Property>]
+    member _.``tryFind, tryFindBack, tryFindIndex, tryFindIndexBack and tryPick answer what the functions of FSharp.Core answer``
+        ([<SmallItems>] items : int array, [<Int(-1, 4)>] threshold : int)
+        =
+        let source = items |> Seq.map id
+        let list = List.ofArray items
+        let predicate (item : int) = item <= threshold
+        let choose (item : int) = if predicate item then Some (item * 10) else None
+        let chooseValue (item : int) = if predicate item then ValueSome (item * 10) else ValueNone
 
-                differences.Expect (
-                    $"tryFindIndex %s{name} %A{sample}",
-                    CoreSeq.tryFindIndex predicate source,
-                    Seq.tryFindIndex predicate source
-                )
+        agree "Seq.tryFind" (CoreSeq.tryFind predicate source) (Seq.tryFind predicate source)
+        agree "Seq.tryFindBack" (CoreSeq.tryFindBack predicate source) (Seq.tryFindBack predicate source)
+        agree "Seq.tryFindIndex" (CoreSeq.tryFindIndex predicate source) (Seq.tryFindIndex predicate source)
+        agree "Seq.tryFindIndexBack" (CoreSeq.tryFindIndexBack predicate source) (Seq.tryFindIndexBack predicate source)
+        agree "Seq.tryPick" (CoreSeq.tryPick choose source) (Seq.tryPick chooseValue source)
 
-                differences.Expect (
-                    $"tryFindIndexBack %s{name} %A{sample}",
-                    CoreSeq.tryFindIndexBack predicate source,
-                    Seq.tryFindIndexBack predicate source
-                )
+        agree "List.tryFind" (CoreList.tryFind predicate list) (List.tryFind predicate list)
+        agree "List.tryFindBack" (CoreList.tryFindBack predicate list) (List.tryFindBack predicate list)
+        agree "List.tryFindIndex" (CoreList.tryFindIndex predicate list) (List.tryFindIndex predicate list)
+        agree "List.tryFindIndexBack" (CoreList.tryFindIndexBack predicate list) (List.tryFindIndexBack predicate list)
+        agree "List.tryPick" (CoreList.tryPick choose list) (List.tryPick chooseValue list)
 
-                differences.Expect (
-                    $"tryPick %s{name} %A{sample}",
-                    source
-                    |> CoreSeq.tryPick (fun item -> if predicate item then Some (item * 10) else None),
-                    source
-                    |> Seq.tryPick (fun item -> if predicate item then ValueSome (item * 10) else ValueNone)
-                )
+        agree "Array.tryFind" (CoreArray.tryFind predicate items) (Array.tryFind predicate items)
+        agree "Array.tryFindBack" (CoreArray.tryFindBack predicate items) (Array.tryFindBack predicate items)
+        agree "Array.tryFindIndex" (CoreArray.tryFindIndex predicate items) (Array.tryFindIndex predicate items)
+        agree "Array.tryFindIndexBack" (CoreArray.tryFindIndexBack predicate items) (Array.tryFindIndexBack predicate items)
+        agree "Array.tryPick" (CoreArray.tryPick choose items) (Array.tryPick chooseValue items)
 
-        Assert.IsEmpty (differences.Found, "Every Seq shadow should answer what the function of FSharp.Core answers.")
+    [<Property>]
+    member _.``zip pairs elements into struct tuples and treats lengths as FSharp.Core does``
+        ([<SmallItems>] first : int array, [<SmallItems>] second : int array)
+        =
+        CollectionAssert.AreEqual (
+            CoreSeq.zip first second |> structPairs,
+            Seq.zip (first |> Seq.map id) (second |> Seq.map id)
+            |> Seq.toArray,
+            "Seq.zip should pair by position until the shorter sequence ends, as the function of FSharp.Core does."
+        )
 
-    [<TestMethod>]
-    member _.``List shadows answer what the functions of FSharp.Core answer`` () =
-        let differences = Differences ()
-
-        for sample in samples do
-            let source = List.ofArray sample
-
-            differences.Expect ($"tryHead %A{sample}", CoreList.tryHead source, List.tryHead source)
-            differences.Expect ($"tryLast %A{sample}", CoreList.tryLast source, List.tryLast source)
-            differences.Expect ($"tryExactlyOne %A{sample}", CoreList.tryExactlyOne source, List.tryExactlyOne source)
-
-            for index in indexes do
-                differences.Expect ($"tryItem %d{index} %A{sample}", CoreList.tryItem index source, List.tryItem index source)
-
-            for struct (name, predicate) in predicates do
-                differences.Expect (
-                    $"tryFind %s{name} %A{sample}",
-                    CoreList.tryFind predicate source,
-                    List.tryFind predicate source
-                )
-
-                differences.Expect (
-                    $"tryFindBack %s{name} %A{sample}",
-                    CoreList.tryFindBack predicate source,
-                    List.tryFindBack predicate source
-                )
-
-                differences.Expect (
-                    $"tryFindIndex %s{name} %A{sample}",
-                    CoreList.tryFindIndex predicate source,
-                    List.tryFindIndex predicate source
-                )
-
-                differences.Expect (
-                    $"tryFindIndexBack %s{name} %A{sample}",
-                    CoreList.tryFindIndexBack predicate source,
-                    List.tryFindIndexBack predicate source
-                )
-
-                differences.Expect (
-                    $"tryPick %s{name} %A{sample}",
-                    source
-                    |> CoreList.tryPick (fun item -> if predicate item then Some (item * 10) else None),
-                    source
-                    |> List.tryPick (fun item -> if predicate item then ValueSome (item * 10) else ValueNone)
-                )
-
-        Assert.IsEmpty (differences.Found, "Every List shadow should answer what the function of FSharp.Core answers.")
-
-    [<TestMethod>]
-    member _.``Array shadows answer what the functions of FSharp.Core answer`` () =
-        let differences = Differences ()
-
-        for sample in samples do
-            differences.Expect ($"tryHead %A{sample}", CoreArray.tryHead sample, Array.tryHead sample)
-            differences.Expect ($"tryLast %A{sample}", CoreArray.tryLast sample, Array.tryLast sample)
-            differences.Expect ($"tryExactlyOne %A{sample}", CoreArray.tryExactlyOne sample, Array.tryExactlyOne sample)
-
-            for index in indexes do
-                differences.Expect ($"tryItem %d{index} %A{sample}", CoreArray.tryItem index sample, Array.tryItem index sample)
-
-            for struct (name, predicate) in predicates do
-                differences.Expect (
-                    $"tryFind %s{name} %A{sample}",
-                    CoreArray.tryFind predicate sample,
-                    Array.tryFind predicate sample
-                )
-
-                differences.Expect (
-                    $"tryFindBack %s{name} %A{sample}",
-                    CoreArray.tryFindBack predicate sample,
-                    Array.tryFindBack predicate sample
-                )
-
-                differences.Expect (
-                    $"tryFindIndex %s{name} %A{sample}",
-                    CoreArray.tryFindIndex predicate sample,
-                    Array.tryFindIndex predicate sample
-                )
-
-                differences.Expect (
-                    $"tryFindIndexBack %s{name} %A{sample}",
-                    CoreArray.tryFindIndexBack predicate sample,
-                    Array.tryFindIndexBack predicate sample
-                )
-
-                differences.Expect (
-                    $"tryPick %s{name} %A{sample}",
-                    sample
-                    |> CoreArray.tryPick (fun item -> if predicate item then Some (item * 10) else None),
-                    sample
-                    |> Array.tryPick (fun item -> if predicate item then ValueSome (item * 10) else ValueNone)
-                )
-
-        Assert.IsEmpty (differences.Found, "Every Array shadow should answer what the function of FSharp.Core answers.")
-
-    [<TestMethod>]
-    member _.``zip pairs elements into struct tuples and treats lengths as FSharp.Core does`` () =
-        let expected = [| struct (1, "a"); struct (2, "b") |]
+        // Arrays and lists pair only at equal lengths, so both inputs are cut to the shorter one
+        let length = min first.Length second.Length
+        let left = Array.truncate length first
+        let right = Array.truncate length second
 
         CollectionAssert.AreEqual (
-            expected,
-            Seq.zip [ 1; 2; 3 ] [ "a"; "b" ] |> Seq.toArray,
-            "Seq.zip should pair by position until the shorter sequence ends."
+            CoreArray.zip left right |> structPairs,
+            Array.zip left right,
+            "Array.zip should pair by index, as the function of FSharp.Core does."
         )
 
-        CollectionAssert.AreEqual (expected, Array.zip [| 1; 2 |] [| "a"; "b" |], "Array.zip should pair by index.")
-
-        CollectionAssert.AreEqual (expected, List.zip [ 1; 2 ] [ "a"; "b" ] |> List.toArray, "List.zip should pair by position.")
-
-        Assert.ThrowsExactly<ArgumentException>(
-            (fun () -> Array.zip [| 1; 2; 3 |] [| "a"; "b" |] |> ignore),
-            "Array.zip should reject arrays of different lengths, as the function of FSharp.Core does."
+        CollectionAssert.AreEqual (
+            CoreList.zip (List.ofArray left) (List.ofArray right)
+            |> structPairs,
+            List.zip (List.ofArray left) (List.ofArray right)
+            |> List.toArray,
+            "List.zip should pair by position, as the function of FSharp.Core does."
         )
-        |> ignore
 
-        Assert.ThrowsExactly<ArgumentException>(
-            (fun () -> List.zip [ 1; 2; 3 ] [ "a"; "b" ] |> ignore),
-            "List.zip should reject lists of different lengths, as the function of FSharp.Core does."
-        )
-        |> ignore
+        if first.Length <> second.Length then
+            Assert.ThrowsExactly<ArgumentException>(
+                (fun () -> Array.zip first second |> ignore),
+                "Array.zip should reject arrays of different lengths, as the function of FSharp.Core does."
+            )
+            |> ignore
+
+            Assert.ThrowsExactly<ArgumentException>(
+                (fun () ->
+                    List.zip (List.ofArray first) (List.ofArray second)
+                    |> ignore
+                ),
+                "List.zip should reject lists of different lengths, as the function of FSharp.Core does."
+            )
+            |> ignore
 
     [<TestMethod>]
     member _.``A shadow hides only the function of its name, which stays reachable by its full name`` () =
