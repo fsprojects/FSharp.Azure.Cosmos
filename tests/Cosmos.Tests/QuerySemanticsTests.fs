@@ -70,15 +70,24 @@ type private QueryAssert private () =
         CollectionAssert.AreEqual (QueryAssert.ItemTexts expectedItems, QueryAssert.ItemTexts items, message)
 
     /// <summary>
+    /// Fails the test with <paramref name="message"/> unless the emulator rejected the query with
+    /// <paramref name="expectedStatusCode"/> and an error that contains <paramref name="text"/>.
+    /// </summary>
+    static member RejectsWith
+        (outcome : QueryOutcome, expectedStatusCode : HttpStatusCode, text : string, [<Optional>] message : string | null)
+        =
+        match outcome with
+        | Returned items -> Assert.Fail $"{message} The query ran and returned {items.ToJsonString ()}."
+        | Rejected (statusCode, _, error) ->
+            Assert.AreEqual (expectedStatusCode, statusCode, message)
+            Assert.Contains (text, error, StringComparison.Ordinal, message)
+
+    /// <summary>
     /// Fails the test with <paramref name="message"/> unless the emulator rejected the query as a bad request whose
     /// error contains <paramref name="text"/>.
     /// </summary>
     static member RejectsSaying (outcome : QueryOutcome, text : string, [<Optional>] message : string | null) =
-        match outcome with
-        | Returned items -> Assert.Fail $"{message} The query ran and returned {items.ToJsonString ()}."
-        | Rejected (statusCode, _, error) ->
-            Assert.AreEqual (HttpStatusCode.BadRequest, statusCode, message)
-            Assert.Contains (text, error, StringComparison.Ordinal, message)
+        QueryAssert.RejectsWith (outcome, HttpStatusCode.BadRequest, text, message)
 
     /// <summary>
     /// Fails the test with <paramref name="message"/> unless the emulator rejected the query as a bad request whose
@@ -94,8 +103,8 @@ type private QueryAssert private () =
 /// <summary>
 /// Records how the emulator evaluates the query constructs that the planned translation of F# quotations into Cosmos DB
 /// SQL relies on: comparisons with missing and <see langword="null"/> values, the coalesce operator, integer division,
-/// string functions with a case flag, parameters in unusual positions, object equality, subqueries and
-/// <c>ORDER BY</c>.
+/// string functions with a case flag, parameters in unusual positions, object equality, subqueries, <c>ORDER BY</c> and
+/// spatial functions.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -156,7 +165,27 @@ type QuerySemanticsTests () =
         }
         |> ImmutableArray.CreateRange
 
+    // GeoJSON for the spatial tests: points at the origin, one degree north of it and off the globe, and a square of one
+    // degree around the origin
+    static let geometries =
+        seq {
+            struct ("@origin", """{"type": "Point", "coordinates": [0.0, 0.0]}""")
+            struct ("@north", """{"type": "Point", "coordinates": [0.0, 1.0]}""")
+            struct ("@offTheGlobe", """{"type": "Point", "coordinates": [0.0, 100.0]}""")
+            struct ("@square",
+                    """{"type": "Polygon", "coordinates": [[[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]]]}""")
+        }
+        |> ImmutableArray.CreateRange
+
     static let invariant (value : int) = value.ToString CultureInfo.InvariantCulture
+
+    // Passes every geometry as a raw JSON parameter, the form planned for captured geometry values
+    static let withGeometries (query : QueryDefinition) =
+        for struct (name, json) in geometries do
+            query.WithParameterStream (name, new MemoryStream (Encoding.UTF8.GetBytes json))
+            |> ignore
+
+        query
 
     /// <summary>
     /// Creates the container of the running test and seeds <paramref name="documents"/>, JSON objects to which the
@@ -857,4 +886,92 @@ type QuerySemanticsTests () =
                 """["b1", "none", "aNull", "a1b1", "a1", "a2b0"]""",
                 "The vNext emulator should sort by c.a ascending, then by c.b descending, without a composite index."
             )
+    }
+
+    [<TestMethod>]
+    [<DataRow("ROUND(ST_DISTANCE(@origin, @north))", "110574", DisplayName = "ST_DISTANCE in meters")>]
+    [<DataRow("ROUND(ST_AREA(@square) / 1000000)", "12309", DisplayName = "ST_AREA in square kilometers")>]
+    [<DataRow("[ST_INTERSECTS(@square, @origin), ST_INTERSECTS(@square, @north)]", "[true, false]", DisplayName = "ST_INTERSECTS")>]
+    [<DataRow("[ST_WITHIN(@origin, @square), ST_WITHIN(@north, @square)]", "[true, false]", DisplayName = "ST_WITHIN")>]
+    [<DataRow("[ST_ISVALID(@north), ST_ISVALID(@offTheGlobe)]", "[true, false]", DisplayName = "ST_ISVALID")>]
+    [<DataRow("ST_ISVALIDDETAILED(@offTheGlobe)",
+              """{"valid": false, "reason": "Latitude values must be between -90 and 90 degrees."}""",
+              DisplayName = "ST_ISVALIDDETAILED")>]
+    member this.``Spatial functions measure GeoJSON on the WGS-84 ellipsoid but fail on the vNext emulator``
+        (expression : string, expected : string)
+        : Task
+        = task {
+        let! kind = Emulator.readKindAsync this.CancellationToken
+        let! container = this.SeedAsync [| """{"id": "item"}""" |]
+
+        let! outcome =
+            this.QueryAsync (
+                container,
+                QueryDefinition $"SELECT VALUE {expression} FROM c"
+                |> withGeometries
+            )
+
+        match kind with
+        | Emulator.Kind.Windows ->
+            QueryAssert.Returns (
+                outcome,
+                $"[{expected}]",
+                $"{expression} should measure in meters on the WGS-84 ellipsoid and test the points against the square."
+            )
+        | Emulator.Kind.VNext ->
+            QueryAssert.RejectsWith (
+                outcome,
+                HttpStatusCode.InternalServerError,
+                "This query type isn't supported yet",
+                $"The vNext emulator should refuse {expression}, because it has no spatial functions yet."
+            )
+    }
+
+    [<TestMethod>]
+    member this.``Spatial functions filter stored GeoJSON points but the vNext emulator refuses the filter`` () : Task = task {
+        let! kind = Emulator.readKindAsync this.CancellationToken
+
+        let! container =
+            this.SeedAsync [|
+                """{"id": "origin", "location": {"type": "Point", "coordinates": [0.0, 0.0]}}"""
+                """{"id": "north", "location": {"type": "Point", "coordinates": [0.0, 1.0]}}"""
+                """{"id": "far", "location": {"type": "Point", "coordinates": [10.0, 10.0]}}"""
+            |]
+
+        let near =
+            QueryDefinition "SELECT VALUE c.id FROM c WHERE ST_DISTANCE(c.location, @origin) < 200000 ORDER BY c.id"
+            |> withGeometries
+
+        let within =
+            QueryDefinition "SELECT VALUE c.id FROM c WHERE ST_WITHIN(c.location, @square) ORDER BY c.id"
+            |> withGeometries
+
+        match kind with
+        | Emulator.Kind.Windows ->
+            let! nearOutcome = this.QueryAsync (container, near)
+
+            QueryAssert.Returns (
+                nearOutcome,
+                """["north", "origin"]""",
+                "ST_DISTANCE should keep the stored points within 200 km of the origin."
+            )
+
+            let! withinOutcome = this.QueryAsync (container, within)
+
+            QueryAssert.Returns (
+                withinOutcome,
+                """["origin"]""",
+                "ST_WITHIN should keep only the stored point inside the square."
+            )
+        | Emulator.Kind.VNext ->
+            // A spatial function in the projection fails with 500. A spatial filter fails with 400, because the vNext
+            // emulator takes the container for one without an index and asks for a scan
+            for query in [| near; within |] do
+                let! outcome = this.QueryAsync (container, query)
+
+                QueryAssert.RejectsSaying (
+                    outcome,
+                    "with indexing mode 'none'",
+                    "The vNext emulator should refuse a spatial filter, because it has no spatial functions yet."
+                )
     }
