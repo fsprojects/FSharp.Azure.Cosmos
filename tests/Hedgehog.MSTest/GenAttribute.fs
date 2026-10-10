@@ -5,6 +5,7 @@
 // (http://www.apache.org/licenses/LICENSE-2.0); see THIRD-PARTY-NOTICES.md at the root of this repository.
 // Changes: the namespace Hedgehog.NUnit is renamed to Hedgehog.MSTest; the non-generic base GenAttribute is added and
 // declares Box, which GenAttribute<'a> overrides; the documentation is rewritten.
+// The file is formatted with Fantomas, under the settings of this repository.
 
 namespace Hedgehog.MSTest
 
@@ -27,13 +28,14 @@ type GenAttribute
     /// <summary>
     /// Called by the constructors of derived attributes.
     /// </summary>
-    () =
-    inherit Attribute()
+    ()
+    =
+    inherit Attribute ()
 
     /// <summary>
     /// Returns the generator of the parameter with its values boxed.
     /// </summary>
-    abstract member Box: unit -> Gen<obj>
+    abstract member Box : unit -> Gen<obj>
 
 /// <summary>
 /// Sets the generator of one parameter of a method marked with <see cref="T:Hedgehog.MSTest.PropertyAttribute"/>.
@@ -60,15 +62,16 @@ type GenAttribute<'a>
     /// <summary>
     /// Called by the constructors of derived attributes.
     /// </summary>
-    () =
-    inherit GenAttribute()
+    ()
+    =
+    inherit GenAttribute ()
 
     /// <summary>
     /// The generator of the parameter.
     /// </summary>
-    abstract member Generator: Gen<'a>
+    abstract member Generator : Gen<'a>
 
     /// <summary>
     /// Returns <see cref="P:Hedgehog.MSTest.GenAttribute`1.Generator"/> with its values boxed.
     /// </summary>
-    override this.Box() = this.Generator |> Gen.map box
+    override this.Box () = this.Generator |> Gen.map box

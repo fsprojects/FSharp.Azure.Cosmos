@@ -1,5 +1,2 @@
 # Ignore AssemblyInfo files
 AssemblyInfo.fs
-
-# The Hedgehog MSTest adapter follows the conventions of hedgehogqa/fsharp-hedgehog, where the same code is proposed
-tests/Hedgehog.MSTest/

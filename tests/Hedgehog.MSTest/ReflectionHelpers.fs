@@ -4,26 +4,29 @@
 // Copyright (c) 2016 Jacob Stanley, Nikos Baxevanis. Licensed under the Apache License, Version 2.0
 // (http://www.apache.org/licenses/LICENSE-2.0); see THIRD-PARTY-NOTICES.md at the root of this repository.
 // Changes: the method invocation helpers are removed, because MSTest invokes the test method and awaits its result;
-// the type checks remain and name the return types that MSTest cannot run.
+// the type checks remain and name the return types that MSTest cannot run; the types they compare with come from
+// KnownTypes and are compared through Type.(=).
+// The file is formatted with Fantomas, under the settings of this repository.
 
 /// Reflection utilities for type checking
 module internal ReflectionHelpers
 
 open System
-open System.Threading.Tasks
+open Hedgehog.MSTest
 
 // ========================================
 // Type Checking
 // ========================================
 
-let isGenericTask (t: Type) =
-    t.IsGenericType && typeof<Task>.IsAssignableFrom(t)
+/// Whether the type is the generic type of the definition with any type arguments
+let private isConstructedFrom (definition : Type) (t : Type) =
+    t.IsGenericType
+    && Type.(=) (t.GetGenericTypeDefinition (), definition)
 
-let isGenericValueTask (t: Type) =
-    t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<ValueTask<_>>
+let isGenericTask (t : Type) = t.IsGenericType && KnownTypes.task.IsAssignableFrom (t)
 
-let isAsync (t: Type) =
-    t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<Async<_>>
+let isGenericValueTask (t : Type) = isConstructedFrom KnownTypes.valueTaskDefinition t
 
-let isResult (t: Type) =
-    t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<Result<_, _>>
+let isAsync (t : Type) = isConstructedFrom KnownTypes.asyncDefinition t
+
+let isResult (t : Type) = isConstructedFrom KnownTypes.resultDefinition t
