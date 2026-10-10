@@ -49,9 +49,22 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
     <Exec Condition="'$(OS)' != 'Windows_NT'" Command="ln -s ../.github/skills &quot;$(_ClaudeSkillsLink)&quot;" ContinueOnError="WarnAndContinue" />
   </Target>
 
-  <!-- Make sure that files are formatted before building -->
-  <Target Name="Format" Condition=" '$(MSBuildProjectExtension)' == '.fsproj' AND '$(DesignTimeBuild)' != 'true' " BeforeTargets="BeforeBuild" Inputs="@(Compile)" Outputs="$(_DotnetFantomasOutputFile)" >
-    <Exec Command="dotnet tool run fantomas $(MSBuildProjectDirectory)" StandardOutputImportance="High" StandardErrorImportance="High" WorkingDirectory="$(MSBuildThisFileDirectory)" ContinueOnError="WarnAndContinue" />
+  <!--
+    Make sure that files are formatted before building.
+    A multi-targeted project builds its target frameworks in parallel, so formatting in each of them ran Fantomas
+    concurrently on the same files ("being used by another process") and raced on the marker file (MSB3371).
+    Every build of a project therefore delegates to one dedicated instance of it without a target framework.
+    MSBuild runs a target once per project instance, so a project is formatted once per build,
+    whether it is built from the solution, as a project reference or on its own.
+  -->
+  <Target Name="FormatBeforeBuild" Condition=" '$(MSBuildProjectExtension)' == '.fsproj' AND '$(DesignTimeBuild)' != 'true' " BeforeTargets="BeforeBuild">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Format" Properties="_FantomasFormatInstance=true" RemoveProperties="TargetFramework;RuntimeIdentifier" />
+  </Target>
+
+  <!-- Fantomas runs twice on purpose: one pass is not always idempotent, and the second one settles what the first moved -->
+  <Target Name="Format" Inputs="@(Compile)" Outputs="$(_DotnetFantomasOutputFile)">
+    <Exec Command="dotnet fantomas $(MSBuildProjectDirectory)" StandardOutputImportance="High" StandardErrorImportance="High" WorkingDirectory="$(MSBuildThisFileDirectory)" ContinueOnError="WarnAndContinue" />
+    <Exec Command="dotnet fantomas $(MSBuildProjectDirectory)" StandardOutputImportance="High" StandardErrorImportance="High" WorkingDirectory="$(MSBuildThisFileDirectory)" ContinueOnError="WarnAndContinue" />
     <Touch Files="$(_DotnetFantomasOutputFile)" AlwaysCreate="True" ForceTouch="True" />
   </Target>
 
