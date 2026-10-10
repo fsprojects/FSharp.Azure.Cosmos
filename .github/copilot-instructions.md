@@ -237,6 +237,7 @@ module MyTypeExtensions =
 * `COSMOS_EMULATOR_KEY` overrides the emulator key the tests authenticate with.
 * `COSMOS_EMULATOR_PARTITION_COUNT` is the number of partitions the emulator offers (default `25`, the Windows emulator's default `/PartitionCount`); the fixtures keep at most that many test containers at a time, one partition each.
 * `COSMOS_TEST_LEFTOVER_AGE_MINUTES` is how many minutes a `fsac-test-` database must stay unmodified before the leftover sweep of `[<AssemblyInitialize>]` and `[<AssemblyCleanup>]` deletes it (default `60`), so that the live databases of another test process on the same emulator are kept; `0` deletes every test database and is safe only while no other test process uses the emulator.
+* `COSMOS_REWRITE_BASELINES` set to `1` or `true` makes a test that compares SQL with its golden baseline (`Baseline.assertMatches`, files under `Baselines/<suite>/` of the test project) write what it produced into the baseline instead of comparing; the test then reports itself inconclusive, the rewritten files are reviewed in the diff, and CI refuses to rewrite.
 * Every test project under `tests/` references `tests/Cosmos.Tests.Infrastructure` through `tests/Directory.Build.props`; a new test project gets it without a `ProjectReference` of its own.
 * `CollectionAssert` cannot work with F# lists – use F# array syntax (`[| ... |]`) instead.
 * `StringAssert` has overloads with `StringComparison`.

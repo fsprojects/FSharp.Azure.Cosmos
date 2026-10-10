@@ -64,8 +64,8 @@ type ResponseMessageTestCategoryAttribute () =
     override _.TestCategories = [| "Response message" |] :> IList<string>
 
 /// <summary>
-/// Categorizes a test of the shared test infrastructure: <see cref="DatabaseIdentifierTests"/>,
-/// <see cref="LeftoverSweepTests"/> and <see cref="PartitionBudgetTests"/>.
+/// Categorizes a test of the shared test infrastructure: <see cref="BaselineTests"/>,
+/// <see cref="DatabaseIdentifierTests"/>, <see cref="LeftoverSweepTests"/> and <see cref="PartitionBudgetTests"/>.
 /// </summary>
 type TestInfrastructureTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
