@@ -96,3 +96,11 @@ type TestInfrastructureUnitTestCategoryAttribute () =
 type ValueCollectionsUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit"; "ValueCollections" |] :> IList<string>
+
+/// <summary>
+/// Categorizes <see cref="T:FSharp.Azure.Cosmos.Tests.Integration.QuerySemanticsTests"/>, which record how the
+/// emulator evaluates the query constructs that the planned translation of F# quotations relies on.
+/// </summary>
+type QuerySemanticsTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "QuerySemantics" |] :> IList<string>

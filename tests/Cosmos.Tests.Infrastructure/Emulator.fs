@@ -204,6 +204,31 @@ let private isReachableAsync (cancellationToken : CancellationToken) : Task<bool
 }
 
 /// <summary>
+/// The emulator that answers at <see cref="endpoint"/>.
+/// </summary>
+[<RequireQualifiedAccess>]
+type Kind =
+    /// The Windows emulator.
+    | Windows
+    /// The Linux vNext preview emulator, which CI and the dev container run.
+    | VNext
+
+/// <summary>
+/// Tells which <see cref="Kind"/> of emulator answers at <see cref="endpoint"/>, for the few query semantics in which
+/// the two differ: the Windows emulator answers an unauthenticated request to its root with HTTP 401, the vNext
+/// emulator with a success status.
+/// </summary>
+let readKindAsync (cancellationToken : CancellationToken) : Task<Kind> = task {
+    use httpClient = new HttpClient (createHttpMessageHandler (), true, Timeout = reachabilityTimeout)
+    use! response = httpClient.GetAsync (endpoint, cancellationToken)
+    return
+        if response.IsSuccessStatusCode then
+            Kind.VNext
+        else
+            Kind.Windows
+}
+
+/// <summary>
 /// Deletes the databases whose identifier starts with <see cref="DatabaseIdentifier.Prefix"/> and that stayed
 /// unmodified for at least the leftover age (<see cref="readLeftoverAge"/>): databases of tests whose cleanup failed
 /// and of runs that were aborted, which would otherwise keep their containers' partitions.
