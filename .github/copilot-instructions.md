@@ -14,7 +14,16 @@
 /
 ├── src/Cosmos.Sql/      – Cosmos DB SQL model (FSharp.Azure.Cosmos.Sql)
 │   ├── EquatableArray.fs – immutable array with structural equality
-│   └── ImmutableArrayPatterns.fs – active patterns that match an `ImmutableArray` by its length
+│   ├── ImmutableArrayPatterns.fs – active patterns that match an `ImmutableArray` by its length
+│   ├── Syntax.fs        – syntax tree of the query language
+│   ├── Keywords.fs      – reserved words and the identifier rule
+│   ├── FunctionSpec.fs  – specification of a built-in function
+│   ├── CatalogData.fs   – one row per built-in function
+│   ├── Catalog.fs       – lookup of built-in functions
+│   ├── ValidationError.fs – validation errors and options
+│   ├── Inline.fs        – replacement of parameters by literals
+│   ├── Printer.fs       – printer of the query text
+│   └── Validator.fs     – rules of the query language that the grammar cannot express
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
