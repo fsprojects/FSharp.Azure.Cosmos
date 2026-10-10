@@ -2,6 +2,7 @@ namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System
 open System.Collections.Immutable
+open System.Collections.ObjectModel
 open System.Globalization
 open System.IO
 open System.Net
@@ -89,7 +90,8 @@ module private QueryAssert =
 /// <summary>
 /// Records how the emulator evaluates the query constructs that the planned translation of F# quotations into Cosmos DB
 /// SQL relies on: comparisons with missing and <see langword="null"/> values, the coalesce operator, integer division,
-/// string functions with a case flag, parameters in unusual positions, object equality and subqueries.
+/// string functions with a case flag, parameters in unusual positions, object equality, subqueries and
+/// <c>ORDER BY</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -138,15 +140,33 @@ type QuerySemanticsTests () =
         }
         |> ImmutableArray.CreateRange
 
+    // Documents that lack a, b or both, or hold null in a, for the ORDER BY tests over two properties
+    static let documentsForTwoSortKeys =
+        seq {
+            """{"id": "none"}"""
+            """{"id": "b1", "b": 1}"""
+            """{"id": "aNull", "a": null}"""
+            """{"id": "a1", "a": 1}"""
+            """{"id": "a1b1", "a": 1, "b": 1}"""
+            """{"id": "a2b0", "a": 2, "b": 0}"""
+        }
+        |> ImmutableArray.CreateRange
+
     static let invariant (value : int) = value.ToString CultureInfo.InvariantCulture
 
     /// <summary>
     /// Creates the container of the running test and seeds <paramref name="documents"/>, JSON objects to which the
     /// partition key property is added.
     /// </summary>
-    member private this.SeedAsync (documents : string seq) : Task<Container> = task {
-        let! container =
-            this.Application.GetOrCreateContainerAsync ("query-semantics", "/pk", this.CancellationToken)
+    member private this.SeedAsync (documents : string seq) : Task<Container> =
+        this.SeedAsync (ContainerProperties ("query-semantics", "/pk"), documents)
+
+    /// <summary>
+    /// Creates the container that <paramref name="containerProperties"/> describe, which must be partitioned by
+    /// <c>/pk</c>, and seeds <paramref name="documents"/>, JSON objects to which the partition key property is added.
+    /// </summary>
+    member private this.SeedAsync (containerProperties : ContainerProperties, documents : string seq) : Task<Container> = task {
+        let! container = this.Application.GetOrCreateContainerAsync (containerProperties, this.CancellationToken)
 
         for document in documents do
             let item = (nonNull (JsonNode.Parse document)).AsObject()
@@ -164,6 +184,31 @@ type QuerySemanticsTests () =
 
         return container
     }
+
+    /// <summary>
+    /// Creates a container with the composite index <c>(/a ASC, /b ASC)</c> and seeds the documents of the
+    /// <c>ORDER BY</c> tests over two properties.
+    /// </summary>
+    /// <remarks>
+    /// The vNext emulator accepts the composite index but does not build it, because it has no composite indexes yet.
+    /// </remarks>
+    member private this.SeedWithCompositeIndexAsync () : Task<Container> =
+        let indexingPolicy = IndexingPolicy ()
+
+        // CompositeIndexes has no public setter, so the index joins the collection that the policy creates
+        indexingPolicy.CompositeIndexes.Add (
+            Collection<CompositePath>(
+                ResizeArray [|
+                    CompositePath (Path = "/a", Order = CompositePathSortOrder.Ascending)
+                    CompositePath (Path = "/b", Order = CompositePathSortOrder.Ascending)
+                |]
+            )
+        )
+
+        this.SeedAsync (
+            ContainerProperties ("query-semantics-composite", "/pk", IndexingPolicy = indexingPolicy),
+            documentsForTwoSortKeys
+        )
 
     /// <summary>
     /// Runs <paramref name="query"/> in the logical partition of the seeded documents and collects the items of every
@@ -739,4 +784,50 @@ type QuerySemanticsTests () =
         |> QueryAssert.Returns
             """["object", "array", "a", "empty", "one", "zero", "true", "false", "null", "missing"]"""
             "ORDER BY DESC should return the exact reverse of ORDER BY ASC."
+    }
+
+    [<TestMethod>]
+    member this.``ORDER BY over two properties keeps documents without a value and sorts them first`` () : Task = task {
+        let! container = this.SeedWithCompositeIndexAsync ()
+
+        let! ascending =
+            this.QueryAsync (container, QueryDefinition "SELECT VALUE c.id FROM c ORDER BY c.a, c.b")
+
+        ascending
+        |> QueryAssert.Returns
+            """["none", "b1", "aNull", "a1", "a1b1", "a2b0"]"""
+            "ORDER BY c.a, c.b should keep the documents without a or b and sort a missing value before null and numbers in each key."
+
+        let! descending =
+            this.QueryAsync (container, QueryDefinition "SELECT VALUE c.id FROM c ORDER BY c.a DESC, c.b DESC")
+
+        descending
+        |> QueryAssert.Returns
+            """["a2b0", "a1b1", "a1", "aNull", "b1", "none"]"""
+            "ORDER BY c.a DESC, c.b DESC, the inverse of the composite index, should return the exact reverse of ORDER BY c.a, c.b."
+    }
+
+    [<TestMethod>]
+    member this.``ORDER BY over two properties in directions that no composite index matches fails on the Windows emulator``
+        ()
+        : Task
+        = task {
+        let! kind = Emulator.readKindAsync this.CancellationToken
+        let! container = this.SeedWithCompositeIndexAsync ()
+
+        let! outcome =
+            this.QueryAsync (container, QueryDefinition "SELECT VALUE c.id FROM c ORDER BY c.a, c.b DESC")
+
+        match kind with
+        | Emulator.Kind.Windows ->
+            outcome
+            |> QueryAssert.RejectsSaying
+                "does not have a corresponding composite index"
+                "The Windows emulator should refuse ORDER BY c.a, c.b DESC, which the composite index (/a ASC, /b ASC) cannot serve."
+        | Emulator.Kind.VNext ->
+            // The vNext emulator has no composite indexes, so it sorts without one
+            outcome
+            |> QueryAssert.Returns
+                """["b1", "none", "aNull", "a1b1", "a1", "a2b0"]"""
+                "The vNext emulator should sort by c.a ascending, then by c.b descending, without a composite index."
     }
