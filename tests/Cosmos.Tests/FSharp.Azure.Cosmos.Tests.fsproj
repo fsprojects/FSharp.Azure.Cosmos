@@ -27,6 +27,7 @@
     <Compile Include="DatabaseIdentifierTests.fs" />
     <Compile Include="PartitionBudgetTests.fs" />
     <Compile Include="LeftoverSweepTests.fs" />
+    <Compile Include="BaselineTests.fs" />
     <Compile Include="OperationTestInfrastructure.fs" />
     <Compile Include="CreateOperationTests.fs" />
     <Compile Include="ReadOperationTests.fs" />
