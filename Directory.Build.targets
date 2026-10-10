@@ -11,31 +11,21 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
     <_DotnetFantomasOutputFile>$(BaseIntermediateOutputPath)dotnet-fantomas-msbuild-$(NETCoreSdkVersion)-$(OS)</_DotnetFantomasOutputFile>
   </PropertyGroup>
 
-  <!-- Make sure that dotnet tools are up to date before restoring any project -->
-  <Target Name="ToolUpdate"
-          BeforeTargets="ResolveNuGetPackageAssets;BeforeCompile"
-          Condition=" '$(BuildingProject)' == 'false' OR '$(DesignTimeBuild)' == 'true' "
-          Inputs="$(_DotnetToolManifestFile)"
-          Outputs="$(_DotnetToolUpdateOutputFile)">
-    <Message Text="Updating dotnet tools..." Importance="High" />
-    <Exec Command="dotnet tool update --all" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="High" StandardErrorImportance="High" />
-    <MakeDir Directories="$(_BuildProjBaseIntermediateOutputPath)"/>
-    <Touch Files="$(_DotnetToolUpdateOutputFile)" AlwaysCreate="True" ForceTouch="True" />
-    <Message Text="All tools updated successfully. Updates marked as complete." Importance="High" />
+  <!--
+    Make sure that dotnet tools are restored before restoring any project.
+    A solution restores its projects in parallel, so restoring the tools in each of them ran `dotnet tool restore`
+    concurrently and raced on the marker file.
+    Every project therefore delegates to one instance of this file: MSBuild runs a target once per project instance,
+    so the tools are restored once per build, and the projects that ask at the same time wait for that one run.
+  -->
+  <Target Name="ToolRestore" BeforeTargets="Restore;CollectPackageReferences">
+    <MSBuild Projects="$(MSBuildThisFileFullPath)" Targets="ToolRestoreOnce" Properties="_DotnetToolRestoreOutputFile=$(_DotnetToolRestoreOutputFile)" RemoveProperties="TargetFramework;RuntimeIdentifier" />
   </Target>
 
-  <!-- Make sure that dotnet tools are restored before restoring any project -->
-  <Target Name="ToolRestore"
-          BeforeTargets="ResolveNuGetPackageAssets;BeforeCompile"
-          AfterTargets="ToolUpdate"
-          Condition=" '$(BuildingProject)' == 'false' OR '$(DesignTimeBuild)' == 'true' "
-          Inputs="$(_DotnetToolManifestFile)"
-          Outputs="$(_DotnetToolRestoreOutputFile)">
-    <Message Text="Restoring dotnet tools..." Importance="High" />
+  <Target Name="ToolRestoreOnce" Inputs="$(_DotnetToolManifestFile)" Outputs="$(_DotnetToolRestoreOutputFile)">
     <Exec Command="dotnet tool restore" WorkingDirectory="$(MSBuildThisFileDirectory)" StandardOutputImportance="High" StandardErrorImportance="High" />
     <MakeDir Directories="$(_BuildProjBaseIntermediateOutputPath)"/>
     <Touch Files="$(_DotnetToolRestoreOutputFile)" AlwaysCreate="True" ForceTouch="True" />
-    <Message Text="All .NET tools restored successfully." Importance="High" />
   </Target>
 
   <!--
