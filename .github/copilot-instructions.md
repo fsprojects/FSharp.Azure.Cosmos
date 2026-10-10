@@ -76,6 +76,7 @@ Agents discover servers from #file:'.mcp.json'; these are only hints on when to 
 * When casting sequence items use `Seq.cast<TargetType>` instead of `Seq.map (fun item -> item :> TargetType)`.
 * When concatenating two sequences or lists, prefer `seq { yield! xs; yield! ys }` (or `[ yield! xs; yield! ys ]` for lists) over the `@` operator or `Seq.append`.
 * When pipe operators are used on a materializable collection multiple times in a row, prefer `Seq` module for the chain and materialize at the end.
+* Keep a pipeline in harmony: when consecutive steps can come from one module, take them from that module, the conversion at the end included – `xs |> Seq.filter isValid |> Seq.sort |> Seq.toArray`, not `… |> Seq.sort |> Array.ofSeq`, and `items |> List.map _.Id |> List.toArray`, not `… |> Array.ofList`. Change the module only where the steps that follow need the other collection.
 
 ### Functions, Lambdas and Strings
 

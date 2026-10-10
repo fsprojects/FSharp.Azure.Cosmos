@@ -33,7 +33,7 @@ type IterationExtensionsIntegrationTests () =
         Assert.HasCount (2, iteratedItems, "FeedIterator.AsAsyncEnumerable should return exactly the seeded items.")
         CollectionAssert.AreEquivalent (
             expectedIds,
-            iteratedItems |> List.map _.id |> Array.ofList,
+            iteratedItems |> List.map _.id |> List.toArray,
             "FeedIterator.AsAsyncEnumerable should iterate seeded items without duplicates or omissions."
         )
     }
@@ -59,7 +59,7 @@ type IterationExtensionsIntegrationTests () =
         Assert.HasCount (2, iteratedItems, "IQueryable.AsAsyncEnumerable should return exactly the seeded items.")
         CollectionAssert.AreEquivalent (
             expectedIds,
-            iteratedItems |> List.map _.id |> Array.ofList,
+            iteratedItems |> List.map _.id |> List.toArray,
             "IQueryable.AsAsyncEnumerable should iterate seeded items without duplicates or omissions."
         )
     }
