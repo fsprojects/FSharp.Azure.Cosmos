@@ -6,7 +6,7 @@
 // Changes: the namespace Hedgehog.NUnit is renamed to Hedgehog.MSTest; the documentation of the attributes is
 // rewritten; NonZeroInt skips a 0 at either end of its range, where upstream generates from an empty part, and rejects
 // the range from 0 to 0; Odd and Even stay inside their range, where upstream leaves an even upper or an odd lower
-// bound by one, and reject a range without such a value.
+// bound by one, and reject a range without such a value; DateOnlyAttribute and TimeOnlyAttribute are added.
 // The file is formatted with Fantomas, under the settings of this repository.
 
 namespace Hedgehog.MSTest
@@ -373,6 +373,85 @@ type DateTimeOffsetAttribute
     new (from) = DateTimeOffsetAttribute (from, TimeSpan.FromDays (3650))
     /// <inheritdoc />
     override _.Generator = Gen.dateTimeOffset (Range.constant from (from + duration))
+
+/// <summary>
+/// Generates a <see cref="T:System.DateOnly"/> from <paramref name="min"/> to <paramref name="max"/>, both included.
+/// </summary>
+/// <remarks>
+/// The range is constant: it does not grow with the size of a case, and a value shrinks towards
+/// <paramref name="min"/>. Upstream's adapters have no such attribute, and Hedgehog 2.0.4 cannot auto-generate a
+/// <see cref="T:System.DateOnly"/>, so a parameter of this type needs this attribute or a generator of its own.
+/// </remarks>
+type DateOnlyAttribute
+    /// <summary>
+    /// Creates the attribute from two dates. An attribute argument cannot be a <see cref="T:System.DateOnly"/>, so this
+    /// constructor serves attributes that derive from this one.
+    /// </summary>
+    /// <param name="min">The earliest value.</param>
+    /// <param name="max">The latest value.</param>
+    (min : DateOnly, max : DateOnly)
+    =
+    inherit GenAttribute<DateOnly> ()
+    /// <summary>
+    /// Generates a <see cref="T:System.DateOnly"/> within the 3650 days from 2000-01-01, the dates of the default range
+    /// of <see cref="T:Hedgehog.MSTest.DateTimeAttribute"/>.
+    /// </summary>
+    new () = DateOnlyAttribute (DateOnly (2000, 1, 1), DateOnly(2000, 1, 1).AddDays(3650))
+    /// <summary>
+    /// Generates a <see cref="T:System.DateOnly"/> from the first date to the second, both included.
+    /// </summary>
+    /// <param name="minYear">The year of the earliest value.</param>
+    /// <param name="minMonth">The month of the earliest value.</param>
+    /// <param name="minDay">The day of the earliest value.</param>
+    /// <param name="maxYear">The year of the latest value.</param>
+    /// <param name="maxMonth">The month of the latest value.</param>
+    /// <param name="maxDay">The day of the latest value.</param>
+    new (minYear : int, minMonth : int, minDay : int, maxYear : int, maxMonth : int, maxDay : int)
+        =
+        DateOnlyAttribute (DateOnly (minYear, minMonth, minDay), DateOnly (maxYear, maxMonth, maxDay))
+    /// <inheritdoc />
+    override _.Generator =
+        Gen.int32 (Range.constant min.DayNumber max.DayNumber)
+        |> Gen.map DateOnly.FromDayNumber
+
+/// <summary>
+/// Generates a <see cref="T:System.TimeOnly"/> from <paramref name="min"/> to <paramref name="max"/>, both included.
+/// </summary>
+/// <remarks>
+/// A value has the full precision of <see cref="T:System.TimeOnly"/>, 100 nanoseconds. The range is constant: it does
+/// not grow with the size of a case, and a value shrinks towards <paramref name="min"/>. Upstream's adapters have no
+/// such attribute, and Hedgehog 2.0.4 cannot auto-generate a <see cref="T:System.TimeOnly"/>, so a parameter of this
+/// type needs this attribute or a generator of its own.
+/// </remarks>
+type TimeOnlyAttribute
+    /// <summary>
+    /// Creates the attribute from two times of day. An attribute argument cannot be a <see cref="T:System.TimeOnly"/>,
+    /// so this constructor serves attributes that derive from this one.
+    /// </summary>
+    /// <param name="min">The earliest value.</param>
+    /// <param name="max">The latest value.</param>
+    (min : TimeOnly, max : TimeOnly)
+    =
+    inherit GenAttribute<TimeOnly> ()
+    /// <summary>
+    /// Generates any <see cref="T:System.TimeOnly"/>, from <see cref="P:System.TimeOnly.MinValue"/> to
+    /// <see cref="P:System.TimeOnly.MaxValue"/>.
+    /// </summary>
+    new () = TimeOnlyAttribute (TimeOnly.MinValue, TimeOnly.MaxValue)
+    /// <summary>
+    /// Generates a <see cref="T:System.TimeOnly"/> from the first time of day to the second, both included.
+    /// </summary>
+    /// <param name="minHour">The hour of the earliest value.</param>
+    /// <param name="minMinute">The minute of the earliest value.</param>
+    /// <param name="maxHour">The hour of the latest value.</param>
+    /// <param name="maxMinute">The minute of the latest value.</param>
+    new (minHour : int, minMinute : int, maxHour : int, maxMinute : int)
+        =
+        TimeOnlyAttribute (TimeOnly (minHour, minMinute), TimeOnly (maxHour, maxMinute))
+    /// <inheritdoc />
+    override _.Generator =
+        Gen.int64 (Range.constant min.Ticks max.Ticks)
+        |> Gen.map TimeOnly
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> of ASCII letters and digits, from <paramref name="minLength"/> to
