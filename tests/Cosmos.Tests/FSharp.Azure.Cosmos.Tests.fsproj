@@ -41,6 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hedgehog" />
     <!-- Referenced directly although the library references it too: the probe tests use IcedTasks themselves and gate which of its builders library code may use, so they must not depend on what the library happens to reference. -->
     <PackageReference Include="IcedTasks" />
     <PackageReference Include="MSTest" />
@@ -49,6 +50,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Cosmos\FSharp.Azure.Cosmos.fsproj" />
+    <!-- The Hedgehog MSTest adapter: the [<Property>] attribute that marks the property tests of this project. -->
+    <ProjectReference Include="..\Hedgehog.MSTest\Hedgehog.MSTest.fsproj" />
   </ItemGroup>
 
 </Project>

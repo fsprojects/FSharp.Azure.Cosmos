@@ -29,6 +29,8 @@
 │   └── ValueCollections.fs – `Seq`, `List` and `Array` functions that return `voption` and struct tuples
 ├── tests/Cosmos.Tests/  – MSTest integration test project
 ├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
+├── tests/Hedgehog.MSTest/ – Hedgehog MSTest adapter for [<Property>] test methods (from hedgehogqa/fsharp-hedgehog)
+├── tests/Hedgehog.MSTest.Tests/ – the adapter's own test suite
 ├── build/               – FAKE build scripts
 └── docsSrc/             – FSharp.Formatting documentation source
 ```
@@ -40,6 +42,7 @@
 * [`FSharp.Control.Reactive`](https://github.com/fsprojects/FSharp.Reactive) – Rx extensions for F#
 * [`FsToolkit.ErrorHandling`](https://github.com/demystifyfp/FsToolkit.ErrorHandling) – `taskResult`, `Result`, `voption` CEs
 * [`Unquote`](https://github.com/SwensenSoftware/unquote) – test assertions
+* [`Hedgehog`](https://github.com/hedgehogqa/fsharp-hedgehog) – property-based testing through the `tests/Hedgehog.MSTest` adapter
 * [`MSTest`](https://github.com/microsoft/testfx) – test framework
 
 Use GitHub MCP tools for code search in these repositories when needed.
@@ -237,7 +240,9 @@ module MyTypeExtensions =
 * `COSMOS_EMULATOR_KEY` overrides the emulator key the tests authenticate with.
 * `COSMOS_EMULATOR_PARTITION_COUNT` is the number of partitions the emulator offers (default `25`, the Windows emulator's default `/PartitionCount`); the fixtures keep at most that many test containers at a time, one partition each.
 * `COSMOS_TEST_LEFTOVER_AGE_MINUTES` is how many minutes a `fsac-test-` database must stay unmodified before the leftover sweep of `[<AssemblyInitialize>]` and `[<AssemblyCleanup>]` deletes it (default `60`), so that the live databases of another test process on the same emulator are kept; `0` deletes every test database and is safe only while no other test process uses the emulator.
-* Every test project under `tests/` references `tests/Cosmos.Tests.Infrastructure` through `tests/Directory.Build.props`; a new test project gets it without a `ProjectReference` of its own.
+* Every test project under `tests/` references `tests/Cosmos.Tests.Infrastructure` through `tests/Directory.Build.props`; a new test project gets it without a `ProjectReference` of its own. The Hedgehog MSTest adapter and its suite are the exception: they stay free of the Cosmos projects, and the suite references the adapter alone.
+* Property tests are methods of `[<TestClass>]` types marked `[<Property>]` (from `tests/Hedgehog.MSTest`), whose parameters Hedgehog generates; never call `Property.check` inside a `[<TestMethod>]`. A test project with property tests references the adapter project and the `Hedgehog` package, as `tests/Cosmos.Tests` does. A property is an instance method that returns `unit`, `Task` or `ValueTask` and fails by throwing: MSTest 4 rejects static methods and other return types, and one such method fails the discovery of the whole assembly, which `--list-tests` shows before a run. MSTest creates the test class and runs `[<TestInitialize>]` and `[<TestCleanup>]` for every generated case and every shrink step. A failed property reports a `[<Recheck("…")>]` to add next to its `Property` attribute, which then replays the counterexample. A parameter of type `DateOnly` or `TimeOnly` needs `[<DateOnly>]` or `[<TimeOnly>]`, or a generator of its own: Hedgehog 2.0.4 cannot auto-generate these two types.
+* `tests/Hedgehog.MSTest` and `tests/Hedgehog.MSTest.Tests` are ported from hedgehogqa/fsharp-hedgehog and proposed there too ([hedgehogqa/fsharp-hedgehog#487](https://github.com/hedgehogqa/fsharp-hedgehog/pull/487)). Their code follows the rules of this file, formatting with Fantomas and nullness checking included; the copy in the upstream pull request keeps upstream's style, so a change of behaviour goes into both. Copied files keep their Apache-2.0 header, which records every change made to them, and `THIRD-PARTY-NOTICES.md` lists them.
 * `CollectionAssert` cannot work with F# lists – use F# array syntax (`[| ... |]`) instead.
 * `StringAssert` has overloads with `StringComparison`.
 * Use `Assert.Contains` instead of `Assert.IsTrue (str.Contains ..., "message")`, and do not put the actual value into the message.

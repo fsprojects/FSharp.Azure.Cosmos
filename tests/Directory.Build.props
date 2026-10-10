@@ -6,10 +6,14 @@
     </PropertyGroup>
 
     <!--
-      Every test project shares the test infrastructure (fixtures, emulator budget, assertion helpers); the
-      infrastructure project itself is excluded, because a project cannot reference itself.
+      Every test project shares the test infrastructure (fixtures, emulator budget, assertion helpers). Excluded are
+      the infrastructure project itself, because a project cannot reference itself, and the Hedgehog MSTest adapter
+      and its suite, which stay free of this repository's projects: the adapter is also proposed to
+      hedgehogqa/fsharp-hedgehog, and its package replaces both once upstream publishes it.
     -->
-    <ItemGroup Condition="'$(MSBuildProjectName)' != 'FSharp.Azure.Cosmos.Tests.Infrastructure'">
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'FSharp.Azure.Cosmos.Tests.Infrastructure'
+                          AND '$(MSBuildProjectName)' != 'Hedgehog.MSTest'
+                          AND '$(MSBuildProjectName)' != 'Hedgehog.MSTest.Tests'">
         <ProjectReference Include="$(MSBuildThisFileDirectory)Cosmos.Tests.Infrastructure/FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj" />
     </ItemGroup>
 </Project>
