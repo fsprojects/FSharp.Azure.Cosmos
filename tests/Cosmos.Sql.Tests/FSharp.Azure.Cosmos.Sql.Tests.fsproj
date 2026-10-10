@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Unit tests of FSharp.Azure.Cosmos.Sql; none of them needs the Cosmos DB Emulator. IsTestProject and IsPackable come
+    from tests/Directory.Build.props, which also references the shared test infrastructure.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Sql.Tests</AssemblyName>
+
+    <OutputType>Exe</OutputType>
+    <EnableMSTestRunner>true</EnableMSTestRunner>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="testconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="TestCategories.fs" />
+    <Compile Include="Ast.fs" />
+    <Compile Include="SyntaxTests.fs" />
+    <Compile Include="EquatableArrayTests.fs" />
+    <Compile Include="PrinterTests.fs" />
+    <Compile Include="InlineTests.fs" />
+    <Compile Include="CatalogTests.fs" />
+    <Compile Include="ValidatorTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only for the catalog test that compares the catalog with the function names of the SDK version in use -->
+    <PackageReference Include="Microsoft.Azure.Cosmos" />
+    <PackageReference Include="MSTest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cosmos.Sql\FSharp.Azure.Cosmos.Sql.fsproj" />
+  </ItemGroup>
+
+</Project>

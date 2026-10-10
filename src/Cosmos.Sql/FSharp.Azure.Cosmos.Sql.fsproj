@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Sql</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet">
+    <PackageId>FSharp.Azure.Cosmos.Sql</PackageId>
+    <Title>FSharp.Azure.Cosmos.Sql</Title>
+    <Summary>Syntax tree, printer, validator and function catalog of the Azure Cosmos DB NoSQL query language</Summary>
+    <Description>An immutable syntax tree of the Azure Cosmos DB NoSQL query language that mirrors the grammar of the .NET SDK, a deterministic printer with a parameterized and an inline mode, a validator for the rules the grammar cannot express and the catalog of the built-in functions as data. It has no dependency on the Azure Cosmos DB SDK.</Description>
+    <PackageTags>$(PackageTags);SQL;Query;Syntax tree</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="EquatableArray.fs" />
+    <Compile Include="ImmutableArrayPatterns.fs" />
+    <Compile Include="Syntax.fs" />
+    <Compile Include="Keywords.fs" />
+    <Compile Include="FunctionSpec.fs" />
+    <Compile Include="CatalogData.fs" />
+    <Compile Include="Catalog.fs" />
+    <Compile Include="ValidationError.fs" />
+    <Compile Include="Inline.fs" />
+    <Compile Include="Printer.fs" />
+    <Compile Include="Validator.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The grammar, node inventory, printer rules and function names come from the Azure Cosmos DB .NET SDK (MIT) -->
+    <None Include="..\..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
