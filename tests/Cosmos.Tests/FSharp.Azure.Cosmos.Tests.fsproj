@@ -37,6 +37,7 @@
     <Compile Include="ReadManyOperationTests.fs" />
     <Compile Include="ReadExtensionsTests.fs" />
     <Compile Include="IterationExtensionsTests.fs" />
+    <Compile Include="QuerySemanticsTests.fs" />
     <Compile Include="BuilderUnitTests.fs" />
   </ItemGroup>
 
