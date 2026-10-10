@@ -25,6 +25,8 @@
 │   ├── CosmosResponse.fs – response type wrappers
 │   ├── TaskSeq.fs       – TaskSeq integration
 │   └── UniqueKey.fs     – unique key helpers
+├── src/Shared/          – source files that every F# project under src and tests compiles
+│   └── ValueCollections.fs – `Seq`, `List` and `Array` functions that return `voption` and struct tuples
 ├── tests/Cosmos.Tests/  – MSTest integration test project
 ├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
 ├── build/               – FAKE build scripts
@@ -71,6 +73,7 @@ Agents discover servers from #file:'.mcp.json'; these are only hints on when to 
 
 * Prefer `voption` (`ValueSome`/`ValueNone`) over `option`. Fields, members, parameters and values shared between threads included: none of them is a reason to pick `option`. Exception: when an API hands you `'T option` and has no `voption` counterpart, unwrap it with `Option.defaultValue`/`Option.defaultWith` directly – do not insert `ValueOption.ofOption` just to switch modules.
 * The mirror case, an API that *takes* `'T option` (an optional argument `?name = …`, a field typed `'T option`): stay in `ValueOption` through the whole chain and convert once, last – `x |> ValueOption.bind _.Value |> ValueOption.toOption`, never `x |> ValueOption.toOption |> Option.bind _.Value`.
+* The `Seq`, `List` and `Array` functions that return an option in FSharp.Core (`tryHead`, `tryLast`, `tryItem`, `tryExactlyOne`, `tryFind`, `tryFindBack`, `tryFindIndex`, `tryFindIndexBack`, `tryPick`) return a `voption` here, `tryPick` takes a chooser that returns one, and `zip` returns struct tuples: #file:'src/Shared/ValueCollections.fs' shadows them in the namespace `FSharp.Azure.Cosmos` of every F# project under `src` and `tests`, so they are in effect in the code of that namespace and in every file that opens it; a file in another namespace, a child namespace such as `FSharp.Azure.Cosmos.Tests` included, opens `FSharp.Azure.Cosmos` to get them. Match their results with `ValueSome`/`ValueNone`; when another function of this kind is needed, add its shadow to that file instead of converting at the call site. The build project keeps the functions of FSharp.Core.
 * Prefer `struct ('T1 * 'T2)` over reference tuples, and anonymous struct records (`struct {| ... |}`) over tuples for return types of public functions and methods.
 * Never group with `Seq.groupBy` – use `ToLookup` from `System.Linq`. It groups once into an `ILookup<'Key, 'T>` instead of re-grouping on every enumeration and does not allocate a tuple per group. Pass a lambda (`xs.ToLookup (fun x -> keyOf x)`), not a bare function value.
 * When casting sequence items use `Seq.cast<TargetType>` instead of `Seq.map (fun item -> item :> TargetType)`.

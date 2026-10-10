@@ -21,6 +21,7 @@
     <Compile Include="TestAssembly.fs" />
     <Compile Include="IcedTasksProbeTests.fs" />
     <Compile Include="IterationExtensionsUnitTests.fs" />
+    <Compile Include="ValueCollectionsTests.fs" />
     <Compile Include="CosmosNameTests.fs" />
     <Compile Include="ResponseMessageTests.fs" />
     <Compile Include="DatabaseIdentifierTests.fs" />

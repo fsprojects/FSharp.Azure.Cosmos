@@ -73,7 +73,7 @@ type ReadExtensionsIntegrationTests () =
             |> Task.WhenAll
 
         let mismatches = [|
-            for struct (id, expected), actual in Array.zip expectations results do
+            for struct (struct (id, expected), actual) in Array.zip expectations results do
                 if expected <> actual then
                     $"{id}: expected {expected}, got {actual}"
         |]

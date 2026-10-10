@@ -78,3 +78,11 @@ type ResponseMessageTestCategoryAttribute () =
 type TestInfrastructureTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Test infrastructure" |] :> IList<string>
+
+/// <summary>
+/// Categorizes a test of the collection functions of <see cref="T:FSharp.Azure.Cosmos.ValueCollections"/>, which each
+/// project compiles.
+/// </summary>
+type ValueCollectionsTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Value collections" |] :> IList<string>
