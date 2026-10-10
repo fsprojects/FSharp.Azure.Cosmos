@@ -7,7 +7,8 @@
 // derives from MSTest's TestMethodAttribute instead of NUnit's TestAttribute and, like it, applies to methods only and is
 // not inherited; every constructor forwards the caller information to it, the primary constructor is private, the Seed
 // setting is added, and an override of TestMethodAttribute.ExecuteAsync replaces the NUnit test builder and test
-// method; the documentation is rewritten.
+// method; a setting that is not given is a voption instead of an option; the documentation is rewritten.
+// The file is formatted with Fantomas, under the settings of this repository.
 
 namespace Hedgehog.MSTest
 
@@ -70,61 +71,74 @@ open Microsoft.VisualStudio.TestTools.UnitTesting
 type PropertyAttribute
     private
     (
-        autoGenConfig: Type option,
-        autoGenConfigArgs: obj[],
-        tests: int<tests> option,
-        shrinks: int<shrinks> option,
-        size: Size option,
-        callerFilePath: string,
-        callerLineNumber: int
-    ) =
+        autoGenConfig : Type voption,
+        autoGenConfigArgs : objnull array,
+        tests : int<tests> voption,
+        shrinks : int<shrinks> voption,
+        size : Size voption,
+        callerFilePath : string,
+        callerLineNumber : int
+    )
+    =
     // TestMethodAttribute records the declaring file and line of the test method from the caller information of its
     // constructor, as STATestMethodAttribute passes it on; F# fills it in for attribute constructors too
-    inherit TestMethodAttribute(callerFilePath, callerLineNumber)
+    inherit TestMethodAttribute (callerFilePath, callerLineNumber)
 
-    let mutable _autoGenConfig: Type option = autoGenConfig
-    let mutable _autoGenConfigArgs: obj[] = autoGenConfigArgs
-    let mutable _tests: int<tests> option = tests
-    let mutable _shrinks: int<shrinks> option = shrinks
-    let mutable _size: Size option = size
-    let mutable _seed: uint64 option = None
+    let mutable _autoGenConfig : Type voption = autoGenConfig
+    let mutable _autoGenConfigArgs : objnull array = autoGenConfigArgs
+    let mutable _tests : int<tests> voption = tests
+    let mutable _shrinks : int<shrinks> voption = shrinks
+    let mutable _size : Size voption = size
+    let mutable _seed : uint64 voption = ValueNone
 
     /// <summary>
     /// A type with exactly one public static member that returns <see cref="T:Hedgehog.IAutoGenConfig"/>, optionally
     /// taking <see cref="P:Hedgehog.MSTest.PropertyAttribute.AutoGenConfigArgs"/>; its configuration is merged over that of
     /// <see cref="T:Hedgehog.MSTest.PropertiesAttribute"/>. Only for setting: reading it throws.
     /// </summary>
-    member _.AutoGenConfig     with set v = _autoGenConfig     <- Some v and get ():Type         = failwith "this getter only exists to make C# named arguments work"
+    member _.AutoGenConfig
+        with set v = _autoGenConfig <- ValueSome v
+        and get () : Type = failwith "this getter only exists to make C# named arguments work"
 
     /// <summary>
     /// The arguments of the member of <see cref="P:Hedgehog.MSTest.PropertyAttribute.AutoGenConfig"/>. Only for setting:
     /// reading it throws.
     /// </summary>
-    member _.AutoGenConfigArgs with set v = _autoGenConfigArgs <-      v and get ():obj array    = failwith "this getter only exists to make C# named arguments work"
+    member _.AutoGenConfigArgs
+        with set v = _autoGenConfigArgs <- AutoGenConfig.argsOrNone v
+        and get () : objnull array = failwith "this getter only exists to make C# named arguments work"
 
     /// <summary>
     /// The number of cases that must pass, 100 unless set here or on <see cref="T:Hedgehog.MSTest.PropertiesAttribute"/>.
     /// Only for setting: reading it throws.
     /// </summary>
-    member _.Tests             with set v = _tests             <- Some v and get ():int<tests>   = failwith "this getter only exists to make C# named arguments work"
+    member _.Tests
+        with set v = _tests <- ValueSome v
+        and get () : int<tests> = failwith "this getter only exists to make C# named arguments work"
 
     /// <summary>
     /// The largest number of shrink steps of a failure, unlimited unless set here or on
     /// <see cref="T:Hedgehog.MSTest.PropertiesAttribute"/>. Only for setting: reading it throws.
     /// </summary>
-    member _.Shrinks           with set v = _shrinks           <- Some v and get ():int<shrinks> = failwith "this getter only exists to make C# named arguments work"
+    member _.Shrinks
+        with set v = _shrinks <- ValueSome v
+        and get () : int<shrinks> = failwith "this getter only exists to make C# named arguments work"
 
     /// <summary>
     /// The size of every generated case; without it the size grows from case to case. Only for setting: reading it
     /// throws.
     /// </summary>
-    member _.Size              with set v = _size              <- Some v and get ():Size         = failwith "this getter only exists to make C# named arguments work"
+    member _.Size
+        with set v = _size <- ValueSome v
+        and get () : Size = failwith "this getter only exists to make C# named arguments work"
 
     /// <summary>
     /// The seed of the run, so that every run generates the same cases; without it every run draws a random seed.
     /// Only for setting: reading it throws.
     /// </summary>
-    member _.Seed              with set v = _seed              <- Some v and get ():uint64       = failwith "this getter only exists to make C# named arguments work"
+    member _.Seed
+        with set v = _seed <- ValueSome v
+        and get () : uint64 = failwith "this getter only exists to make C# named arguments work"
 
     /// <summary>
     /// Runs the property with the settings of <see cref="T:Hedgehog.MSTest.PropertiesAttribute"/> or Hedgehog's
@@ -132,8 +146,13 @@ type PropertyAttribute
     /// </summary>
     /// <param name="callerFilePath">The file that declares the test method; the compiler fills it in.</param>
     /// <param name="callerLineNumber">The line that declares the test method; the compiler fills it in.</param>
-    new([<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath: string, [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber: int) =
-        PropertyAttribute(None, [||], None, None, None, callerFilePath, callerLineNumber)
+    new
+        (
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath : string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber : int
+        )
+        =
+        PropertyAttribute (ValueNone, [||], ValueNone, ValueNone, ValueNone, callerFilePath, callerLineNumber)
 
     /// <summary>
     /// Runs the property until <paramref name="tests"/> cases pass.
@@ -141,8 +160,14 @@ type PropertyAttribute
     /// <param name="tests">The number of cases that must pass.</param>
     /// <param name="callerFilePath">The file that declares the test method; the compiler fills it in.</param>
     /// <param name="callerLineNumber">The line that declares the test method; the compiler fills it in.</param>
-    new(tests, [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath: string, [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber: int) =
-        PropertyAttribute(None, [||], Some tests, None, None, callerFilePath, callerLineNumber)
+    new
+        (
+            tests,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath : string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber : int
+        )
+        =
+        PropertyAttribute (ValueNone, [||], ValueSome tests, ValueNone, ValueNone, callerFilePath, callerLineNumber)
 
     /// <summary>
     /// Runs the property until <paramref name="tests"/> cases pass and shrinks a failure in at most
@@ -152,8 +177,15 @@ type PropertyAttribute
     /// <param name="shrinks">The largest number of shrink steps.</param>
     /// <param name="callerFilePath">The file that declares the test method; the compiler fills it in.</param>
     /// <param name="callerLineNumber">The line that declares the test method; the compiler fills it in.</param>
-    new(tests, shrinks, [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath: string, [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber: int) =
-        PropertyAttribute(None, [||], Some tests, Some shrinks, None, callerFilePath, callerLineNumber)
+    new
+        (
+            tests,
+            shrinks,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath : string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber : int
+        )
+        =
+        PropertyAttribute (ValueNone, [||], ValueSome tests, ValueSome shrinks, ValueNone, callerFilePath, callerLineNumber)
 
     /// <summary>
     /// Generates the arguments with the configuration of <paramref name="autoGenConfig"/>.
@@ -163,8 +195,14 @@ type PropertyAttribute
     /// </param>
     /// <param name="callerFilePath">The file that declares the test method; the compiler fills it in.</param>
     /// <param name="callerLineNumber">The line that declares the test method; the compiler fills it in.</param>
-    new(autoGenConfig, [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath: string, [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber: int) =
-        PropertyAttribute(Some autoGenConfig, [||], None, None, None, callerFilePath, callerLineNumber)
+    new
+        (
+            autoGenConfig,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath : string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber : int
+        )
+        =
+        PropertyAttribute (ValueSome autoGenConfig, [||], ValueNone, ValueNone, ValueNone, callerFilePath, callerLineNumber)
 
     /// <summary>
     /// Generates the arguments with the configuration of <paramref name="autoGenConfig"/> until <paramref name="tests"/>
@@ -176,8 +214,15 @@ type PropertyAttribute
     /// <param name="tests">The number of cases that must pass.</param>
     /// <param name="callerFilePath">The file that declares the test method; the compiler fills it in.</param>
     /// <param name="callerLineNumber">The line that declares the test method; the compiler fills it in.</param>
-    new(autoGenConfig:Type, tests, [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath: string, [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber: int) =
-        PropertyAttribute(Some autoGenConfig, [||], Some tests, None, None, callerFilePath, callerLineNumber)
+    new
+        (
+            autoGenConfig : Type,
+            tests,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath : string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber : int
+        )
+        =
+        PropertyAttribute (ValueSome autoGenConfig, [||], ValueSome tests, ValueNone, ValueNone, callerFilePath, callerLineNumber)
 
     /// <summary>
     /// Generates the arguments with the configuration of <paramref name="autoGenConfig"/> until <paramref name="tests"/>
@@ -190,16 +235,44 @@ type PropertyAttribute
     /// <param name="shrinks">The largest number of shrink steps.</param>
     /// <param name="callerFilePath">The file that declares the test method; the compiler fills it in.</param>
     /// <param name="callerLineNumber">The line that declares the test method; the compiler fills it in.</param>
-    new(autoGenConfig:Type, tests, shrinks, [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath: string, [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber: int) =
-        PropertyAttribute(Some autoGenConfig, [||], Some tests, Some shrinks, None, callerFilePath, callerLineNumber)
+    new
+        (
+            autoGenConfig : Type,
+            tests,
+            shrinks,
+            [<CallerFilePath; Optional; DefaultParameterValue("")>] callerFilePath : string,
+            [<CallerLineNumber; Optional; DefaultParameterValue(-1)>] callerLineNumber : int
+        )
+        =
+        PropertyAttribute (
+            ValueSome autoGenConfig,
+            [||],
+            ValueSome tests,
+            ValueSome shrinks,
+            ValueNone,
+            callerFilePath,
+            callerLineNumber
+        )
 
     interface IPropertyAttribute with
-        member _.AutoGenConfig with get () = _autoGenConfig and set v = _autoGenConfig <- v
-        member _.AutoGenConfigArgs with get () = _autoGenConfigArgs and set v = _autoGenConfigArgs <- v
-        member _.Tests with get () = _tests and set v = _tests <- v
-        member _.Shrinks with get () = _shrinks and set v = _shrinks <- v
-        member _.Size with get () = _size and set v = _size <- v
-        member _.Seed with get () = _seed and set v = _seed <- v
+        member _.AutoGenConfig
+            with get () = _autoGenConfig
+            and set v = _autoGenConfig <- v
+        member _.AutoGenConfigArgs
+            with get () = _autoGenConfigArgs
+            and set v = _autoGenConfigArgs <- v
+        member _.Tests
+            with get () = _tests
+            and set v = _tests <- v
+        member _.Shrinks
+            with get () = _shrinks
+            and set v = _shrinks <- v
+        member _.Size
+            with get () = _size
+            and set v = _size <- v
+        member _.Seed
+            with get () = _seed
+            and set v = _seed <- v
 
     /// <summary>
     /// Runs the test method as a property instead of invoking it once, and returns the single result of the property.
@@ -214,15 +287,14 @@ type PropertyAttribute
     /// </summary>
     /// <param name="testMethod">The test method that MSTest runs.</param>
     /// <returns>An array with the one result of the property.</returns>
-    override _.ExecuteAsync(testMethod: ITestMethod) : Task<TestResult[]> =
-        task {
-            let! result =
-                InternalLogic.executeAsync
-                    testMethod.MethodInfo
-                    testMethod.Arguments
-                    (fun arguments -> testMethod.InvokeAsync arguments)
-                    InternalLogic.currentCancellationToken
+    override _.ExecuteAsync (testMethod : ITestMethod) : Task<TestResult[]> = task {
+        let! result =
+            InternalLogic.executeAsync
+                testMethod.MethodInfo
+                testMethod.Arguments
+                (InternalLogic.invokerOf testMethod)
+                InternalLogic.currentCancellationToken
 
-            // Several results from one ExecuteAsync call appear as separate results of one test and inflate the totals
-            return [| result |]
-        }
+        // Several results from one ExecuteAsync call appear as separate results of one test and inflate the totals
+        return [| result |]
+    }

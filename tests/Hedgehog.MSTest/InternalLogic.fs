@@ -18,7 +18,15 @@
 // - an invocation whose outcome is none of Passed, Failed, Inconclusive and Timeout, such as Error, did not run the test
 //   method as a test: the run stops at it without shrinking, and its result is the result of the property;
 // - the run is folded into one MSTest TestResult, whose failure message ends with a Recheck attribute to add next to
-//   the Property attribute, and any exception becomes an error result.
+//   the Property attribute, and any exception becomes an error result;
+// - the conventions of this repository are applied: a setting that is not given is a voption, the generated arguments
+//   are an array instead of a list, collections are joined in array and sequence expressions, the journal pairs the
+//   parameters with their values in struct tuples, the configuration helpers are functions instead of function values,
+//   and the return type is compared with the types of KnownTypes through the operators of System.Type;
+// - nullness checking is on: a data row and the arguments of an invocation may hold null, a null data row is checked for
+//   where MSTest hands it in, nested exceptions are matched instead of tested with isNull, and the one call whose
+//   annotation contradicts MSTest's own use of it, ITestMethod.InvokeAsync, is in the helper invokerOf.
+// The file is formatted with Fantomas, under the settings of this repository.
 
 module internal InternalLogic
 
@@ -31,6 +39,8 @@ open System.Diagnostics
 open System.Reflection
 open System.Threading
 open System.Threading.Tasks
+// For the collection functions of this repository that return a voption or struct tuples
+open FSharp.Azure.Cosmos
 
 // ========================================
 // Type Utilities & Helpers
@@ -43,43 +53,45 @@ let private GenxAutoBoxMethodName = "genxAutoBoxWith"
 
 let private genxAutoBoxWith<'T> x = x |> Gen.autoWith<'T> |> Gen.map box
 
-let private genxAutoBoxWithMethodInfo =
-    typeof<TypedReflectionMarker>.DeclaringType.GetTypeInfo().GetDeclaredMethod(GenxAutoBoxMethodName)
+// Neither lookup can fail: the marker type is nested in this module, and the module declares the method above
+let private genxAutoBoxWithMethodInfo : MethodInfo =
+    (nonNull typeof<TypedReflectionMarker>.DeclaringType).GetTypeInfo().GetDeclaredMethod(GenxAutoBoxMethodName)
+    |> nonNull
 
 // ========================================
 // Resource Management
 // ========================================
 
-let dispose (o: obj) =
+let dispose (o : objnull) =
     match o with
-    | :? IDisposable as d -> d.Dispose()
+    | :? IDisposable as d -> d.Dispose ()
     | _ -> ()
 
 // ========================================
 // Configuration Helpers
 // ========================================
 
-let withTests =
-    function
-    | Some x -> PropertyConfig.withTests x
-    | None -> id
+let withTests (tests : int<tests> voption) (config : IPropertyConfig) : IPropertyConfig =
+    match tests with
+    | ValueSome tests -> config |> PropertyConfig.withTests tests
+    | ValueNone -> config
 
-let withShrinks =
-    function
-    | Some x -> PropertyConfig.withShrinks x
-    | None -> id
+let withShrinks (shrinks : int<shrinks> voption) (config : IPropertyConfig) : IPropertyConfig =
+    match shrinks with
+    | ValueSome shrinks -> config |> PropertyConfig.withShrinks shrinks
+    | ValueNone -> config
 
-let withSeed =
-    function
-    | Some x -> PropertyConfig.withSeed (Seed.from x)
-    | None -> id
+let withSeed (seed : uint64 voption) (config : IPropertyConfig) : IPropertyConfig =
+    match seed with
+    | ValueSome seed -> config |> PropertyConfig.withSeed (Seed.from seed)
+    | ValueNone -> config
 
 // ========================================
 // Method Validation
 // ========================================
 
 /// Throws when the method cannot run as a property
-let validate (testMethod: MethodInfo) =
+let validate (testMethod : MethodInfo) =
     // MSTest 4.2.3 discovers a generic test method although TestMethodAttribute documents that it must not be generic;
     // upstream closes the method over obj, which turns every generated value into null
     if testMethod.ContainsGenericParameters then
@@ -92,9 +104,16 @@ let validate (testMethod: MethodInfo) =
     // the whole assembly (UTA007), so this guards the runner when it is driven directly
     let returnType = testMethod.ReturnType
 
-    if returnType <> typeof<Void> && returnType <> typeof<Task> && returnType <> typeof<ValueTask> then
+    if
+        Type.(<>) (returnType, KnownTypes.voidType)
+        && Type.(<>) (returnType, KnownTypes.task)
+        && Type.(<>) (returnType, KnownTypes.valueTask)
+    then
         let advice =
-            if ReflectionHelpers.isGenericTask returnType || ReflectionHelpers.isGenericValueTask returnType then
+            if
+                ReflectionHelpers.isGenericTask returnType
+                || ReflectionHelpers.isGenericValueTask returnType
+            then
                 "return Task or ValueTask without a result and fail by throwing, such as through an Assert call"
             elif ReflectionHelpers.isAsync returnType then
                 "return a Task from a task { } expression instead of an Async"
@@ -111,167 +130,167 @@ let validate (testMethod: MethodInfo) =
 
 module private GeneratorFactory =
     /// Tries to get a custom generator from a GenAttribute on a parameter, whatever its place in the inheritance chain
-    let tryGetAttributeGenerator (parameterInfo: ParameterInfo) : Gen<obj> option =
-        parameterInfo.GetCustomAttributes()
-        |> Seq.tryPick (function
-            | :? GenAttribute as attr -> Some(attr.Box())
-            | _ -> None)
+    let tryGetAttributeGenerator (parameterInfo : ParameterInfo) : Gen<obj> voption =
+        parameterInfo.GetCustomAttributes<GenAttribute>()
+        |> Seq.tryHead
+        |> ValueOption.map _.Box()
 
     /// Creates a generator for a parameter based on attribute or type
-    let createGenerator (autoGenConfig: obj) (parameter: ParameterInfo) : Gen<obj> =
+    let createGenerator (autoGenConfig : obj) (parameter : ParameterInfo) : Gen<obj> =
         match tryGetAttributeGenerator parameter with
-        | Some gen -> gen
-        | None ->
-            genxAutoBoxWithMethodInfo.MakeGenericMethod(parameter.ParameterType).Invoke(null, [| autoGenConfig |])
-            :?> Gen<obj>
+        | ValueSome gen -> gen
+        | ValueNone ->
+            genxAutoBoxWithMethodInfo.MakeGenericMethod(parameter.ParameterType).Invoke(null, [| autoGenConfig |]) :?> Gen<obj>
 
-    /// Creates a list generator for all test method parameters
-    let createParameterListGenerator (context: PropertyContext) (parameters: ParameterInfo[]) : Gen<obj list> =
+    /// Creates an array generator for all test method parameters
+    let createParameterArrayGenerator (context : PropertyContext) (parameters : ParameterInfo[]) : Gen<obj array> =
         let gens =
             parameters
             |> Array.map (createGenerator context.AutoGenConfig)
-            |> List.ofArray
-            |> Gen.sequenceList
+            |> Gen.sequenceArray
 
         match context.Size, context.Recheck with
-        | _, Some _ -> gens // Size from recheck data if present
-        | Some size, _ -> gens |> Gen.resize size
-        | None, _ -> gens
+        | _, ValueSome _ -> gens // Size from recheck data if present
+        | ValueSome size, _ -> gens |> Gen.resize size
+        | ValueNone, _ -> gens
 
 // ========================================
 // Invocation
 // ========================================
 
 /// What one run of a property produced, before it becomes an MSTest result
-type PropertyRun =
-    { /// Hedgehog's report of the run
-      Report: Report
-      /// The number of invocations of the test method, shrink steps included
-      Invocations: int
-      /// The result of the last invocation that failed: with every invocation memoised, that of the counterexample
-      LastFailure: TestResult voption
-      /// Whether the run stopped because the TestContext cancellation token was cancelled
-      Cancelled: bool
-      /// The result of the invocation that MSTest could not run as a test; the run stopped at it
-      RunnerFailure: TestResult voption }
+type PropertyRun = {
+    /// Hedgehog's report of the run
+    Report : Report
+    /// The number of invocations of the test method, shrink steps included
+    Invocations : int
+    /// The result of the last invocation that failed: with every invocation memoised, that of the counterexample
+    LastFailure : TestResult voption
+    /// Whether the run stopped because the TestContext cancellation token was cancelled
+    Cancelled : bool
+    /// The result of the invocation that MSTest could not run as a test; the run stopped at it
+    RunnerFailure : TestResult voption
+}
 
 /// The bookkeeping of one run; Hedgehog evaluates the cases of a run one after another, so it needs no locking
-type private RunState() =
+type private RunState () =
     member val Invocations = 0 with get, set
-    member val LastFailure: TestResult voption = ValueNone with get, set
+    member val LastFailure : TestResult voption = ValueNone with get, set
     member val Cancelled = false with get, set
-    member val RunnerFailure: TestResult voption = ValueNone with get, set
+    member val RunnerFailure : TestResult voption = ValueNone with get, set
 
 [<Literal>]
 let private TestFailedExceptionTypeName =
     "Microsoft.VisualStudio.TestPlatform.MSTest.TestAdapter.ObjectModel.TestFailedException"
 
 /// The exception that an invocation reports, or one that names its outcome when it reports none
-let private reportedExceptionOf (result: TestResult) : exn =
+let private reportedExceptionOf (result : TestResult) : exn =
     match result.TestFailureException with
-    | null -> InvalidOperationException($"The invocation of the test method ended with the outcome %O{result.Outcome}.")
+    | null -> InvalidOperationException ($"The invocation of the test method ended with the outcome %O{result.Outcome}.")
     | error -> error
 
 /// The exception of a failed invocation. MSTest wraps what the test method threw into its internal
 /// TestFailedException; one without an inner exception, such as a timeout, stands for itself.
-let exceptionOf (result: TestResult) : exn =
-    match reportedExceptionOf result with
-    | error when
-        String.Equals(error.GetType().FullName, TestFailedExceptionTypeName, StringComparison.Ordinal)
-        && not (isNull error.InnerException)
-        ->
-        error.InnerException
-    | error -> error
+let exceptionOf (result : TestResult) : exn =
+    let error = reportedExceptionOf result
+
+    match error.InnerException with
+    | null -> error
+    | inner when String.Equals (error.GetType().FullName, TestFailedExceptionTypeName, StringComparison.Ordinal) -> inner
+    | _ -> error
 
 module private PropertyBuilder =
     /// Creates a property whose every case invokes the test method once
     let createProperty
-        (state: RunState)
-        (rechecking: bool)
-        (cancellationToken: unit -> CancellationToken)
-        (invoke: obj array -> Task<TestResult>)
-        (parameters: ParameterInfo[])
-        (dataRow: obj array)
-        (gens: Gen<obj list>)
+        (state : RunState)
+        (rechecking : bool)
+        (cancellationToken : unit -> CancellationToken)
+        (invoke : objnull array -> Task<TestResult>)
+        (parameters : ParameterInfo[])
+        (dataRow : objnull array)
+        (gens : Gen<obj array>)
         : Property<unit> =
 
         // A case that does not run is discarded, but the arguments generated for it are disposed all the same
-        let skip (generated: obj list) (reason: string) : Journal * Outcome<unit> =
-            List.iter dispose generated
+        let skip (generated : obj array) (reason : string) : Journal * Outcome<unit> =
+            Array.iter dispose generated
             Journal.singletonMessage $"Not run: %s{reason}", Discard
 
-        let invokeOnce (generated: obj list) : Task<Journal * Outcome<unit>> =
-            task {
-                // Read before every invocation: MSTest gives the TestContext a new token source before each TestCleanup,
-                // so the token in effect during this invocation is the one read now, and the one to check after it
-                let token = cancellationToken ()
+        let invokeOnce (generated : obj array) : Task<Journal * Outcome<unit>> = task {
+            // Read before every invocation: MSTest gives the TestContext a new token source before each TestCleanup,
+            // so the token in effect during this invocation is the one read now, and the one to check after it
+            let token = cancellationToken ()
 
-                if state.RunnerFailure.IsSome then
-                    return skip generated "an earlier invocation did not run the test method as a test."
-                elif state.Cancelled || token.IsCancellationRequested then
+            if state.RunnerFailure.IsSome then
+                return skip generated "an earlier invocation did not run the test method as a test."
+            elif state.Cancelled || token.IsCancellationRequested then
+                state.Cancelled <- true
+                return skip generated "the TestContext cancellation token is cancelled."
+            else
+                let arguments = [| yield! dataRow; yield! generated |]
+
+                let! result = task {
+                    try
+                        try
+                            return! invoke arguments
+                        with e ->
+                            // MSTest reports what the test method throws in the result; an exception comes
+                            // from MSTest itself, so it is an error of the runner, not a failed case
+                            return TestResult (Outcome = UnitTestOutcome.Error, TestFailureException = e)
+                    finally
+                        Array.iter dispose generated
+                }
+
+                state.Invocations <- state.Invocations + 1
+
+                // A [<Timeout>] cancels the token of the invocation it applies to, and a cancelled run cancels it as
+                // well. The token is checked after every invocation, whatever its outcome: MSTest reports Passed for
+                // a test method that returns without observing its cancelled token, and after the last case nothing
+                // else would notice it. So the property stops in the same way wherever the cancellation reached it.
+                if token.IsCancellationRequested then
                     state.Cancelled <- true
-                    return skip generated "the TestContext cancellation token is cancelled."
-                else
-                    let arguments = Array.append dataRow (Array.ofList generated)
 
-                    let! result =
-                        task {
-                            try
-                                try
-                                    return! invoke arguments
-                                with e ->
-                                    // MSTest reports what the test method throws in the result; an exception comes
-                                    // from MSTest itself, so it is an error of the runner, not a failed case
-                                    return TestResult(Outcome = UnitTestOutcome.Error, TestFailureException = e)
-                            finally
-                                List.iter dispose generated
-                        }
+                match result.Outcome with
+                | UnitTestOutcome.Passed -> return Journal.empty, Success ()
+                // Assert.Inconclusive marks a case whose precondition does not hold, so Hedgehog discards it. A
+                // recheck replays a single case and cannot discard it, so there the case fails instead.
+                | UnitTestOutcome.Inconclusive when not rechecking -> return Journal.empty, Discard
+                // The test method ran and its case is falsified
+                | UnitTestOutcome.Failed
+                | UnitTestOutcome.Inconclusive
+                | UnitTestOutcome.Timeout ->
+                    // After a cancelled token no shrink step runs: every one of them would wait for the same
+                    // timeout again, so the property reports this case as it is.
+                    state.LastFailure <- ValueSome result
+                    return Journal.exn (exceptionOf result), Failure
+                // Any other outcome, such as Error or NotFound, says that MSTest could not run the test method as a
+                // test. No smaller case would fare better, so the run stops here without shrinking: the cases that
+                // Hedgehog still asks for are skipped, and this result becomes the result of the property.
+                | _ ->
+                    state.RunnerFailure <- ValueSome result
+                    return Journal.exn (reportedExceptionOf result), Failure
+        }
 
-                    state.Invocations <- state.Invocations + 1
-
-                    // A [<Timeout>] cancels the token of the invocation it applies to, and a cancelled run cancels it as
-                    // well. The token is checked after every invocation, whatever its outcome: MSTest reports Passed for
-                    // a test method that returns without observing its cancelled token, and after the last case nothing
-                    // else would notice it. So the property stops in the same way wherever the cancellation reached it.
-                    if token.IsCancellationRequested then
-                        state.Cancelled <- true
-
-                    match result.Outcome with
-                    | UnitTestOutcome.Passed -> return Journal.empty, Success()
-                    // Assert.Inconclusive marks a case whose precondition does not hold, so Hedgehog discards it. A
-                    // recheck replays a single case and cannot discard it, so there the case fails instead.
-                    | UnitTestOutcome.Inconclusive when not rechecking -> return Journal.empty, Discard
-                    // The test method ran and its case is falsified
-                    | UnitTestOutcome.Failed
-                    | UnitTestOutcome.Inconclusive
-                    | UnitTestOutcome.Timeout ->
-                        // After a cancelled token no shrink step runs: every one of them would wait for the same
-                        // timeout again, so the property reports this case as it is.
-                        state.LastFailure <- ValueSome result
-                        return Journal.exn (exceptionOf result), Failure
-                    // Any other outcome, such as Error or NotFound, says that MSTest could not run the test method as a
-                    // test. No smaller case would fare better, so the run stops here without shrinking: the cases that
-                    // Hedgehog still asks for are skipped, and this result becomes the result of the property.
-                    | _ ->
-                        state.RunnerFailure <- ValueSome result
-                        return Journal.exn (reportedExceptionOf result), Failure
+        let createJournal (generated : obj array) =
+            seq {
+                yield! dataRow
+                yield! generated
             }
-
-        let createJournal (generated: obj list) =
-            generated
-            |> Seq.append dataRow
             |> Seq.zip parameters
-            |> Seq.map (fun (param, value) -> fun () -> TestParameter(param.Name, value))
-            |> Array.ofSeq // not sure if journal will do multiple enumerations
+            |> Seq.map (fun struct (param, value) -> fun () -> TestParameter (param.Name, value))
+            |> Seq.toArray // not sure if journal will do multiple enumerations
             |> Journal.ofSeq
 
         gens
-        |> Property.bindWith createJournal (fun generated ->
-            // Hedgehog 2.0.4 runs an asynchronous result again whenever it unwraps it, and it unwraps the final
-            // counterexample a second time to read its journal. The lazy task makes that one invocation per node of the
-            // shrink tree: side effects happen once, and the journal is that of the invocation that failed.
-            let invocation = lazy (invokeOnce generated)
-            Property.ofAsyncWithJournal (async { return! Async.AwaitTask invocation.Value }))
+        |> Property.bindWith
+            createJournal
+            (fun generated ->
+                // Hedgehog 2.0.4 runs an asynchronous result again whenever it unwraps it, and it unwraps the final
+                // counterexample a second time to read its journal. The lazy task makes that one invocation per node of the
+                // shrink tree: side effects happen once, and the journal is that of the invocation that failed.
+                let invocation = lazy (invokeOnce generated)
+                Property.ofAsyncWithJournal (async { return! Async.AwaitTask invocation.Value })
+            )
 
 // ========================================
 // Report Generation
@@ -280,52 +299,49 @@ module private PropertyBuilder =
 /// Runs the method as a property: Hedgehog generates the arguments that follow the data row, and invoke runs the test
 /// method once for every case and every shrink step
 let runAsync
-    (context: PropertyContext)
-    (testMethod: MethodInfo)
-    (dataRow: obj array)
-    (invoke: obj array -> Task<TestResult>)
-    (cancellationToken: unit -> CancellationToken)
-    : Task<PropertyRun> =
-    task {
-        let dataRow =
-            match dataRow with
-            | null -> [||]
-            | dataRow -> dataRow
+    (context : PropertyContext)
+    (testMethod : MethodInfo)
+    (dataRow : objnull array)
+    (invoke : objnull array -> Task<TestResult>)
+    (cancellationToken : unit -> CancellationToken)
+    : Task<PropertyRun> = task {
+    let parameters = testMethod.GetParameters ()
+    let generatedParameters =
+        parameters
+        |> Array.skip (min dataRow.Length parameters.Length)
+    let gens = GeneratorFactory.createParameterArrayGenerator context generatedParameters
+    let state = RunState ()
 
-        let parameters = testMethod.GetParameters()
-        let generatedParameters = parameters |> Array.skip (min dataRow.Length parameters.Length)
-        let gens = GeneratorFactory.createParameterListGenerator context generatedParameters
-        let state = RunState()
+    let property =
+        PropertyBuilder.createProperty state context.Recheck.IsSome cancellationToken invoke parameters dataRow gens
 
-        let property =
-            PropertyBuilder.createProperty state context.Recheck.IsSome cancellationToken invoke parameters dataRow gens
+    let config =
+        PropertyConfig.defaults
+        |> withTests context.Tests
+        |> withShrinks context.Shrinks
+        |> withSeed context.Seed
 
-        let config =
-            PropertyConfig.defaults
-            |> withTests context.Tests
-            |> withShrinks context.Shrinks
-            |> withSeed context.Seed
+    let! report =
+        match context.Recheck with
+        // Hedgehog 2.0.4 rechecks synchronously and blocks on asynchronous results, so the replay runs on the thread
+        // pool instead of blocking the test thread
+        | ValueSome recheckData -> Task.Run (fun () -> Property.reportRecheckWith recheckData config property)
+        | ValueNone -> Property.reportTaskWith config property
 
-        let! report =
-            match context.Recheck with
-            // Hedgehog 2.0.4 rechecks synchronously and blocks on asynchronous results, so the replay runs on the thread
-            // pool instead of blocking the test thread
-            | Some recheckData -> Task.Run(fun () -> Property.reportRecheckWith recheckData config property)
-            | None -> Property.reportTaskWith config property
-
-        return
-            { Report = report
-              Invocations = state.Invocations
-              LastFailure = state.LastFailure
-              Cancelled = state.Cancelled
-              RunnerFailure = state.RunnerFailure }
+    return {
+        Report = report
+        Invocations = state.Invocations
+        LastFailure = state.LastFailure
+        Cancelled = state.Cancelled
+        RunnerFailure = state.RunnerFailure
     }
+}
 
 // ========================================
 // MSTest Results
 // ========================================
 
-let private recheckHint (report: Report) =
+let private recheckHint (report : Report) =
     match report.Status with
     | Failed { RecheckInfo = Some info } ->
         let data = RecheckData.serialize info.Data
@@ -336,15 +352,15 @@ let private recheckHint (report: Report) =
 
 /// The result of the property, with the output of the invocation that it reports
 let private resultOf
-    (outcome: UnitTestOutcome)
-    (error: exn)
-    (source: TestResult voption)
-    (summary: string)
-    (duration: TimeSpan)
+    (outcome : UnitTestOutcome)
+    (error : exn)
+    (source : TestResult voption)
+    (summary : string)
+    (duration : TimeSpan)
     =
     match source with
     | ValueSome source ->
-        TestResult(
+        TestResult (
             Outcome = outcome,
             TestFailureException = error,
             LogOutput = summary + Environment.NewLine + source.LogOutput,
@@ -354,19 +370,19 @@ let private resultOf
             ResultFiles = source.ResultFiles,
             Duration = duration
         )
-    | ValueNone -> TestResult(Outcome = outcome, TestFailureException = error, LogOutput = summary, Duration = duration)
+    | ValueNone -> TestResult (Outcome = outcome, TestFailureException = error, LogOutput = summary, Duration = duration)
 
 /// A failed property; the invocation that failed is the counterexample that the message shows
-let private failedResult (message: string) (failure: TestResult voption) (summary: string) (duration: TimeSpan) =
+let private failedResult (message : string) (failure : TestResult voption) (summary : string) (duration : TimeSpan) =
     let error =
         match failure with
-        | ValueSome source -> AssertFailedException(message, exceptionOf source)
-        | ValueNone -> AssertFailedException(message)
+        | ValueSome source -> AssertFailedException (message, exceptionOf source)
+        | ValueNone -> AssertFailedException (message)
 
     resultOf UnitTestOutcome.Failed error failure summary duration
 
 /// Folds a run into the one MSTest result of the property
-let toTestResult (run: PropertyRun) (duration: TimeSpan) : TestResult =
+let toTestResult (run : PropertyRun) (duration : TimeSpan) : TestResult =
     let report = run.Report
 
     let summary =
@@ -381,12 +397,7 @@ let toTestResult (run: PropertyRun) (duration: TimeSpan) : TestResult =
             $"The property stopped after %d{run.Invocations} invocations without shrinking, because an invocation ended "
             + $"with the outcome %O{source.Outcome}: MSTest did not run the test method as a test."
 
-        resultOf
-            source.Outcome
-            (reportedExceptionOf source)
-            run.RunnerFailure
-            (summary + Environment.NewLine + stopped)
-            duration
+        resultOf source.Outcome (reportedExceptionOf source) run.RunnerFailure (summary + Environment.NewLine + stopped) duration
     | ValueNone when run.Cancelled ->
         let message =
             $"The property stopped after %d{run.Invocations} invocations without shrinking, because the TestContext "
@@ -398,7 +409,7 @@ let toTestResult (run: PropertyRun) (duration: TimeSpan) : TestResult =
         failedResult message run.LastFailure summary duration
     | ValueNone ->
         match report.Status with
-        | OK -> TestResult(Outcome = UnitTestOutcome.Passed, LogOutput = summary, Duration = duration)
+        | OK -> TestResult (Outcome = UnitTestOutcome.Passed, LogOutput = summary, Duration = duration)
         | GaveUp ->
             let message =
                 Report.render report
@@ -409,43 +420,59 @@ let toTestResult (run: PropertyRun) (duration: TimeSpan) : TestResult =
         | Failed _ -> failedResult (Report.render report + recheckHint report) run.LastFailure summary duration
 
 /// The result of a property that could not run
-let errorResult (error: exn) (duration: TimeSpan) : TestResult =
+let errorResult (error : exn) (duration : TimeSpan) : TestResult =
     let error =
         match error with
-        | :? TargetInvocationException as e when not (isNull e.InnerException) -> e.InnerException
+        | :? TargetInvocationException as e ->
+            match e.InnerException with
+            | null -> error
+            | inner -> inner
         | e -> e
 
-    TestResult(
+    TestResult (
         Outcome = UnitTestOutcome.Error,
-        TestFailureException = AssertFailedException($"Hedgehog could not run the property: %s{error.Message}", error),
+        TestFailureException = AssertFailedException ($"Hedgehog could not run the property: %s{error.Message}", error),
         Duration = duration
     )
 
 /// Runs the method as a property and folds the run into one MSTest result; no exception escapes. This is the entry
 /// point of PropertyAttribute.ExecuteAsync, and the adapter's own tests drive it with an invoker of their own.
 let executeAsync
-    (testMethod: MethodInfo)
-    (dataRow: obj array)
-    (invoke: obj array -> Task<TestResult>)
-    (cancellationToken: unit -> CancellationToken)
-    : Task<TestResult> =
-    task {
-        let stopwatch = Stopwatch.StartNew()
+    (testMethod : MethodInfo)
+    (dataRow : objnull array | null)
+    (invoke : objnull array -> Task<TestResult>)
+    (cancellationToken : unit -> CancellationToken)
+    : Task<TestResult> = task {
+    let stopwatch = Stopwatch.StartNew ()
 
-        try
-            validate testMethod
-            let context = PropertyContext.fromMethod testMethod
-            let! run = runAsync context testMethod dataRow invoke cancellationToken
-            return toTestResult run stopwatch.Elapsed
-        with error ->
-            return errorResult error stopwatch.Elapsed
-    }
+    // MSTest gives no arguments, null, to a test method without a data row
+    let dataRow =
+        match dataRow with
+        | null -> [||]
+        | dataRow -> dataRow
+
+    try
+        validate testMethod
+        let context = PropertyContext.fromMethod testMethod
+        let! run = runAsync context testMethod dataRow invoke cancellationToken
+        return toTestResult run stopwatch.Elapsed
+    with error ->
+        return errorResult error stopwatch.Elapsed
+}
 
 /// The cancellation token of the current invocation. TestContext.Current is the only way from an attribute to the
 /// TestContext, and MSTest 4.2.3 and 4.3.2 mark it experimental (MSTESTEXP), so FS0057 is suppressed here only.
 let currentCancellationToken () : CancellationToken =
-#nowarn "57"
+    #nowarn "57"
     match TestContext.Current with
     | null -> CancellationToken.None
     | context -> context.CancellationToken
 #warnon "57"
+
+/// Invokes the test method for one case. MSTest declares the elements of the arguments of ITestMethod.InvokeAsync as
+/// non-null, although it passes ITestMethod.Arguments, whose elements it declares as nullable, to that method itself,
+/// and a data row or a generator may well hold a null. So FS3261 is suppressed for this one call only.
+let invokerOf (testMethod : ITestMethod) : objnull array -> Task<TestResult> =
+    #nowarn "3261"
+    fun arguments -> testMethod.InvokeAsync arguments
+#warnon "3261"

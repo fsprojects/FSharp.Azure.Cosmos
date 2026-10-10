@@ -4,6 +4,7 @@
 // Copyright (c) 2016 Jacob Stanley, Nikos Baxevanis. Licensed under the Apache License, Version 2.0
 // (http://www.apache.org/licenses/LICENSE-2.0); see THIRD-PARTY-NOTICES.md at the root of this repository.
 // Changes: the namespace Hedgehog.NUnit is renamed to Hedgehog.MSTest; the documentation is rewritten.
+// The file is formatted with Fantomas, under the settings of this repository.
 
 namespace Hedgehog.MSTest
 
@@ -25,9 +26,10 @@ type RecheckAttribute
     /// Replays the counterexample that <paramref name="recheckData"/> describes.
     /// </summary>
     /// <param name="recheckData">The recheck data that the failed run reported.</param>
-    (recheckData) =
-    inherit Attribute()
+    (recheckData)
+    =
+    inherit Attribute ()
 
-    let _recheckData: string = recheckData
+    let _recheckData : string = recheckData
 
     member internal _.GetRecheckData = _recheckData

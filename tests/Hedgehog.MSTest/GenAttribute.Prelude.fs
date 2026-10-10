@@ -7,6 +7,7 @@
 // rewritten; NonZeroInt skips a 0 at either end of its range, where upstream generates from an empty part, and rejects
 // the range from 0 to 0; Odd and Even stay inside their range, where upstream leaves an even upper or an odd lower
 // bound by one, and reject a range without such a value.
+// The file is formatted with Fantomas, under the settings of this repository.
 
 namespace Hedgehog.MSTest
 
@@ -26,7 +27,7 @@ module private RangeHelpers =
     /// - For ranges > 1000: use exponential to ensure boundary values are tested
     /// - For ranges > 100: use linear for balanced shrinking
     /// - For ranges <= 100: use constant (no shrinking needed for small ranges)
-    let inline chooseRangeInt32 (min: int) (max: int) : Range<int> =
+    let inline chooseRangeInt32 (min : int) (max : int) : Range<int> =
         let rangeSize = int64 max - int64 min
         let origin = if min <= 0 && 0 <= max then 0 else min
         match rangeSize with
@@ -36,8 +37,8 @@ module private RangeHelpers =
 
     /// The range narrowed to its first and last odd or even value, so that moving a generated value onto that parity
     /// cannot leave the range. A range without such a value is rejected.
-    let parityRangeInt32 (odd: bool) (min: int) (max: int) : Range<int> =
-        let isOffParity (value: int) = (value % 2 <> 0) <> odd
+    let parityRangeInt32 (odd : bool) (min : int) (max : int) : Range<int> =
+        let isOffParity (value : int) = (value % 2 <> 0) <> odd
         // int64, because the neighbour of Int32.MinValue or Int32.MaxValue would overflow
         let first = if isOffParity min then int64 min + 1L else int64 min
         let last = if isOffParity max then int64 max - 1L else int64 max
@@ -61,16 +62,16 @@ type IntAttribute
     /// </summary>
     /// <param name="min">The smallest value.</param>
     /// <param name="max">The largest value.</param>
-    (min: int, max: int) =
-    inherit GenAttribute<int>()
+    (min : int, max : int)
+    =
+    inherit GenAttribute<int> ()
     /// <summary>
     /// Generates an <see cref="T:System.Int32"/> from <see cref="F:System.Int32.MinValue"/> to
     /// <see cref="F:System.Int32.MaxValue"/>.
     /// </summary>
-    new() = IntAttribute(Int32.MinValue, Int32.MaxValue)
+    new () = IntAttribute (Int32.MinValue, Int32.MaxValue)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.int32 (chooseRangeInt32 min max)
+    override _.Generator = Gen.int32 (chooseRangeInt32 min max)
 
 /// <summary>
 /// Generates an odd <see cref="T:System.Int32"/> from <paramref name="min"/> to <paramref name="max"/>, both included.
@@ -86,12 +87,13 @@ type OddAttribute
     /// </summary>
     /// <param name="min">The smallest value.</param>
     /// <param name="max">The largest value.</param>
-    (min: int, max: int) =
-    inherit GenAttribute<int>()
+    (min : int, max : int)
+    =
+    inherit GenAttribute<int> ()
     /// <summary>
     /// Generates an odd <see cref="T:System.Int32"/> from the whole range of <see cref="T:System.Int32"/>.
     /// </summary>
-    new() = OddAttribute(Int32.MinValue, Int32.MaxValue)
+    new () = OddAttribute (Int32.MinValue, Int32.MaxValue)
     /// <inheritdoc />
     override _.Generator =
         let range = parityRangeInt32 true min max
@@ -115,12 +117,13 @@ type EvenAttribute
     /// </summary>
     /// <param name="min">The smallest value.</param>
     /// <param name="max">The largest value.</param>
-    (min: int, max: int) =
-    inherit GenAttribute<int>()
+    (min : int, max : int)
+    =
+    inherit GenAttribute<int> ()
     /// <summary>
     /// Generates an even <see cref="T:System.Int32"/> from the whole range of <see cref="T:System.Int32"/>.
     /// </summary>
-    new() = EvenAttribute(Int32.MinValue, Int32.MaxValue)
+    new () = EvenAttribute (Int32.MinValue, Int32.MaxValue)
     /// <inheritdoc />
     override _.Generator =
         let range = parityRangeInt32 false min max
@@ -141,15 +144,15 @@ type PositiveIntAttribute
     /// Creates the attribute.
     /// </summary>
     /// <param name="max">The largest value.</param>
-    (max: int) =
-    inherit GenAttribute<int>()
+    (max : int)
+    =
+    inherit GenAttribute<int> ()
     /// <summary>
     /// Generates a positive <see cref="T:System.Int32"/> from 1 to <see cref="F:System.Int32.MaxValue"/>.
     /// </summary>
-    new() = PositiveIntAttribute(Int32.MaxValue)
+    new () = PositiveIntAttribute (Int32.MaxValue)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.int32 (chooseRangeInt32 1 max)
+    override _.Generator = Gen.int32 (chooseRangeInt32 1 max)
 
 /// <summary>
 /// Generates a non-negative <see cref="T:System.Int32"/> from 0 to <paramref name="max"/>.
@@ -162,15 +165,15 @@ type NonNegativeIntAttribute
     /// Creates the attribute.
     /// </summary>
     /// <param name="max">The largest value.</param>
-    (max: int) =
-    inherit GenAttribute<int>()
+    (max : int)
+    =
+    inherit GenAttribute<int> ()
     /// <summary>
     /// Generates a non-negative <see cref="T:System.Int32"/> from 0 to <see cref="F:System.Int32.MaxValue"/>.
     /// </summary>
-    new() = NonNegativeIntAttribute(Int32.MaxValue)
+    new () = NonNegativeIntAttribute (Int32.MaxValue)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.int32 (chooseRangeInt32 0 max)
+    override _.Generator = Gen.int32 (chooseRangeInt32 0 max)
 
 /// <summary>
 /// Generates a non-zero <see cref="T:System.Int32"/> from <paramref name="min"/> to <paramref name="max"/>.
@@ -186,26 +189,24 @@ type NonZeroIntAttribute
     /// </summary>
     /// <param name="min">The smallest value.</param>
     /// <param name="max">The largest value.</param>
-    (min: int, max: int) =
-    inherit GenAttribute<int>()
+    (min : int, max : int)
+    =
+    inherit GenAttribute<int> ()
     /// <summary>
     /// Generates a non-zero <see cref="T:System.Int32"/> from <see cref="F:System.Int32.MinValue"/> + 1 to
     /// <see cref="F:System.Int32.MaxValue"/>.
     /// </summary>
-    new() = NonZeroIntAttribute(Int32.MinValue + 1, Int32.MaxValue)
+    new () = NonZeroIntAttribute (Int32.MinValue + 1, Int32.MaxValue)
     /// <inheritdoc />
     override _.Generator =
         match min, max with
         | 0, 0 -> invalidArg (nameof min) "The range from 0 to 0 holds no non-zero value."
-        | _, m when m < 0 -> Gen.int32 (chooseRangeInt32 min max)  // Range entirely negative
-        | n, _ when n > 0 -> Gen.int32 (chooseRangeInt32 min max)  // Range entirely positive
-        | 0, m -> Gen.int32 (chooseRangeInt32 1 m)                  // 0 is the lowest value, skip it
-        | n, 0 -> Gen.int32 (chooseRangeInt32 n -1)                 // 0 is the highest value, skip it
-        | n, m ->                                                   // 0 lies inside the range, split it
-            Gen.choice [
-                Gen.int32 (chooseRangeInt32 n -1)
-                Gen.int32 (chooseRangeInt32 1 m)
-            ]
+        | _, m when m < 0 -> Gen.int32 (chooseRangeInt32 min max) // Range entirely negative
+        | n, _ when n > 0 -> Gen.int32 (chooseRangeInt32 min max) // Range entirely positive
+        | 0, m -> Gen.int32 (chooseRangeInt32 1 m) // 0 is the lowest value, skip it
+        | n, 0 -> Gen.int32 (chooseRangeInt32 n -1) // 0 is the highest value, skip it
+        | n, m -> // 0 lies inside the range, split it
+            Gen.choice [| Gen.int32 (chooseRangeInt32 n -1); Gen.int32 (chooseRangeInt32 1 m) |]
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> that is a valid identifier, through
@@ -216,15 +217,15 @@ type IdentifierAttribute
     /// Creates the attribute.
     /// </summary>
     /// <param name="maxLen">The largest length.</param>
-    (maxLen: int) =
-    inherit GenAttribute<string>()
+    (maxLen : int)
+    =
+    inherit GenAttribute<string> ()
     /// <summary>
     /// Generates an identifier of up to 25 characters.
     /// </summary>
-    new() = IdentifierAttribute(25)
+    new () = IdentifierAttribute (25)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.identifier maxLen
+    override _.Generator = Gen.identifier maxLen
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> that is a Latin name, through
@@ -235,15 +236,15 @@ type LatinNameAttribute
     /// Creates the attribute.
     /// </summary>
     /// <param name="maxLength">The largest length.</param>
-    (maxLength: int) =
-    inherit GenAttribute<string>()
+    (maxLength : int)
+    =
+    inherit GenAttribute<string> ()
     /// <summary>
     /// Generates a Latin name of up to 20 characters.
     /// </summary>
-    new() = LatinNameAttribute(20)
+    new () = LatinNameAttribute (20)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.latinName maxLength
+    override _.Generator = Gen.latinName maxLength
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> in snake case, such as <c>snake_case</c>, through
@@ -255,15 +256,15 @@ type SnakeCaseAttribute
     /// </summary>
     /// <param name="maxWordLength">The largest length of one word.</param>
     /// <param name="maxWordsCount">The largest number of words.</param>
-    (maxWordLength: int, maxWordsCount: int) =
-    inherit GenAttribute<string>()
+    (maxWordLength : int, maxWordsCount : int)
+    =
+    inherit GenAttribute<string> ()
     /// <summary>
     /// Generates up to 5 words of up to 5 characters each in snake case.
     /// </summary>
-    new() = SnakeCaseAttribute(5, 5)
+    new () = SnakeCaseAttribute (5, 5)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.snakeCase (Range.constant 1 maxWordLength) (Range.constant 1 maxWordsCount)
+    override _.Generator = Gen.snakeCase (Range.constant 1 maxWordLength) (Range.constant 1 maxWordsCount)
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> in kebab case, such as <c>kebab-case</c>, through
@@ -275,15 +276,15 @@ type KebabCaseAttribute
     /// </summary>
     /// <param name="maxWordLength">The largest length of one word.</param>
     /// <param name="maxWordsCount">The largest number of words.</param>
-    (maxWordLength: int, maxWordsCount: int) =
-    inherit GenAttribute<string>()
+    (maxWordLength : int, maxWordsCount : int)
+    =
+    inherit GenAttribute<string> ()
     /// <summary>
     /// Generates up to 5 words of up to 5 characters each in kebab case.
     /// </summary>
-    new() = KebabCaseAttribute(5, 5)
+    new () = KebabCaseAttribute (5, 5)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.kebabCase (Range.constant 1 maxWordLength) (Range.constant 1 maxWordsCount)
+    override _.Generator = Gen.kebabCase (Range.constant 1 maxWordLength) (Range.constant 1 maxWordsCount)
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> that is a valid domain name, through
@@ -293,11 +294,11 @@ type DomainNameAttribute
     /// <summary>
     /// Creates the attribute.
     /// </summary>
-    () =
-    inherit GenAttribute<string>()
+    ()
+    =
+    inherit GenAttribute<string> ()
     /// <inheritdoc />
-    override _.Generator =
-        Gen.domainName
+    override _.Generator = Gen.domainName
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> that is a valid email address, through
@@ -307,11 +308,11 @@ type EmailAttribute
     /// <summary>
     /// Creates the attribute.
     /// </summary>
-    () =
-    inherit GenAttribute<string>()
+    ()
+    =
+    inherit GenAttribute<string> ()
     /// <inheritdoc />
-    override _.Generator =
-        Gen.email
+    override _.Generator = Gen.email
 
 /// <summary>
 /// Generates a <see cref="T:System.DateTime"/> of the given <paramref name="kind"/> from <paramref name="from"/> to
@@ -324,29 +325,29 @@ type DateTimeAttribute
     /// <param name="kind">The <see cref="P:System.DateTime.Kind"/> of every value.</param>
     /// <param name="from">The earliest value.</param>
     /// <param name="duration">How much later than <paramref name="from"/> the latest value is.</param>
-    (kind: DateTimeKind, from: DateTime, duration: TimeSpan) =
-    inherit GenAttribute<DateTime>()
+    (kind : DateTimeKind, from : DateTime, duration : TimeSpan)
+    =
+    inherit GenAttribute<DateTime> ()
     /// <summary>
     /// Generates a <see cref="T:System.DateTime"/> of kind <see cref="F:System.DateTimeKind.Utc"/> within the 3650 days
     /// from 2000-01-01.
     /// </summary>
-    new() = DateTimeAttribute(DateTimeKind.Utc, DateTime(2000, 1, 1), TimeSpan.FromDays(3650))
+    new () = DateTimeAttribute (DateTimeKind.Utc, DateTime (2000, 1, 1), TimeSpan.FromDays (3650))
     /// <summary>
     /// Generates a <see cref="T:System.DateTime"/> of kind <see cref="F:System.DateTimeKind.Utc"/> from
     /// <paramref name="from"/> to <paramref name="from"/> plus <paramref name="duration"/>.
     /// </summary>
     /// <param name="from">The earliest value.</param>
     /// <param name="duration">How much later than <paramref name="from"/> the latest value is.</param>
-    new(from, duration) = DateTimeAttribute(DateTimeKind.Utc, from, duration)
+    new (from, duration) = DateTimeAttribute (DateTimeKind.Utc, from, duration)
     /// <summary>
     /// Generates a <see cref="T:System.DateTime"/> of the given <paramref name="kind"/> within the 3650 days from
     /// 2000-01-01.
     /// </summary>
     /// <param name="kind">The <see cref="P:System.DateTime.Kind"/> of every value.</param>
-    new(kind) = DateTimeAttribute(kind, DateTime(2000, 1, 1), TimeSpan.FromDays(3650))
+    new (kind) = DateTimeAttribute (kind, DateTime (2000, 1, 1), TimeSpan.FromDays (3650))
     /// <inheritdoc />
-    override _.Generator =
-        Gen.dateTime (Range.constant from (from + duration)) (Gen.constant kind)
+    override _.Generator = Gen.dateTime (Range.constant from (from + duration)) (Gen.constant kind)
 
 /// <summary>
 /// Generates a <see cref="T:System.DateTimeOffset"/> from <paramref name="from"/> to <paramref name="from"/> plus
@@ -358,20 +359,20 @@ type DateTimeOffsetAttribute
     /// </summary>
     /// <param name="from">The earliest value.</param>
     /// <param name="duration">How much later than <paramref name="from"/> the latest value is.</param>
-    (from: DateTimeOffset, duration: TimeSpan) =
-    inherit GenAttribute<DateTimeOffset>()
+    (from : DateTimeOffset, duration : TimeSpan)
+    =
+    inherit GenAttribute<DateTimeOffset> ()
     /// <summary>
     /// Generates a <see cref="T:System.DateTimeOffset"/> with offset zero within the 3650 days from 2000-01-01.
     /// </summary>
-    new() = DateTimeOffsetAttribute(DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero), TimeSpan.FromDays(3650))
+    new () = DateTimeOffsetAttribute (DateTimeOffset (2000, 1, 1, 0, 0, 0, TimeSpan.Zero), TimeSpan.FromDays (3650))
     /// <summary>
     /// Generates a <see cref="T:System.DateTimeOffset"/> within the 3650 days from <paramref name="from"/>.
     /// </summary>
     /// <param name="from">The earliest value.</param>
-    new(from) = DateTimeOffsetAttribute(from, TimeSpan.FromDays(3650))
+    new (from) = DateTimeOffsetAttribute (from, TimeSpan.FromDays (3650))
     /// <inheritdoc />
-    override _.Generator =
-        Gen.dateTimeOffset (Range.constant from (from + duration))
+    override _.Generator = Gen.dateTimeOffset (Range.constant from (from + duration))
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> of ASCII letters and digits, from <paramref name="minLength"/> to
@@ -383,21 +384,21 @@ type AlphaNumStringAttribute
     /// </summary>
     /// <param name="minLength">The smallest length.</param>
     /// <param name="maxLength">The largest length.</param>
-    (minLength: int, maxLength: int) =
-    inherit GenAttribute<string>()
+    (minLength : int, maxLength : int)
+    =
+    inherit GenAttribute<string> ()
     /// <summary>
     /// Generates a <see cref="T:System.String"/> of ASCII letters and digits, up to 256 characters long.
     /// </summary>
-    new() = AlphaNumStringAttribute(0, 256)
+    new () = AlphaNumStringAttribute (0, 256)
     /// <summary>
     /// Generates a <see cref="T:System.String"/> of ASCII letters and digits, from <paramref name="minLength"/> to 256
     /// characters long.
     /// </summary>
     /// <param name="minLength">The smallest length.</param>
-    new(minLength) = AlphaNumStringAttribute(minLength, 256)
+    new (minLength) = AlphaNumStringAttribute (minLength, 256)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.string (Range.constant minLength maxLength) Gen.alphaNum
+    override _.Generator = Gen.string (Range.constant minLength maxLength) Gen.alphaNum
 
 /// <summary>
 /// Generates a <see cref="T:System.String"/> of Unicode characters, from <paramref name="minLength"/> to
@@ -409,21 +410,21 @@ type UnicodeStringAttribute
     /// </summary>
     /// <param name="minLength">The smallest length.</param>
     /// <param name="maxLength">The largest length.</param>
-    (minLength: int, maxLength: int) =
-    inherit GenAttribute<string>()
+    (minLength : int, maxLength : int)
+    =
+    inherit GenAttribute<string> ()
     /// <summary>
     /// Generates a <see cref="T:System.String"/> of Unicode characters, up to 256 characters long.
     /// </summary>
-    new() = UnicodeStringAttribute(0, 256)
+    new () = UnicodeStringAttribute (0, 256)
     /// <summary>
     /// Generates a <see cref="T:System.String"/> of Unicode characters, from <paramref name="minLength"/> to 256
     /// characters long.
     /// </summary>
     /// <param name="minLength">The smallest length.</param>
-    new(minLength) = UnicodeStringAttribute(minLength, 256)
+    new (minLength) = UnicodeStringAttribute (minLength, 256)
     /// <inheritdoc />
-    override _.Generator =
-        Gen.string (Range.constant minLength maxLength) Gen.unicode
+    override _.Generator = Gen.string (Range.constant minLength maxLength) Gen.unicode
 
 /// <summary>
 /// Generates an IPv4 <see cref="T:System.Net.IPAddress"/>, through <see cref="P:Hedgehog.FSharp.GenUri.Gen.ipv4Address"/>.
@@ -432,11 +433,11 @@ type Ipv4AddressAttribute
     /// <summary>
     /// Creates the attribute.
     /// </summary>
-    () =
-    inherit GenAttribute<System.Net.IPAddress>()
+    ()
+    =
+    inherit GenAttribute<System.Net.IPAddress> ()
     /// <inheritdoc />
-    override _.Generator =
-        Gen.ipv4Address
+    override _.Generator = Gen.ipv4Address
 
 /// <summary>
 /// Generates an IPv6 <see cref="T:System.Net.IPAddress"/>, through <see cref="P:Hedgehog.FSharp.GenUri.Gen.ipv6Address"/>.
@@ -445,8 +446,8 @@ type Ipv6AddressAttribute
     /// <summary>
     /// Creates the attribute.
     /// </summary>
-    () =
-    inherit GenAttribute<System.Net.IPAddress>()
+    ()
+    =
+    inherit GenAttribute<System.Net.IPAddress> ()
     /// <inheritdoc />
-    override _.Generator =
-        Gen.ipv6Address
+    override _.Generator = Gen.ipv6Address
