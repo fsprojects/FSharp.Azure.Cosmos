@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Hedgehog MSTest adapter, ported from Hedgehog.NUnit and Hedgehog.Xunit of hedgehogqa/fsharp-hedgehog
+    (Apache-2.0, see THIRD-PARTY-NOTICES.md) and proposed there as src/Hedgehog.MSTest
+    (https://github.com/hedgehogqa/fsharp-hedgehog/pull/487). The code follows the coding guidelines of this
+    repository, its formatting and nullness checking included: voption, struct tuples, arrays and the collection
+    helpers of src/Shared/ValueCollections.fs, which the root Directory.Build.props compiles into every F# project. The
+    copy in the upstream pull request keeps upstream's conventions. This project references no project of this
+    repository, so tests/Directory.Build.props leaves the Cosmos test infrastructure out of it. Once upstream publishes
+    the package, the package replaces this project.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Hedgehog.MSTest</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      A library that test projects reference, not a test application: tests/Directory.Build.props marks every project
+      under tests/ as a test project, so this one opts out explicitly. It references MSTest.TestFramework only, never
+      the MSTest metapackage, for the same reason.
+    -->
+    <IsTestProject>false</IsTestProject>
+    <IsPackable>false</IsPackable>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <!--
+    The adapter's own tests drive the runner (InternalLogic) without MSTest. The SDK turns this item into the attribute
+    only while it generates the assembly information, which Directory.Build.props turns off for the AssemblyInfo.fs that
+    FAKE writes into the src projects, so this project turns it back on (GenerateAssemblyInfo).
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Hedgehog.MSTest.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Prelude.fs" />
+    <Compile Include="KnownTypes.fs" />
+    <Compile Include="AutoGenConfig.fs" />
+    <Compile Include="IPropertyAttribute.fs" />
+    <Compile Include="RecheckAttribute.fs" />
+    <Compile Include="GenAttribute.fs" />
+    <Compile Include="GenAttribute.Prelude.fs" />
+    <Compile Include="PropertyContext.fs" />
+    <Compile Include="ReflectionHelpers.fs" />
+    <Compile Include="InternalLogic.fs" />
+    <Compile Include="PropertyAttribute.fs" />
+    <Compile Include="PropertiesAttribute.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hedgehog" />
+    <PackageReference Include="MSTest.TestFramework" />
+  </ItemGroup>
+
+</Project>
