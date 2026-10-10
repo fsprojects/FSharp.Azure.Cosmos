@@ -199,8 +199,8 @@ type FeedIteratorExtensions private () =
 
     static let seqToReadResult (items : 'T seq) =
         match items |> Seq.tryHead with
-        | Some item -> Ok item
-        | None -> NotFound "Item not found"
+        | ValueSome item -> Ok item
+        | ValueNone -> NotFound "Item not found"
 
     [<Extension>]
     static member FirstAsync (iterator : FeedIterator<'T>, [<Optional>] cancellationToken : CancellationToken) = task {

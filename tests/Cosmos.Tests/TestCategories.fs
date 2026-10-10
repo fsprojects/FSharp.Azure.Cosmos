@@ -88,3 +88,11 @@ type ResponseMessageUnitTestCategoryAttribute () =
 type TestInfrastructureUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit"; "TestInfrastructure" |] :> IList<string>
+
+/// <summary>
+/// Categorizes <see cref="ValueCollectionsTests"/> as both a fast, emulator-free unit test and coverage for the
+/// collection functions of <see cref="T:FSharp.Azure.Cosmos.ValueCollections"/>, which every project compiles.
+/// </summary>
+type ValueCollectionsUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Unit"; "ValueCollections" |] :> IList<string>

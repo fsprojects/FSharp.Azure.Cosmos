@@ -43,6 +43,16 @@ See https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-director
     <PackageReference Include="FSharp.Core" />
   </ItemGroup>
 
+  <!--
+    Every F# project of the library and of its tests compiles the collection helpers first. They shadow the functions
+    of Seq, List and Array that return an option or reference tuples with functions that return a voption or struct
+    tuples, for the code of the namespace FSharp.Azure.Cosmos and for every file that opens it. The build project is
+    left out: its scripts were generated against the functions of FSharp.Core.
+  -->
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.fsproj' And '$(MSBuildProjectName)' != 'build'">
+    <Compile Include="$(MSBuildThisFileDirectory)src/Shared/ValueCollections.fs" Link="Shared/ValueCollections.fs" />
+  </ItemGroup>
+
   <!--<ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="BinaryDefense.FSharp.Analyzers.Hashing" PrivateAssets="all" />
     <PackageReference Include="FSharp.Compiler.Service" PrivateAssets="all" />
