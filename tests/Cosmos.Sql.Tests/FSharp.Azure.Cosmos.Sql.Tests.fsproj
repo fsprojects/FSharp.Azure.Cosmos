@@ -30,9 +30,12 @@
     <Compile Include="CatalogTests.fs" />
     <Compile Include="ValidatorTests.fs" />
     <Compile Include="GeneratorHelperTests.fs" />
+    <Compile Include="PrinterLawsTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hedgehog" />
+    <PackageReference Include="Hedgehog.MSTest" />
     <!-- Only for the catalog test that compares the catalog with the function names of the SDK version in use -->
     <PackageReference Include="Microsoft.Azure.Cosmos" />
     <PackageReference Include="MSTest" />
