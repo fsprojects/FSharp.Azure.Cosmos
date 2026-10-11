@@ -42,6 +42,7 @@
 ├── tests/Cosmos.Tests/  – MSTest integration test project
 ├── tests/Cosmos.Sql.Tests/ – MSTest unit tests of FSharp.Azure.Cosmos.Sql, no emulator needed
 ├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
+├── benchmarks/Cosmos.Quotations.Benchmarks/ – BenchmarkDotNet measurements for the quotation translator, run by hand
 ├── build/               – FAKE build scripts
 └── docsSrc/             – FSharp.Formatting documentation source
 ```
