@@ -4,6 +4,7 @@
     "projects": [
       "src\\Cosmos.Sql\\FSharp.Azure.Cosmos.Sql.fsproj",
       "src\\Cosmos\\FSharp.Azure.Cosmos.fsproj",
+      "tests\\Cosmos.Sql.Hedgehog\\FSharp.Azure.Cosmos.Sql.Hedgehog.fsproj",
       "tests\\Cosmos.Sql.Tests\\FSharp.Azure.Cosmos.Sql.Tests.fsproj",
       "tests\\Cosmos.Tests.Infrastructure\\FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj",
       "tests\\Cosmos.Tests\\FSharp.Azure.Cosmos.Tests.fsproj"
