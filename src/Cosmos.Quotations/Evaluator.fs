@@ -561,6 +561,76 @@ and private valuesOf (computed : Computed) (arguments : Expr list) : objnull arr
     arguments |> List.map (valueOf computed) |> List.toArray
 
 /// <summary>
+/// The parts of quotations that
+/// <see cref="M:FSharp.Azure.Cosmos.Quotations.Evaluator.canEvaluate(FSharp.Azure.Cosmos.Quotations.Evaluator.Refused,Microsoft.FSharp.Quotations.FSharpExpr)"/>
+/// has refused, by their identity. A caller that asks about a part and
+/// then about the parts under it keeps one of these for all its questions: to refuse a part, every part on the way
+/// down to the reason was looked at, and is not looked at again.
+/// </summary>
+[<Sealed>]
+type Refused () =
+
+    // By identity, because a quotation compares and hashes itself by walking all of itself.
+    let parts = HashSet<obj> ReferenceEqualityComparer.Instance
+
+    /// <summary>
+    /// Whether <paramref name="part"/> has been refused.
+    /// </summary>
+    member _.Holds (part : Expr) : bool = parts.Contains part
+
+    /// <summary>
+    /// Remembers that <paramref name="part"/> is refused.
+    /// </summary>
+    member _.Add (part : Expr) : unit = parts.Add part |> ignore
+
+/// <summary>
+/// Whether <paramref name="expr"/> is made only of what
+/// <see cref="M:FSharp.Azure.Cosmos.Quotations.Evaluator.tryEvaluate(Microsoft.FSharp.Quotations.FSharpExpr)"/>
+/// computes. Such a part reads no variable and holds no function that is written in the quotation, so it has a value
+/// before the query runs, unless the code in it raises an exception.
+/// </summary>
+/// <remarks>
+/// The answer is given without running any code of the part: a caller asks it to choose the parts to compute, and a
+/// part that turned out not to be computable half way would have run a half of its code for nothing.
+/// </remarks>
+/// <param name="refused">
+/// The parts refused so far. A part that is refused now is added, with every part between it and the reason.
+/// </param>
+/// <param name="expr">The part of a quotation in normal form.</param>
+let rec canEvaluate (refused : Refused) (expr : Expr) : bool =
+    not (refused.Holds expr)
+    && (let can =
+            match expr with
+            | Var _ -> false
+            | Value _
+            | DefaultValue _ -> true
+            | PropertyGet (receiver, _, arguments)
+            | Call (receiver, _, arguments) ->
+                receiver |> Option.forall (canEvaluate refused)
+                && arguments |> List.forall (canEvaluate refused)
+            | IfThenElse (condition, whenTrue, whenFalse) ->
+                canEvaluate refused condition
+                && canEvaluate refused whenTrue
+                && canEvaluate refused whenFalse
+            | FieldGet (receiver, _) -> receiver |> Option.forall (canEvaluate refused)
+            | NewObject (_, items)
+            | NewRecord (_, items)
+            | NewUnionCase (_, items)
+            | NewArray (_, items)
+            | NewTuple items -> items |> List.forall (canEvaluate refused)
+            | TupleGet (value, _)
+            | UnionCaseTest (value, _)
+            | TypeTest (value, _)
+            | Coerce (value, _) -> canEvaluate refused value
+            | Application (func, argument) -> canEvaluate refused func && canEvaluate refused argument
+            | _ -> false
+
+        if not can then
+            refused.Add expr
+
+        can)
+
+/// <summary>
 /// The error for a part that raised <paramref name="cause"/> while it was computed.
 /// </summary>
 let private failed (part : Expr) (cause : exn) : TranslationError =
