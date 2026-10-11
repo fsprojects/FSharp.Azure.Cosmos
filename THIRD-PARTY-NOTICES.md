@@ -7,7 +7,7 @@ original copyright notices and licences are reproduced here.
 
 * Source: <https://github.com/Azure/azure-cosmos-dotnet-v3>, tag `3.62.0` (commit `fe16fe00617e962dbab246244813d605871c086d`)
 * Licence: MIT
-* Used in `FSharp.Azure.Cosmos.Sql` (`src/Cosmos.Sql`) and its tests (`tests/Cosmos.Sql.Tests`):
+* Used in `FSharp.Azure.Cosmos.Sql` (`src/Cosmos.Sql`) and its tests (`tests/Cosmos.Sql.Tests`, `tests/Cosmos.Sql.Grammar.Generated`):
   * the node inventory of the syntax tree, after the classes in `Microsoft.Azure.Cosmos/src/SqlObjects` and the
     grammar `Microsoft.Azure.Cosmos/src/Query/Core/Parser/sql.g4`;
   * the printing rules, after `Microsoft.Azure.Cosmos/src/SqlObjects/Visitors/SqlObjectTextSerializer.cs`;
@@ -15,7 +15,10 @@ original copyright notices and licences are reproduced here.
     `Microsoft.Azure.Cosmos/src/SqlObjects/SqlFunctionCallScalarExpression.cs`;
   * expected query texts in the tests, from the baselines in
     `Microsoft.Azure.Cosmos/tests/Microsoft.Azure.Cosmos.Tests/BaselineTest/TestBaseline` and
-    `Microsoft.Azure.Cosmos/tests/Microsoft.Azure.Cosmos.EmulatorTests/BaselineTest/TestBaseline`.
+    `Microsoft.Azure.Cosmos/tests/Microsoft.Azure.Cosmos.EmulatorTests/BaselineTest/TestBaseline`;
+  * the grammar `sql.g4` and the lexer and parser that ANTLR generated from it (`sqlLexer.cs`, `sqlParser.cs`,
+    `IsqlVisitor.cs`, `sqlBaseVisitor.cs`, `IsqlListener.cs`, `sqlBaseListener.cs`), copied unchanged from
+    `Microsoft.Azure.Cosmos/src/Query/Core/Parser` into `tests/Cosmos.Sql.Grammar.Generated`.
 
 ```text
 MIT License

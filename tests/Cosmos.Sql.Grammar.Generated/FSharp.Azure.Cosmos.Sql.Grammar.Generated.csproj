@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The parser of Cosmos DB SQL that the Azure Cosmos DB .NET SDK runs: the SDK's grammar and the C# sources ANTLR
+    generated from it, copied unchanged (README.md). The project is C# because those sources are; its only own code is
+    the attribute that opens the generated types, which are internal, to FSharp.Azure.Cosmos.Sql.Grammar, the F#
+    project that reads their parse trees.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Sql.Grammar.Generated</AssemblyName>
+    <RootNamespace>$(AssemblyBaseName).Sql.Grammar.Generated</RootNamespace>
+
+    <!--
+      A library that test projects reference, not a test application: tests/Directory.Build.props marks every project
+      under tests/ as a test project, so this one opts out explicitly.
+    -->
+    <IsTestProject>false</IsTestProject>
+    <IsPackable>false</IsPackable>
+
+    <!-- The generated sources carry no nullable annotations -->
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The root Directory.Build.props references FSharp.Core from every project; nothing here is F# -->
+    <PackageReference Remove="FSharp.Core" />
+    <PackageReference Include="Antlr4.Runtime.Standard" />
+  </ItemGroup>
+
+</Project>
