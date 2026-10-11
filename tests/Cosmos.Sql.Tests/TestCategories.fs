@@ -37,6 +37,16 @@ type GeneratorsTestCategoryAttribute () =
     override _.TestCategories = [| "Generators" |] :> IList<string>
 
 /// <summary>
+/// Categorizes a law of the printer, checked as a property on generated syntax trees:
+/// <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.PrinterLawsTests"/>.
+/// </summary>
+type PrinterLawsTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Printer laws" |] :> IList<string>
+
+/// <summary>
 /// Categorizes a test of the printer and its inline mode:
 /// <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.PrinterTests"/> and <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.InlineTests"/>.
 /// </summary>
