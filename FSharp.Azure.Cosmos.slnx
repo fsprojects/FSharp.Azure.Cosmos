@@ -14,6 +14,7 @@
   <Project Path="src/Cosmos.Sql/FSharp.Azure.Cosmos.Sql.fsproj" />
   <Project Path="src/Cosmos/FSharp.Azure.Cosmos.fsproj" />
   <Project Path="tests/Cosmos.Sql.Grammar.Generated/FSharp.Azure.Cosmos.Sql.Grammar.Generated.csproj" />
+  <Project Path="tests/Cosmos.Sql.Grammar/FSharp.Azure.Cosmos.Sql.Grammar.fsproj" />
   <Project Path="tests/Cosmos.Sql.Hedgehog/FSharp.Azure.Cosmos.Sql.Hedgehog.fsproj" />
   <Project Path="tests/Cosmos.Sql.Tests/FSharp.Azure.Cosmos.Sql.Tests.fsproj" />
   <Project Path="tests/Cosmos.Tests.Infrastructure/FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj" />

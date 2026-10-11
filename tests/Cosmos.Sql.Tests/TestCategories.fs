@@ -37,6 +37,16 @@ type GeneratorsUnitTestCategoryAttribute () =
     override _.TestCategories = [| "Unit"; "Generators" |] :> IList<string>
 
 /// <summary>
+/// Categorizes a unit test of the conversion from the parse tree of the SDK's grammar into the syntax tree:
+/// <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.SdkGrammarTests"/>.
+/// </summary>
+type GrammarUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Unit"; "Grammar" |] :> IList<string>
+
+/// <summary>
 /// Categorizes a law of the printer, checked as a property on generated syntax trees:
 /// <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.PrinterLawsTests"/>.
 /// </summary>
