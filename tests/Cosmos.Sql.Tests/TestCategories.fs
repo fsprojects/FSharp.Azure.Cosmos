@@ -27,6 +27,16 @@ type CollectionsUnitTestCategoryAttribute () =
     override _.TestCategories = [| "Unit"; "Collections" |] :> IList<string>
 
 /// <summary>
+/// Categorizes a unit test of the generator helpers that the property tests and the test data are built from:
+/// <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.GeneratorHelperTests"/>.
+/// </summary>
+type GeneratorsUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Unit"; "Generators" |] :> IList<string>
+
+/// <summary>
 /// Categorizes a unit test of the printer and its inline mode:
 /// <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.PrinterTests"/> and <see cref="T:FSharp.Azure.Cosmos.Sql.Tests.InlineTests"/>.
 /// </summary>
