@@ -13,6 +13,7 @@
     <PackageVersion Include="IcedTasks" Version="0.11.10-beta001" />
   </ItemGroup>
   <ItemGroup Label="Build and Test">
+    <PackageVersion Include="Antlr4.Runtime.Standard" Version="4.9.3" />
     <PackageVersion Include="Argu" Version="6.2.5" />
     <PackageVersion Include="Fake.Api.GitHub" Version="6.2.0" />
     <PackageVersion Include="Fake.BuildServer.GitHubActions" Version="6.2.0" />
