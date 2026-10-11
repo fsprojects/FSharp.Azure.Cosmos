@@ -2,6 +2,7 @@
   "solution": {
     "path": "FSharp.Azure.Cosmos.slnx",
     "projects": [
+      "benchmarks\\Cosmos.Quotations.Benchmarks\\FSharp.Azure.Cosmos.Quotations.Benchmarks.fsproj",
       "src\\Cosmos.Sql\\FSharp.Azure.Cosmos.Sql.fsproj",
       "src\\Cosmos\\FSharp.Azure.Cosmos.fsproj",
       "tests\\Cosmos.Sql.Tests\\FSharp.Azure.Cosmos.Sql.Tests.fsproj",

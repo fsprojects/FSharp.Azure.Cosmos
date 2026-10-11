@@ -10,6 +10,7 @@
     <File Path="README.md" />
     <File Path="THIRD-PARTY-NOTICES.md" />
   </Folder>
+  <Project Path="benchmarks/Cosmos.Quotations.Benchmarks/FSharp.Azure.Cosmos.Quotations.Benchmarks.fsproj" />
   <Project Path="build/build.fsproj" />
   <Project Path="src/Cosmos.Sql/FSharp.Azure.Cosmos.Sql.fsproj" />
   <Project Path="src/Cosmos/FSharp.Azure.Cosmos.fsproj" />

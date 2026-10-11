@@ -51,6 +51,9 @@ let testsDirectoryGlob = rootDirectory </> "tests/**/*.??proj"
 /// </summary>
 let testsGlob = rootDirectory </> "tests/**/*.Tests.??proj"
 
+/// The benchmark applications, which the solution builds and nothing runs
+let benchmarksGlob = rootDirectory </> "benchmarks/**/*.??proj"
+
 let srcAndTest = !!srcGlob ++ testsDirectoryGlob
 
 let distDir = rootDirectory </> "dist"
@@ -254,7 +257,7 @@ let clean _ =
     [ "bin"; "temp"; distDir; coverageReportDir; testResultsDir ]
     |> Shell.cleanDirs
 
-    !!srcGlob ++ testsDirectoryGlob
+    !!srcGlob ++ testsDirectoryGlob ++ benchmarksGlob
     |> Seq.collect (fun p ->
         [ "bin"; "obj" ]
         |> Seq.map (fun sp -> IO.Path.GetDirectoryName p </> sp)

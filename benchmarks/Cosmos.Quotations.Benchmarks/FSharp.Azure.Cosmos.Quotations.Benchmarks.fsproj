@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Measurements for the cost model of the quotation translator (ADR 0001): a console application that is run by hand,
+    see README.md next to this file. It lies outside src/ and tests/, so nothing packs it, runs it as a test or counts
+    it in the coverage.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Quotations.Benchmarks</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="SampleQuery.fs" />
+    <Compile Include="ShapeKey.fs" />
+    <Compile Include="QuotationBenchmarks.fs" />
+    <Compile Include="EvaluationBenchmarks.fs" />
+    <Compile Include="SqlModelBenchmarks.fs" />
+    <Compile Include="RoundTripBenchmarks.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" />
+    <!--
+      The SDK loads Newtonsoft.Json in the constructor of the client, whatever the serializer, and declares no
+      dependency on it. A test project gets the assembly from the test host; a console application has to bring it.
+    -->
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cosmos.Sql\FSharp.Azure.Cosmos.Sql.fsproj" />
+    <!-- Only for the round trip benchmarks: the client of the emulator and the prefix of the databases the test runs sweep -->
+    <ProjectReference Include="..\..\tests\Cosmos.Tests.Infrastructure\FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj" />
+  </ItemGroup>
+
+</Project>
