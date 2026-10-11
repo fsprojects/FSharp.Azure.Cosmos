@@ -1,8 +1,9 @@
 // Tests of what the MSTest adapter adds to upstream's adapters or does differently (ADR 0001, section 22.6): one result
 // per property, the lifecycle of every case, failure reports and their replay, Seed, give-ups, Assert.Inconclusive,
 // rejected methods, Task and ValueTask bodies, data rows, settings of inherited properties, generator attributes found
-// through the inheritance chain, memoised invocations, cancellation, timeouts and invocations that MSTest could not
-// run. Each pins MSTest behaviour that the adapter relies on, so the suite runs on every MSTest update.
+// through the inheritance chain, memoised invocations, cancellation, timeouts, invocations that MSTest could not
+// run, and DateOnly and TimeOnly parameters without an attribute. Each pins behaviour of MSTest or Hedgehog that the
+// adapter relies on, so the suite runs on every update of the two.
 namespace Hedgehog.MSTest.Tests
 
 open System
@@ -10,6 +11,7 @@ open System.Threading
 open System.Threading.Tasks
 open Microsoft.VisualStudio.TestTools.UnitTesting
 open Hedgehog
+open Hedgehog.FSharp
 open Hedgehog.MSTest
 
 /// The function under test of the failure report tests: it loses the last item of a list of three or more items.
@@ -707,3 +709,104 @@ type ``Timeout tests`` () =
     [<Timeout(200, CooperativeCancellation = true)>]
     member this.``a timed-out invocation stops the property without shrinking`` (_ : int) : Task =
         Task.Delay (TimeSpan.FromSeconds 30.0, this.TestContext.CancellationToken)
+
+/// A value that holds dates and times of day: bare, optional and in a collection.
+type Stay = {
+    Arrival : DateOnly
+    CheckIn : TimeOnly
+    Departure : DateOnly voption
+    Breakfasts : TimeOnly array
+}
+
+/// An AutoGenConfig type whose every date is the last day of 1999.
+type LastDayOf1999 =
+    static member __ =
+        AutoGenConfig.defaults
+        |> AutoGenConfig.addGenerator (Gen.constant (DateOnly (1999, 12, 31)))
+
+/// Properties with dates and times of day that no attribute bounds, run through the harness.
+type DateAndTimeTargets () =
+
+    [<Property>]
+    member _.``takes a date, a time of day and a value that holds them`` (_ : DateOnly, _ : TimeOnly, _ : Stay) = ()
+
+/// Hedgehog 2.0.4 has no generator of DateOnly or TimeOnly. The adapter registers the two default generators that
+/// hedgehogqa/fsharp-hedgehog#488 adds to Hedgehog, for the parameters of a property and until a release has them.
+[<TestClass>]
+type ``DateOnly and TimeOnly without an attribute tests`` () =
+
+    let sample (size : int) : Gen<'T> -> 'T array = Gen.sample size 200 >> Seq.toArray
+
+    [<TestMethod>]
+    member _.``Hedgehog cannot generate a DateOnly or a TimeOnly by itself yet`` () =
+        // When this test fails, Hedgehog has the generators: AutoGenConfig.propertyDefaults of the adapter, which stands
+        // in for them, has to go together with this test.
+        Assert.Throws<ArgumentException>(
+            Action (fun () -> Gen.auto<DateOnly> |> sample 50 |> ignore),
+            "Hedgehog generates a DateOnly by itself now, so the adapter need not register a generator for it."
+        )
+        |> ignore
+
+        Assert.Throws<ArgumentException>(
+            Action (fun () -> Gen.auto<TimeOnly> |> sample 50 |> ignore),
+            "Hedgehog generates a TimeOnly by itself now, so the adapter need not register a generator for it."
+        )
+        |> ignore
+
+    [<TestMethod>]
+    member _.``a property with dates and times of day gets its arguments in every case`` () : Task = task {
+        let! run = Harness.runAsync<DateAndTimeTargets> "takes a date, a time of day and a value that holds them"
+
+        Assert.AreEqual (Status.OK, run.Report.Status, "The dates and the times of day are generated.")
+        Assert.AreEqual (100<tests>, run.Report.Tests, "Every case gets its arguments.")
+    }
+
+    [<TestMethod>]
+    member _.``a date lies near 2000-01-01 in a small case and anywhere in a large one`` () =
+        let dates = Gen.autoWith<DateOnly> AutoGenConfig.propertyDefaults
+        let origin = DateOnly (2000, 1, 1)
+
+        Assert.DoesNotContain (
+            (fun (date : DateOnly) -> abs (date.DayNumber - origin.DayNumber) > 31),
+            dates |> sample 10,
+            "A date of a small case lies within a month of 2000-01-01."
+        )
+
+        let large = dates |> sample 99
+        Assert.Contains ((fun (date : DateOnly) -> date.Year < 1900), large, "Some of 200 dates lie before 1900.")
+        Assert.Contains ((fun (date : DateOnly) -> date.Year > 2100), large, "Some of 200 dates lie after 2100.")
+
+    [<TestMethod>]
+    member _.``a time of day lies later the larger a case is, anywhere in the day at full precision`` () =
+        let times = Gen.autoWith<TimeOnly> AutoGenConfig.propertyDefaults
+
+        // A range that grew exponentially would keep the times of a case of this size within a moment of midnight
+        Assert.Contains (
+            (fun (time : TimeOnly) -> time.Hour >= 1),
+            times |> sample 50,
+            "Some of 200 times of a medium case lie hours after midnight."
+        )
+
+        let large = times |> sample 99
+        Assert.Contains ((fun (time : TimeOnly) -> time.Hour < 12), large, "Some of 200 times lie before noon.")
+        Assert.Contains ((fun (time : TimeOnly) -> time.Hour >= 12), large, "Some of 200 times lie after noon.")
+
+        Assert.Contains (
+            (fun (time : TimeOnly) -> time.Ticks % TimeSpan.TicksPerSecond <> 0L),
+            large,
+            "A time has the precision of TimeOnly, not whole seconds."
+        )
+
+    [<Property(typeof<LastDayOf1999>)>]
+    member _.``a generator of the test's configuration wins`` (date : DateOnly, stay : Stay) =
+        Assert.AreEqual (DateOnly (1999, 12, 31), date, "The configuration of the test sets every date.")
+        Assert.AreEqual (
+            DateOnly (1999, 12, 31),
+            stay.Arrival,
+            "The configuration of the test sets the dates inside a value too."
+        )
+
+    [<Property(typeof<Int2718>)>]
+    member _.``a configuration without such generators keeps those of the adapter`` (i : int, _ : DateOnly, _ : TimeOnly) =
+        // The property fails with the error of the generator when a date or a time of day cannot be generated
+        Assert.AreEqual (2718, i, "The configuration of the test sets every int.")

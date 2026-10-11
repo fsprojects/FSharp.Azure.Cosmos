@@ -10,7 +10,9 @@
 // config method is found with the Seq.tryExactlyOne of this repository's collection helpers; the error for a type
 // without exactly one such method says "member" where upstream says "property", because a method that takes
 // AutoGenConfigArgs is accepted as well; the arguments may hold null, a null array of them counts as none where the
-// attributes take it (argsOrNone), and a config method that returns no IAutoGenConfig is an error.
+// attributes take it (argsOrNone), and a config method that returns no IAutoGenConfig is an error; propertyDefaults is
+// added, the configuration that a property starts from, with the default generators of DateOnly and TimeOnly that
+// Hedgehog 2.0.4 lacks.
 // The file is formatted with Fantomas, under the settings of this repository.
 
 namespace Hedgehog.MSTest
@@ -18,10 +20,42 @@ namespace Hedgehog.MSTest
 open System
 open System.Reflection
 open Hedgehog
+open Hedgehog.FSharp
 // For the collection functions of this repository that return a voption or struct tuples
 open FSharp.Azure.Cosmos
 
 module internal AutoGenConfig =
+
+    // Hedgehog 2.0.4 has no generator of DateOnly or TimeOnly: Gen.auto calls a constructor of the type with integers
+    // that it generates, and the constructor refuses them. hedgehogqa/fsharp-hedgehog#488 adds the two default
+    // generators below to Hedgehog itself, as DefaultGenerators.DateOnly and DefaultGenerators.TimeOnly:
+    // https://github.com/hedgehogqa/fsharp-hedgehog/pull/488
+    // The adapter registers them for the parameters of a property until a release of Hedgehog has them. Then these
+    // three values go, and PropertyContext.defaults takes AutoGenConfig.defaults again; a test of the adapter's suite
+    // fails as soon as Hedgehog generates the two types by itself.
+
+    // Dates around 2000-01-01, further away the larger a case is, up to any date at all
+    let private dateOnly : Gen<DateOnly> =
+        Range.exponentialFrom (DateOnly (2000, 1, 1)).DayNumber DateOnly.MinValue.DayNumber DateOnly.MaxValue.DayNumber
+        |> Gen.int32
+        |> Gen.map DateOnly.FromDayNumber
+
+    // A linear range: an exponential one would keep the times of half of all sizes within the first tenth of a second
+    // after midnight, because a day has 864 billion ticks.
+    let private timeOnly : Gen<TimeOnly> =
+        Range.linear TimeOnly.MinValue.Ticks TimeOnly.MaxValue.Ticks
+        |> Gen.int64
+        |> Gen.map TimeOnly
+
+    /// <summary>
+    /// The configuration that a property starts from: <see cref="P:Hedgehog.AutoGenConfig.Defaults"/> and generators
+    /// of <see cref="T:System.DateOnly"/> and <see cref="T:System.TimeOnly"/>. The configuration that a test names is
+    /// merged over it, so a generator of the test for one of the two types wins.
+    /// </summary>
+    let propertyDefaults : IAutoGenConfig =
+        AutoGenConfig.defaults
+        |> AutoGenConfig.addGenerator dateOnly
+        |> AutoGenConfig.addGenerator timeOnly
 
     // Infers the generic arguments of a generic config method from the runtime types of the arguments it is given
     let private inferGenericArguments (configType : Type) (methodInfo : MethodInfo) (configArgs : objnull array) : Type array =

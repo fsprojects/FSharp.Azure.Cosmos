@@ -379,8 +379,10 @@ type DateTimeOffsetAttribute
 /// </summary>
 /// <remarks>
 /// The range is constant: it does not grow with the size of a case, and a value shrinks towards
-/// <paramref name="min"/>. Upstream's adapters have no such attribute, and Hedgehog 2.0.4 cannot auto-generate a
-/// <see cref="T:System.DateOnly"/>, so a parameter of this type needs this attribute or a generator of its own.
+/// <paramref name="min"/>. A parameter without this attribute gets a date around 2000-01-01, further away the larger
+/// the case is. Upstream's adapters get this attribute and Hedgehog its generator of
+/// <see cref="T:System.DateOnly"/> through
+/// <see href="https://github.com/hedgehogqa/fsharp-hedgehog/pull/488">hedgehogqa/fsharp-hedgehog#488</see>.
 /// </remarks>
 type DateOnlyAttribute
     /// <summary>
@@ -419,9 +421,10 @@ type DateOnlyAttribute
 /// </summary>
 /// <remarks>
 /// A value has the full precision of <see cref="T:System.TimeOnly"/>, 100 nanoseconds. The range is constant: it does
-/// not grow with the size of a case, and a value shrinks towards <paramref name="min"/>. Upstream's adapters have no
-/// such attribute, and Hedgehog 2.0.4 cannot auto-generate a <see cref="T:System.TimeOnly"/>, so a parameter of this
-/// type needs this attribute or a generator of its own.
+/// not grow with the size of a case, and a value shrinks towards <paramref name="min"/>. A parameter without this
+/// attribute gets a time of the whole day, later the larger the case is. Upstream's adapters get this attribute and
+/// Hedgehog its generator of <see cref="T:System.TimeOnly"/> through
+/// <see href="https://github.com/hedgehogqa/fsharp-hedgehog/pull/488">hedgehogqa/fsharp-hedgehog#488</see>.
 /// </remarks>
 type TimeOnlyAttribute
     /// <summary>

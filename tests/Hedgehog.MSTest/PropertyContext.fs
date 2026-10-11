@@ -6,7 +6,8 @@
 // Changes: the namespace Hedgehog.NUnit is renamed to Hedgehog.MSTest; the Seed setting is added; class-level settings
 // are read from the reflected type of the method instead of its declaring type, and a derived class's settings win over
 // its base class's; a setting that is not given is a voption instead of an option, and the attributes are folded from
-// a sequence expression instead of an appended list.
+// a sequence expression instead of an appended list; a property starts from AutoGenConfig.propertyDefaults of this
+// adapter instead of AutoGenConfig.defaults of Hedgehog.
 // The file is formatted with Fantomas, under the settings of this repository.
 
 namespace Hedgehog.MSTest
@@ -30,7 +31,7 @@ type internal PropertyContext = {
 
 module internal PropertyContext =
     let defaults : PropertyContext = {
-        AutoGenConfig = AutoGenConfig.defaults
+        AutoGenConfig = AutoGenConfig.propertyDefaults
         Tests = ValueNone
         Shrinks = ValueNone
         Size = ValueNone
