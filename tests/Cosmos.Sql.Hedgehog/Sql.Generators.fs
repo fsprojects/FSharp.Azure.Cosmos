@@ -227,10 +227,25 @@ let exactIntegerGen : Gen<int64> = Gen.int64 (Range.linearFrom 0L -MaxExactInteg
 /// <c>undefined</c>, a Boolean, an integer that a JSON number holds exactly, a finite number or a string.
 /// </summary>
 let literalGen : Gen<Literal> =
+    // The text does not tell 2.0 from 2: the printer writes both as 2, the way the SDK does, and that is read as an
+    // integer. A number without a fraction is therefore an integer literal in a valid tree, unless it is written with
+    // an exponent, which the printer does from 1E+17 on and finiteNumberGen reaches only at the edges of a double, or
+    // is the negative zero, which is written -0 and read as a double. The limit of finiteNumberGen is drawn as well,
+    // and 1E+15 is written in full
+    let numberLiteral (value : float) =
+        if
+            Double.IsInteger value
+            && Math.Abs value <= MaxNumber
+            && not (value = 0.0 && Double.IsNegative value)
+        then
+            Literal.Int (int64 value)
+        else
+            Literal.Float value
+
     Gen.choice [
         Gen.item [ Literal.Null; Literal.Undefined; Literal.Boolean true; Literal.Boolean false ]
         exactIntegerGen |> Gen.map Literal.Int
-        finiteNumberGen |> Gen.map Literal.Float
+        finiteNumberGen |> Gen.map numberLiteral
         textGen |> Gen.map Literal.String
     ]
 
@@ -481,10 +496,18 @@ and private collectionExpressionWith (scope : Scope) : Gen<CollectionExpression>
         else
             let part = collectionExpressionWith scope |> Gen.resize (size / 2)
 
+            // The text has no brackets around a join, so a b JOIN (c JOIN d) is written like (b JOIN c) JOIN d and read
+            // back as that. A valid tree therefore has no join on the right side of a join
+            let right =
+                if scope.Valid then
+                    Gen.choice [ aliased; iterator ]
+                else
+                    part
+
             Gen.frequency [
                 3, aliased
                 3, iterator
-                1, Gen.map2 (fun left right -> CollectionExpression.Join (left, right)) part part
+                1, Gen.map2 (fun left right -> CollectionExpression.Join (left, right)) part right
             ]
     )
 

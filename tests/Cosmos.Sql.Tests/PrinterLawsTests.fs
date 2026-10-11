@@ -10,6 +10,7 @@ open Hedgehog
 open Hedgehog.MSTest
 
 open FSharp.Azure.Cosmos.Sql
+open FSharp.Azure.Cosmos.Sql.Grammar
 open FSharp.Azure.Cosmos.Tests
 open FSharp.Azure.Cosmos.Tests.Models
 
@@ -207,8 +208,9 @@ module PrinterAssert =
 /// The laws of <see cref="T:FSharp.Azure.Cosmos.Sql.Printer"/>: what holds for every syntax tree, checked on trees that
 /// Hedgehog generates. A law that fails is reported with the smallest tree that breaks it.
 /// <para>
-/// The laws that read the printed text back as a query wait for a parser of the query language; these read back what
-/// JSON and the number formats of .NET can read: literals, property names and constants.
+/// Two laws read the printed text of a whole query back with the SDK's own parser,
+/// <see cref="M:FSharp.Azure.Cosmos.Sql.Grammar.SdkGrammar.parse(System.String)"/>; the others read back what JSON and
+/// the number formats of .NET can read: literals, property names and constants.
 /// </para>
 /// </summary>
 [<TestClass; UnitTestCategory; PrinterLawsTestCategory; Properties(typeof<SqlAutoGenConfig>)>]
@@ -267,6 +269,29 @@ type PrinterLawsTests () =
     member _.``A valid query is written the same way again and under every culture`` (query : SqlQuery) =
         for style in styles do
             PrinterAssert.IsStableText style query
+
+    [<Property>]
+    member _.``The SDK's parser reads the text of a valid query as the tree it was written from`` (query : SqlQuery) =
+        let text = Printer.print PropertyStyle.Brackets query
+
+        match SdkGrammar.parse text with
+        | Error error -> Assert.Fail $"The SDK's parser should read the text of a valid query.\n%s{text}\n%s{error}"
+        | Ok read -> Assert.AreEqual (query, read, $"The SDK's parser should read the tree the text was written from.\n%s{text}")
+
+    // Not the tree here: a step of an input path that is written with a dot is read as an identifier step, whether
+    // the tree holds it as an identifier or as a string, so the dot style keeps the text and not that distinction
+    [<Property>]
+    member _.``The SDK's parser reads the dot style, and what it reads is written as the same text`` (query : SqlQuery) =
+        let text = Printer.print PropertyStyle.DotWhenSafe query
+
+        match SdkGrammar.parse text with
+        | Error error -> Assert.Fail $"The SDK's parser should read the dot style of a valid query.\n%s{text}\n%s{error}"
+        | Ok read ->
+            Assert.AreEqual<string>(
+                text,
+                Printer.print PropertyStyle.DotWhenSafe read,
+                "What the SDK's parser reads should be written as the text it was read from."
+            )
 
     [<Property>]
     member _.``Any tree is written, valid or not, the same way again and under every culture``
