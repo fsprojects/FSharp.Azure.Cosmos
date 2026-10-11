@@ -2,7 +2,8 @@
 
   <!--
     Hedgehog generators for the tests: the helper modules that every generator project of this repository shares
-    (Sample, Gen, CollectionGen, TextGen). The generators of the Cosmos DB SQL model join them in this project.
+    (Sample, Gen, CollectionGen, TextGen) and the generators of the Cosmos DB SQL syntax tree (SqlGenerators,
+    SqlAutoGenConfig).
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -22,12 +23,18 @@
     <Compile Include="Gen.fs" />
     <Compile Include="CollectionGen.fs" />
     <Compile Include="TextGen.fs" />
+    <Compile Include="Sql.Generators.fs" />
+    <Compile Include="SqlAutoGenConfig.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Only for the generators of Skippable values -->
     <PackageReference Include="FSharp.SystemTextJson" />
     <PackageReference Include="Hedgehog" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cosmos.Sql\FSharp.Azure.Cosmos.Sql.fsproj" />
   </ItemGroup>
 
 </Project>
