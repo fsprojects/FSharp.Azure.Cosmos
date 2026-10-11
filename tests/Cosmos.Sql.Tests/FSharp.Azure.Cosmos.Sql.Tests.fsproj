@@ -29,6 +29,7 @@
     <Compile Include="InlineTests.fs" />
     <Compile Include="CatalogTests.fs" />
     <Compile Include="ValidatorTests.fs" />
+    <Compile Include="GeneratorHelperTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +40,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Cosmos.Sql\FSharp.Azure.Cosmos.Sql.fsproj" />
+    <ProjectReference Include="..\Cosmos.Sql.Hedgehog\FSharp.Azure.Cosmos.Sql.Hedgehog.fsproj" />
   </ItemGroup>
 
 </Project>
