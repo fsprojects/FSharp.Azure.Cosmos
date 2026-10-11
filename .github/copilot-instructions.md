@@ -12,6 +12,8 @@
 
 ```text
 /
+├── src/Cosmos.Quotations/ – translator of F# quotations into queries (FSharp.Azure.Cosmos.Quotations), built stage by stage and not packed yet
+│   └── TranslationError.fs – translation errors and the place of a quotation in the source
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
