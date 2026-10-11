@@ -30,6 +30,7 @@
     <Compile Include="CatalogTests.fs" />
     <Compile Include="ValidatorTests.fs" />
     <Compile Include="GeneratorHelperTests.fs" />
+    <Compile Include="SdkGrammarTests.fs" />
     <Compile Include="PrinterLawsTests.fs" />
   </ItemGroup>
 
@@ -43,6 +44,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Cosmos.Sql\FSharp.Azure.Cosmos.Sql.fsproj" />
+    <ProjectReference Include="..\Cosmos.Sql.Grammar\FSharp.Azure.Cosmos.Sql.Grammar.fsproj" />
     <ProjectReference Include="..\Cosmos.Sql.Hedgehog\FSharp.Azure.Cosmos.Sql.Hedgehog.fsproj" />
   </ItemGroup>
 
