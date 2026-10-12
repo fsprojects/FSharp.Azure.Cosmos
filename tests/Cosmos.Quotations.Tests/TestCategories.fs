@@ -6,6 +6,16 @@ open System.Collections.Generic
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
 /// <summary>
+/// Categorizes a unit test of the evaluator of the parts of a quotation that read no variable:
+/// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.EvaluatorTests"/>.
+/// </summary>
+type EvaluatorUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Unit"; "Evaluator" |] :> IList<string>
+
+/// <summary>
 /// Categorizes a unit test of the normalizer:
 /// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.NormalizerSpellingTests"/>,
 /// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.NormalizerTests"/> and
