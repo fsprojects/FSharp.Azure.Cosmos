@@ -36,6 +36,15 @@
     <Compile Include="EvaluatorTests.fs" />
     <Compile Include="ParameterizerShapeTests.fs" />
     <Compile Include="ParameterizerTests.fs" />
+    <Compile Include="ModelMembers.fs" />
+    <Compile Include="StoredModel.fs" />
+    <Compile Include="StoredValues.fs" />
+    <Compile Include="StoredUnions.fs" />
+    <Compile Include="WrittenDocuments.fs" />
+    <Compile Include="JsonLayoutTests.fs" />
+    <Compile Include="JsonLayoutValueTests.fs" />
+    <Compile Include="JsonLayoutUnionTests.fs" />
+    <Compile Include="JsonLayoutPolymorphismTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

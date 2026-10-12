@@ -16,8 +16,11 @@ type EvaluatorUnitTestCategoryAttribute () =
     override _.TestCategories = [| "Unit"; "Evaluator" |] :> IList<string>
 
 /// <summary>
-/// Categorizes a unit test of the layout that says how the serializer writes the members of a document:
-/// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.JsonLayoutTests"/>.
+/// Categorizes a unit test of the layout that says how the serializer writes a document:
+/// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.JsonLayoutTests"/>,
+/// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.JsonLayoutValueTests"/>,
+/// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.JsonLayoutUnionTests"/> and
+/// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.JsonLayoutPolymorphismTests"/>.
 /// </summary>
 type JsonLayoutUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
