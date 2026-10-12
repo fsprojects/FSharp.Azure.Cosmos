@@ -1394,7 +1394,7 @@ type JsonLayoutTests () =
         let layout = JsonLayout.ofSerializerOptions (JsonSerializerOptions (IgnoreReadOnlyProperties = true))
         let stamps = propertyOf typeof<StoredCounted> "Stamps"
         let first = layout.MemberName stamps
-        let madeForFirst = StoredCountingConverterFactory.Made
+        let madeForFirst = StoredCountingConverterFactory<StoredCounted>.Made
         let second = layout.MemberName stamps
 
         Assert.AreEqual<string voption>(
@@ -1407,7 +1407,7 @@ type JsonLayoutTests () =
 
         Assert.AreEqual<int>(
             madeForFirst,
-            StoredCountingConverterFactory.Made,
+            StoredCountingConverterFactory<StoredCounted>.Made,
             "The layout has the factory of the member make a converter to find the answer, and remembers the answer: the factory made no converter for the second one."
         )
 
