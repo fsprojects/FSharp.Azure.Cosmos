@@ -1593,7 +1593,9 @@ type JsonLayoutTests () =
         let madeBefore = StoredGatedConverterFactory.Made
         StoredGatedConverterFactory.Gate.Reset ()
 
-        let asking = Array.init 4 (fun _ -> Task.Run (fun () -> layout.MemberName stamps))
+        // Each asks on a thread of its own: the pool is busy with the other tests, and it would start them late.
+        let asking =
+            Array.init 4 (fun _ -> Task.Factory.StartNew ((fun () -> layout.MemberName stamps), TaskCreationOptions.LongRunning))
 
         // The first thread waits inside the factory. The others get the time to come there too, which they would do
         // if every thread worked the answer out for itself.
