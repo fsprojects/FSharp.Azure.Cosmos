@@ -23,170 +23,6 @@ open FSharp.Azure.Cosmos.Tests
 [<TestClass; UnitTestCategory; JsonLayoutTestCategory>]
 type JsonLayoutUnionTests () =
 
-    /// The steps of a path as a query would write them, for a failure message.
-    static let shown (path : ImmutableArray<JsonStep>) : string =
-        path
-        |> Seq.map (fun step ->
-            match step with
-            | JsonStep.Property name -> $"[\"%s{name}\"]"
-            | JsonStep.Item index -> $"[%d{index}]"
-        )
-        |> String.concat ""
-
-    /// The JSON value at the end of the steps that start at a value; none when a step leads nowhere.
-    static let valueAt (path : ImmutableArray<JsonStep>) (start : JsonElement) : JsonElement voption =
-        path
-        |> Seq.fold
-            (fun (reached : JsonElement voption) (step : JsonStep) ->
-                reached
-                |> ValueOption.bind (fun value ->
-                    match step with
-                    | JsonStep.Property name when value.ValueKind = JsonValueKind.Object ->
-                        match value.TryGetProperty name with
-                        | true, found -> ValueSome found
-                        | false, _ -> ValueNone
-                    | JsonStep.Item index when
-                        value.ValueKind = JsonValueKind.Array
-                        && index < value.GetArrayLength ()
-                        ->
-                        ValueSome value[index]
-                    | _ -> ValueNone
-                )
-            )
-            (ValueSome start)
-
-    /// Whether a JSON value is a tag.
-    static let isTag (tag : UnionTag) (value : JsonElement) : bool =
-        match tag, value.ValueKind with
-        | UnionTag.String text, JsonValueKind.String -> String.Equals (value.GetString (), text, StringComparison.Ordinal)
-        | UnionTag.Number number, JsonValueKind.Number -> value.GetInt32 () = number
-        | UnionTag.Boolean true, JsonValueKind.True
-        | UnionTag.Boolean false, JsonValueKind.False -> true
-        | _ -> false
-
-    /// Whether a written value has a mark; no answer for the mark that nothing is written for.
-    static let hasMark (mark : UnionCaseMark) (written : JsonElement) : bool voption =
-        match mark with
-        | UnionCaseMark.Tag (path, tag) -> ValueSome (valueAt path written |> ValueOption.exists (isTag tag))
-        | UnionCaseMark.Property name ->
-            let isHeld =
-                written.ValueKind = JsonValueKind.Object
-                && (
-                    match written.TryGetProperty name with
-                    | found, _ -> found
-                )
-
-            ValueSome isHeld
-        | UnionCaseMark.Null -> ValueSome (written.ValueKind = JsonValueKind.Null)
-        | UnionCaseMark.Unmarked -> ValueNone
-
-    /// The case and the values of the fields of a value of a union.
-    static let caseOf (unionType : Type) (value : objnull) : struct (UnionCaseInfo * objnull array) =
-        let case, values = FSharpValue.GetUnionFields (value, unionType, true)
-        struct (case, values)
-
-    /// <summary>
-    /// Where what the layout says of the case of a value differs from what the serializer wrote for the value, as
-    /// texts for a failure message. The mark of the case has to be in the document and the mark of no other case; the
-    /// value of every field has to be at its place, written as the serializer writes a value of its type. A field
-    /// without a value that the serializer left out is not looked for.
-    /// </summary>
-    static let disagreementsAbout
-        (layout : IJsonLayout)
-        (options : JsonSerializerOptions)
-        (memberOfDocument : DocumentMember voption)
-        (unionType : Type)
-        (value : objnull)
-        (written : JsonElement)
-        : string seq = seq {
-        let struct (case, values) = caseOf unionType value
-        let named = $"%s{unionType.Name}.%s{case.Name}, written as %s{written.GetRawText ()}"
-
-        match layout.UnionCaseEncoding (memberOfDocument, case) with
-        | UnionCaseEncoding.NotDescribed -> $"%s{named}: the layout does not describe the case"
-        | UnionCaseEncoding.Written (mark, places) ->
-            if hasMark mark written = ValueSome false then
-                $"%s{named}: the mark %A{mark} is not in the document"
-
-            for other in FSharpType.GetUnionCases (unionType, true) do
-                if other.Tag <> case.Tag then
-                    match layout.UnionCaseEncoding (memberOfDocument, other) with
-                    | UnionCaseEncoding.Written (otherMark, _) when hasMark otherMark written = ValueSome true ->
-                        $"%s{named}: the mark of the case %s{other.Name} is in the document too"
-                    | _ -> ()
-
-            let fields = case.GetFields ()
-
-            if places.Length <> fields.Length then
-                $"%s{named}: the layout has %d{places.Length} places for %d{fields.Length} fields"
-            else
-                for index in 0 .. fields.Length - 1 do
-                    let field = fields[index]
-                    let expected = JsonSerializer.SerializeToElement (values[index], field.PropertyType, options)
-
-                    match places[index] with
-                    | UnionFieldPlace.Value path ->
-                        match valueAt path written with
-                        | ValueSome found when JsonElement.DeepEquals (found, expected) -> ()
-                        // A field without a value can be left out, as a field of a record can.
-                        | ValueNone when expected.ValueKind = JsonValueKind.Null -> ()
-                        | _ -> $"%s{named}: the field %s{field.Name} is not at %s{shown path}"
-                    | UnionFieldPlace.Members path ->
-                        match valueAt path written with
-                        | ValueSome holder when holder.ValueKind = JsonValueKind.Object ->
-                            for dataMember in FSharpType.GetRecordFields (field.PropertyType, true) do
-                                let ofRecord = { Holder = field.PropertyType; Member = dataMember }
-
-                                let expected =
-                                    JsonSerializer.SerializeToElement (
-                                        dataMember.GetValue values[index],
-                                        dataMember.PropertyType,
-                                        options
-                                    )
-
-                                match layout.MemberName ofRecord with
-                                | ValueSome name ->
-                                    match holder.TryGetProperty name with
-                                    | true, found when JsonElement.DeepEquals (found, expected) -> ()
-                                    | _ ->
-                                        $"%s{named}: the member %s{dataMember.Name} of the record is not at %s{shown path}[\"%s{name}\"]"
-                                | ValueNone ->
-                                    $"%s{named}: the layout has no name for the member %s{dataMember.Name} of the record"
-                        | _ -> $"%s{named}: no object is at %s{shown path} for the members of the record"
-    }
-
-    /// What the serializer writes for a value; none when it refuses the type.
-    static let written (options : JsonSerializerOptions) (valueType : Type) (value : objnull) : JsonElement voption =
-        try
-            ValueSome (JsonSerializer.SerializeToElement (value, valueType, options))
-        with :? NotSupportedException ->
-            ValueNone
-
-    /// <summary>
-    /// What the serializer writes for each of some values of one type; none when it refuses one of them. System.Text.Json
-    /// refuses a union when it is to write a value of it, and writes a null without asking what it is a null of, so
-    /// the union with a case that is null is refused as the other unions are.
-    /// </summary>
-    static let writtenAll
-        (options : JsonSerializerOptions)
-        (valueType : Type)
-        (values : objnull seq)
-        : struct (objnull * JsonElement) array voption =
-        let documents =
-            values
-            |> Seq.map (fun value -> struct (value, written options valueType value))
-            |> Seq.toArray
-
-        if
-            documents
-            |> Array.forall (fun (struct (_, document)) -> document.IsSome)
-        then
-            documents
-            |> Array.map (fun (struct (value, document)) -> struct (value, document.Value))
-            |> ValueSome
-        else
-            ValueNone
-
     /// The cases of a union that a layout describes although it should describe none, as texts for a failure message.
     static let describedCasesOf
         (layout : IJsonLayout)
@@ -210,10 +46,10 @@ type JsonLayoutUnionTests () =
 
         seq {
             for sample in StoredUnionSamples.all do
-                match writtenAll options sample.UnionType sample.Values with
+                match WrittenUnions.writtenAll options sample.UnionType sample.Values with
                 | ValueSome documents ->
                     for struct (value, document) in documents do
-                        yield! disagreementsAbout layout options ValueNone sample.UnionType value document
+                        yield! WrittenUnions.disagreementsAbout layout options ValueNone sample.UnionType value document
                 | ValueNone -> yield! describedCasesOf layout ValueNone sample.UnionType "the serializer refuses the union"
         }
         |> Seq.toArray
@@ -239,16 +75,17 @@ type JsonLayoutUnionTests () =
                     |> Seq.map (fun value -> FSharpValue.MakeRecord (holderType, [| value |], true))
                     |> Seq.cast<objnull>
 
-                match writtenAll options holderType holders, layout.MemberName held with
+                match WrittenUnions.writtenAll options holderType holders, layout.MemberName held with
                 | ValueSome documents, ValueSome name ->
                     for struct (holder, document) in documents do
                         let value = held.Member :?> PropertyInfo |> _.GetValue(holder)
 
                         match document.TryGetProperty name with
-                        | true, found -> yield! disagreementsAbout layout options (ValueSome held) sample.UnionType value found
+                        | true, found ->
+                            yield! WrittenUnions.disagreementsAbout layout options (ValueSome held) sample.UnionType value found
                         | false, _ ->
                             // A null that the serializer left out: only the case that is null is written that way.
-                            let struct (case, _) = caseOf sample.UnionType value
+                            let struct (case, _) = WrittenUnions.caseOf sample.UnionType value
 
                             match layout.UnionCaseEncoding (ValueSome held, case) with
                             | UnionCaseEncoding.Written (UnionCaseMark.Null, _) -> ()
@@ -261,11 +98,6 @@ type JsonLayoutUnionTests () =
         }
         |> Seq.toArray
 
-    /// A union case by its name.
-    static let caseNamed (unionType : Type) (name : string) : UnionCaseInfo =
-        FSharpType.GetUnionCases (unionType, true)
-        |> Array.find (fun case -> String.Equals (case.Name, name, StringComparison.Ordinal))
-
     /// What a layout says of a case, as a text that two answers with the same steps share.
     static let described (encoding : UnionCaseEncoding) : string =
         match encoding with
@@ -273,7 +105,7 @@ type JsonLayoutUnionTests () =
         | UnionCaseEncoding.Written (mark, places) ->
             let markShown =
                 match mark with
-                | UnionCaseMark.Tag (path, tag) -> $"tag %A{tag} at value%s{shown path}"
+                | UnionCaseMark.Tag (path, tag) -> $"tag %A{tag} at value%s{WrittenSteps.shown path}"
                 | UnionCaseMark.Property name -> $"property %s{name}"
                 | UnionCaseMark.Null -> "null"
                 | UnionCaseMark.Unmarked -> "unmarked"
@@ -282,8 +114,8 @@ type JsonLayoutUnionTests () =
                 places
                 |> Seq.map (fun place ->
                     match place with
-                    | UnionFieldPlace.Value path -> $"value%s{shown path}"
-                    | UnionFieldPlace.Members path -> $"members of value%s{shown path}"
+                    | UnionFieldPlace.Value path -> $"value%s{WrittenSteps.shown path}"
+                    | UnionFieldPlace.Members path -> $"members of value%s{WrittenSteps.shown path}"
                 )
                 |> String.concat ", "
 
@@ -425,7 +257,7 @@ type JsonLayoutUnionTests () =
 
         Assert.AreEqual<string>(
             "tag String \"Labelled\" at value[\"kind\"]; fields: value[\"data\"][0], value[\"data\"][1]",
-            described (layout.UnionCaseEncoding (ValueNone, caseNamed typeof<StoredLabel> "Labelled")),
+            described (layout.UnionCaseEncoding (ValueNone, WrittenUnions.caseNamed typeof<StoredLabel> "Labelled")),
             "The layout follows the library: the names of the attribute, the encoding of the common options."
         )
 
@@ -442,7 +274,7 @@ type JsonLayoutUnionTests () =
 
         Assert.AreEqual<string>(
             "not described",
-            described (layout.UnionCaseEncoding (ValueNone, caseNamed typeof<StoredTwice> "Plain")),
+            described (layout.UnionCaseEncoding (ValueNone, WrittenUnions.caseNamed typeof<StoredTwice> "Plain")),
             "No case of a union that the serializer cannot write is described."
         )
 
@@ -467,7 +299,7 @@ type JsonLayoutUnionTests () =
 
         Assert.AreEqual<string>(
             "not described",
-            described (layout.UnionCaseEncoding (ValueNone, caseNamed typeof<StoredShape> "Circle")),
+            described (layout.UnionCaseEncoding (ValueNone, WrittenUnions.caseNamed typeof<StoredShape> "Circle")),
             "A case that the serializer fails to write is not described."
         )
 
@@ -501,8 +333,8 @@ type JsonLayoutUnionTests () =
     member _.``A union of a member with a converter of its own must not be described`` () =
         let options = SerializerProfiles.fsharpSystemTextJson.Create ()
         let layout = JsonLayout.ofSerializerOptions options
-        let circle = caseNamed typeof<StoredShape> "Circle"
-        let rect = caseNamed typeof<StoredShape> "Rect"
+        let circle = WrittenUnions.caseNamed typeof<StoredShape> "Circle"
+        let rect = WrittenUnions.caseNamed typeof<StoredShape> "Rect"
 
         let memberOf (name : string) : DocumentMember voption =
             ValueSome {
@@ -542,8 +374,8 @@ type JsonLayoutUnionTests () =
 
     [<TestMethod>]
     member _.``An option must be described as a union only when it is written as one`` () =
-        let some = caseNamed typeof<int option> "Some"
-        let none = caseNamed typeof<int option> "None"
+        let some = WrittenUnions.caseNamed typeof<int option> "Some"
+        let none = WrittenUnions.caseNamed typeof<int option> "None"
         let unwrapped = JsonLayout.ofSerializerOptions (SerializerProfiles.fsharpSystemTextJson.Create ())
         let asUnion = SerializerProfiles.withoutUnwrappedOptions.Create ()
         let layout = JsonLayout.ofSerializerOptions asUnion
@@ -556,7 +388,7 @@ type JsonLayoutUnionTests () =
 
         Assert.AreEqual<string>(
             "not described",
-            described (unwrapped.UnionCaseEncoding (ValueNone, caseNamed typeof<Skippable<int>> "Include")),
+            described (unwrapped.UnionCaseEncoding (ValueNone, WrittenUnions.caseNamed typeof<Skippable<int>> "Include")),
             "A skippable value is always written as its value."
         )
 
@@ -580,8 +412,8 @@ type JsonLayoutUnionTests () =
 
     [<TestMethod>]
     member _.``A record in a case must not be described when it is not written as the record is by itself`` () =
-        let lent = caseNamed typeof<StoredLoan> "Lent"
-        let returned = caseNamed typeof<StoredLoan> "Returned"
+        let lent = WrittenUnions.caseNamed typeof<StoredLoan> "Lent"
+        let returned = WrittenUnions.caseNamed typeof<StoredLoan> "Returned"
 
         // The attribute of the union gives the options that unwrap the record, and the record is written with them.
         let ofAttribute = (JsonFSharpOptions.Default().WithAllowOverride()).ToJsonSerializerOptions()
@@ -620,7 +452,8 @@ type JsonLayoutUnionTests () =
         Assert.AreEqual<string>(
             "not described",
             described (
-                (JsonLayout.ofSerializerOptions unionsOnly).UnionCaseEncoding(ValueNone, caseNamed typeof<StoredShape> "Signed")
+                (JsonLayout.ofSerializerOptions unionsOnly)
+                    .UnionCaseEncoding(ValueNone, WrittenUnions.caseNamed typeof<StoredShape> "Signed")
             ),
             "The record by itself is written by System.Text.Json, so what the layout says of its members is not about the record in the case."
         )
@@ -629,7 +462,7 @@ type JsonLayoutUnionTests () =
         // attribute makes, where no converter of the options takes records: without the naming policy of the options,
         // which the union writes the members of the record with.
         let signer = { SignedAs = "signer"; Alias = None }
-        let dealt = caseNamed typeof<StoredDeal> "Dealt"
+        let dealt = WrittenUnions.caseNamed typeof<StoredDeal> "Dealt"
 
         Assert.AreEqual<string>(
             "{\"SignedAs\":\"signer\",\"Alias\":null}",
@@ -681,7 +514,7 @@ type JsonLayoutUnionTests () =
 
     [<TestMethod>]
     member _.``A union whose contract a resolver of the caller makes must not be described`` () =
-        let low = caseNamed typeof<StoredLevel> "Low"
+        let low = WrittenUnions.caseNamed typeof<StoredLevel> "Low"
 
         // The resolver makes the contract from the converter of FSharp.SystemTextJson for the union, which it has made
         // with a naming policy that the options do not have.
@@ -722,7 +555,10 @@ type JsonLayoutUnionTests () =
 
         Assert.AreEqual<string>(
             "not described",
-            described ((JsonLayout.ofSerializerOptions options).UnionCaseEncoding(ValueNone, caseNamed typeof<StoredLevel> "Low")),
+            described (
+                (JsonLayout.ofSerializerOptions options)
+                    .UnionCaseEncoding(ValueNone, WrittenUnions.caseNamed typeof<StoredLevel> "Low")
+            ),
             "Only the factory of FSharp.SystemTextJson itself shows the options that a union is written with."
         )
 
@@ -732,7 +568,7 @@ type JsonLayoutUnionTests () =
             (JsonFSharpOptions.Default().WithUnionTagNamingPolicy(StoredCountingNamingPolicy ())).ToJsonSerializerOptions()
 
         let layout = JsonLayout.ofSerializerOptions options
-        let low = caseNamed typeof<StoredLevel> "Low"
+        let low = WrittenUnions.caseNamed typeof<StoredLevel> "Low"
         let first = layout.UnionCaseEncoding (ValueNone, low)
         let spelledForFirst = StoredCountingNamingPolicy.Spelled
         let second = layout.UnionCaseEncoding (ValueNone, low)
