@@ -37,7 +37,9 @@
     <Compile Include="ParameterizerTests.fs" />
     <Compile Include="ModelMembers.fs" />
     <Compile Include="StoredModel.fs" />
+    <Compile Include="StoredValues.fs" />
     <Compile Include="JsonLayoutTests.fs" />
+    <Compile Include="JsonLayoutValueTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
