@@ -2,6 +2,8 @@ namespace FSharp.Azure.Cosmos.Quotations
 
 open System
 open System.Collections.Concurrent
+open System.Collections.Generic
+open System.Collections.Immutable
 open System.Reflection
 open System.Text.Json
 open System.Text.Json.Serialization
@@ -134,9 +136,120 @@ type MapEncoding =
     | NotDescribed
 
 /// <summary>
+/// A step from a JSON value to a value that it holds. The steps to a part of a union start at the value of the union.
+/// </summary>
+[<RequireQualifiedAccess; Struct>]
+type JsonStep =
+    /// <summary>
+    /// To the property of a JSON object that has this name.
+    /// </summary>
+    /// <param name="name">The name of the property.</param>
+    | Property of name : string
+    /// <summary>
+    /// To the item of a JSON array at this index.
+    /// </summary>
+    /// <param name="index">The index of the item, counted from zero.</param>
+    | Item of index : int
+
+/// <summary>
+/// What a union writes to name a case. FSharp.SystemTextJson writes the name of the case, and the number or the
+/// boolean that a case declares in place of a name with
+/// <see cref="T:System.Text.Json.Serialization.JsonNameAttribute"/>.
+/// </summary>
+[<RequireQualifiedAccess; Struct>]
+type UnionTag =
+    /// <summary>
+    /// A JSON string.
+    /// </summary>
+    /// <param name="text">The string.</param>
+    | String of text : string
+    /// <summary>
+    /// A JSON number.
+    /// </summary>
+    /// <param name="number">The number.</param>
+    | Number of number : int
+    /// <summary>
+    /// A JSON boolean.
+    /// </summary>
+    /// <param name="flag">The boolean.</param>
+    | Boolean of flag : bool
+
+/// <summary>
+/// What tells that a value of a union is of one case. A query has to know it to ask for the values of a case.
+/// </summary>
+[<RequireQualifiedAccess>]
+type UnionCaseMark =
+    /// <summary>
+    /// The JSON value at the end of <paramref name="path"/> is <paramref name="tag"/>. With no step the value of the
+    /// union itself is the tag, as for a case without fields that is written as its name alone.
+    /// </summary>
+    /// <param name="path">The steps from the value of the union to the tag.</param>
+    /// <param name="tag">The tag of the case.</param>
+    | Tag of path : ImmutableArray<JsonStep> * tag : UnionTag
+    /// <summary>
+    /// The value of the union is a JSON object that has a property of this name, which holds the fields of the case.
+    /// </summary>
+    /// <param name="name">The name of the property.</param>
+    | Property of name : string
+    /// <summary>
+    /// The value of the union is <see langword="null"/>: the case is the one that a union marked with
+    /// <see cref="F:Microsoft.FSharp.Core.CompilationRepresentationFlags.UseNullAsTrueValue"/> represents by null.
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.OptionalEncoding(Microsoft.FSharp.Core.FSharpValueOption{FSharp.Azure.Cosmos.Quotations.DocumentMember},System.Type)"/>
+    /// says how a member that holds such a null is written.
+    /// </summary>
+    | Null
+    /// <summary>
+    /// Nothing that is written tells the case: the union is written without tags, or it has one case, whose one
+    /// field is written in place of the union.
+    /// </summary>
+    | Unmarked
+
+/// <summary>
+/// Where the value of a field of a union case is written.
+/// </summary>
+[<RequireQualifiedAccess>]
+type UnionFieldPlace =
+    /// <summary>
+    /// The value of the field is the JSON value at the end of <paramref name="path"/>. With no step it is written in
+    /// place of the union.
+    /// </summary>
+    /// <param name="path">The steps from the value of the union to the value of the field.</param>
+    | Value of path : ImmutableArray<JsonStep>
+    /// <summary>
+    /// The field is a record, and its members are properties of the JSON object at the end of
+    /// <paramref name="path"/>, which holds the tag of the case next to them: the object is more than the record.
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.MemberName(FSharp.Azure.Cosmos.Quotations.DocumentMember)"/>
+    /// names the property of a member of the record.
+    /// </summary>
+    /// <param name="path">The steps from the value of the union to the object that holds the members.</param>
+    | Members of path : ImmutableArray<JsonStep>
+
+/// <summary>
+/// How a value of one case of a union is written. A query has to know it to test the case of a union that a document
+/// holds and to read a field of that case.
+/// </summary>
+[<RequireQualifiedAccess>]
+type UnionCaseEncoding =
+    /// <summary>
+    /// The case is written in the way that is described.
+    /// </summary>
+    /// <param name="mark">What tells that a value is of this case.</param>
+    /// <param name="fields">Where the fields of the case are written, in the order of the fields.</param>
+    | Written of mark : UnionCaseMark * fields : ImmutableArray<UnionFieldPlace>
+    /// <summary>
+    /// The layout does not describe how the case is written: the serializer refuses the union, a converter that the
+    /// layout does not know writes it, or it is an option, a value option or a skippable value that is written as
+    /// its value, which
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.OptionalEncoding(Microsoft.FSharp.Core.FSharpValueOption{FSharp.Azure.Cosmos.Quotations.DocumentMember},System.Type)"/>
+    /// describes.
+    /// </summary>
+    | NotDescribed
+
+/// <summary>
 /// What a query has to know about how documents were serialized. The translator asks it for every member that a
 /// quotation reads, so that the query reads the property that the serializer wrote, and for every value that is no
-/// JSON object by itself: an enumeration, a tuple, a collection and a map are each written in more than one way.
+/// JSON object by itself: an enumeration, a tuple, a collection, a map and a union are each written in more than one
+/// way.
 /// </summary>
 /// <remarks>
 /// <see cref="M:FSharp.Azure.Cosmos.Quotations.JsonLayout.ofSerializerOptions(System.Text.Json.JsonSerializerOptions)"/>
@@ -230,6 +343,25 @@ type IJsonLayout =
     /// <param name="mapType">The type of the map.</param>
     abstract MapEncoding : memberOfDocument : DocumentMember voption * mapType : Type -> MapEncoding
 
+    /// <summary>
+    /// How a value of the union case <paramref name="case"/> is written: what tells that a value is of the case, and
+    /// where its fields are. The union is the one that declares the case. It is asked as
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.EnumEncoding(Microsoft.FSharp.Core.FSharpValueOption{FSharp.Azure.Cosmos.Quotations.DocumentMember},System.Type)"/>
+    /// is.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A member that names a converter of its own is not described: nothing shows how that converter writes a union.
+    /// </para>
+    /// <para>
+    /// Neither is a union one of whose cases is written as an object with two properties of the name of the tag, the
+    /// tag and a field: a query reads one property of a name, and nothing says which of the two.
+    /// </para>
+    /// </remarks>
+    /// <param name="memberOfDocument">The member that holds the union, when a member does.</param>
+    /// <param name="case">The case.</param>
+    abstract UnionCaseEncoding : memberOfDocument : DocumentMember voption * case : UnionCaseInfo -> UnionCaseEncoding
+
 /// <summary>
 /// The layouts of the serializers that <see cref="T:FSharp.Azure.Cosmos.Quotations.IJsonLayout"/> comes with.
 /// </summary>
@@ -271,6 +403,11 @@ module JsonLayout =
     let private isTupleConverter (converterType : Type) : bool =
         converterType.Assembly.Equals fsharpSerializerAssembly
         && isDerivedFromTupleConverter converterType
+
+    /// Whether the steps of <paramref name="path"/> begin with the steps of <paramref name="start"/>.
+    let private beginsWith (start : ImmutableArray<JsonStep>) (path : ImmutableArray<JsonStep>) : bool =
+        path.Length >= start.Length
+        && path.AsSpan(0, start.Length).SequenceEqual(start.AsSpan ())
 
     /// <summary>
     /// The kinds of values that can be absent, as far as the way they are written depends on the kind.
@@ -471,6 +608,173 @@ module JsonLayout =
                 | _ -> false
             )
 
+    /// <summary>
+    /// The options that FSharp.SystemTextJson makes the converter of one type with.
+    /// </summary>
+    [<Struct>]
+    type private ConverterOptions = {
+        /// The options of FSharp.SystemTextJson for the type: the ones the type has for itself, or the common ones.
+        Effective : JsonFSharpOptions
+        /// The options of the converter among the options that takes the type; none when an attribute on the type
+        /// makes the converter by itself.
+        Common : JsonFSharpOptions voption
+        /// The naming policy of the options of the serializer that the converter is made with; none when names are
+        /// written as they are.
+        NamingPolicy : JsonNamingPolicy | null
+        /// Whether those options of the serializer ignore null values.
+        IgnoresNull : bool
+    }
+
+    /// <summary>
+    /// What FSharp.SystemTextJson reads from its options and from the options of the serializer when it writes a
+    /// union.
+    /// </summary>
+    [<Struct>]
+    type private UnionOptions = {
+        /// How unions are written, with the encoding that the options of a type inherit put in.
+        Encoding : JsonUnionEncoding
+        /// The name of the property that holds the tag of a case.
+        TagName : string
+        /// The name of the property that holds the fields of a case.
+        FieldsName : string
+        /// The naming policy for a case that declares no name; none when names are written as they are.
+        TagNamingPolicy : JsonNamingPolicy | null
+        /// The naming policy for a field that declares no name; none when names are written as they are.
+        FieldNamingPolicy : JsonNamingPolicy | null
+        /// <summary>
+        /// The common options, when the union is written with them and has none of its own: the ones of the
+        /// converter among the options that takes the union. A record that a case unwraps is written as that
+        /// converter writes it.
+        /// </summary>
+        Common : JsonFSharpOptions voption
+    }
+
+    /// <summary>
+    /// The bits of <see cref="T:System.Text.Json.Serialization.JsonUnionEncoding"/> that choose where the tag is.
+    /// </summary>
+    [<Literal>]
+    let private UnionFormatBits = 0xFE
+
+    /// <summary>
+    /// The bit of <see cref="F:System.Text.Json.Serialization.JsonUnionEncoding.Untagged"/> among those bits.
+    /// </summary>
+    [<Literal>]
+    let private UntaggedBit = 0x08
+
+    /// <summary>
+    /// <paramref name="name"/> as <paramref name="policy"/> spells it; as it is without a policy.
+    /// </summary>
+    let private spelled (policy : JsonNamingPolicy | null) (name : string) : string =
+        match policy with
+        | null -> name
+        | policy -> policy.ConvertName name
+
+    /// <summary>
+    /// The tag that FSharp.SystemTextJson writes for a case: the first name of the
+    /// <see cref="T:System.Text.Json.Serialization.JsonNameAttribute"/> of the case that names no field, then the name
+    /// of its <see cref="T:System.Text.Json.Serialization.JsonPropertyNameAttribute"/>, then the name of the case as
+    /// <paramref name="policy"/> spells it. A name that is declared is written as it is.
+    /// </summary>
+    let private unionTagOf (policy : JsonNamingPolicy | null) (case : UnionCaseInfo) : UnionTag =
+        let declared =
+            case.GetCustomAttributes typeof<JsonNameAttribute>
+            |> Seq.cast<JsonNameAttribute>
+            // The library declares the field as a string that is never null and leaves it null when none is given.
+            |> Seq.tryFind (fun attribute ->
+                match withNull attribute.Field with
+                | null -> true
+                | _ -> false
+            )
+
+        match declared with
+        | ValueSome attribute ->
+            match attribute.Name with
+            | JsonName.String text -> UnionTag.String text
+            | JsonName.Int number -> UnionTag.Number number
+            | JsonName.Bool flag -> UnionTag.Boolean flag
+        | ValueNone ->
+            match
+                case.GetCustomAttributes typeof<JsonPropertyNameAttribute>
+                |> Seq.cast<JsonPropertyNameAttribute>
+                |> Seq.tryHead
+            with
+            | ValueSome attribute -> UnionTag.String attribute.Name
+            | ValueNone -> UnionTag.String (spelled policy case.Name)
+
+    /// <summary>
+    /// A tag as the name of a JSON property, which is how a union with external tags writes it.
+    /// </summary>
+    let private propertyNameOf (tag : UnionTag) : string =
+        match tag with
+        | UnionTag.String text -> text
+        | UnionTag.Number number -> string number
+        | UnionTag.Boolean true -> "true"
+        | UnionTag.Boolean false -> "false"
+
+    /// <summary>
+    /// The names that FSharp.SystemTextJson writes the fields of a case under when it writes them as properties, in
+    /// the order of the fields.
+    /// </summary>
+    /// <remarks>
+    /// A field has the name that F# gives it. With
+    /// <see cref="F:System.Text.Json.Serialization.JsonUnionEncoding.UnionFieldNamesFromTypes"/> a field that the
+    /// source does not name, <c>Item</c> or <c>Item1</c>, <c>Item2</c> and so on, has the name of its type, and a
+    /// name that the case then has more than once gets the number of its occurrence. Under that name the case can
+    /// declare another one, with a <see cref="T:System.Text.Json.Serialization.JsonNameAttribute"/> that names the
+    /// field; a name without one is spelled by the policy.
+    /// </remarks>
+    let private unionFieldNamesOf (options : UnionOptions) (case : UnionCaseInfo) : string array =
+        let fields = case.GetFields ()
+        let occurrences = Dictionary<string, int> StringComparer.Ordinal
+
+        let own =
+            if options.Encoding.HasFlag JsonUnionEncoding.UnionFieldNamesFromTypes then
+                fields
+                |> Array.mapi (fun index field ->
+                    let isUnnamed =
+                        if fields.Length = 1 then
+                            String.Equals (field.Name, "Item", StringComparison.Ordinal)
+                        else
+                            String.Equals (field.Name, $"Item%d{index + 1}", StringComparison.Ordinal)
+
+                    let name = if isUnnamed then field.PropertyType.Name else field.Name
+
+                    let occurrence =
+                        match occurrences.TryGetValue name with
+                        | true, seen -> seen + 1
+                        | _ -> 1
+
+                    occurrences[name] <- occurrence
+                    struct (name, occurrence)
+                )
+            else
+                fields |> Array.map (fun field -> struct (field.Name, 1))
+
+        let declared = Dictionary<string, string> StringComparer.Ordinal
+
+        for attribute in Seq.cast<JsonNameAttribute>(case.GetCustomAttributes typeof<JsonNameAttribute>) do
+            match withNull attribute.Field with
+            | null -> ()
+            | field -> declared[field] <- attribute.Name.AsString ()
+
+        own
+        |> Array.map (fun (struct (name, occurrence)) ->
+            let isRepeated =
+                match occurrences.TryGetValue name with
+                | true, seen -> seen > 1
+                | _ -> false
+
+            let name =
+                if occurrence = 1 && not isRepeated then
+                    name
+                else
+                    $"%s{name}%d{occurrence}"
+
+            match declared.TryGetValue name with
+            | true, given -> given
+            | _ -> spelled options.FieldNamingPolicy name
+        )
+
     // JsonSerializerOptions.IgnoreNullValues is obsolete, and System.Text.Json and FSharp.SystemTextJson still follow
     // it, so the layout has to read it. This function is the one place that does.
     #nowarn "44"
@@ -536,20 +840,23 @@ module JsonLayout =
             with
             | :? NotSupportedException
             | :? InvalidOperationException
-            | :? ArgumentException -> ValueNone
+            | :? ArgumentException
+            // FSharp.SystemTextJson makes its converters by reflection, so what one of them refuses a type with comes
+            // wrapped in this one: a union with a case that has two attributes with names is refused that way.
+            | :? TargetInvocationException -> ValueNone
 
         /// <summary>
-        /// The options that FSharp.SystemTextJson writes a record type with: the ones the type is given in the
-        /// overrides, then the ones of the attribute on the type when the options allow that, then the common ones.
-        /// The common ones are those of the converter that takes the type, which is the first one among the options
-        /// that does, as the serializer chooses it: the options can hold several converters of FSharp.SystemTextJson
-        /// for different kinds of types. No value when nothing shows the options of the converter: a converter of
-        /// records that stands among the options by itself keeps them to itself, and so does one that an attribute of
-        /// the caller makes.
+        /// The options that FSharp.SystemTextJson writes a record or a union type with: the ones the type is given in
+        /// the overrides, then the ones of the attribute on the type when the options allow that, then the common
+        /// ones. The common ones are those of the converter that takes the type, which is the first one among the
+        /// options that does, as the serializer chooses it: the options can hold several converters of
+        /// FSharp.SystemTextJson for different kinds of types. No value when nothing shows the options of the
+        /// converter: a converter that stands among the options by itself keeps them to itself, and so does one that
+        /// an attribute of the caller makes.
         /// </summary>
-        let recordOptionsOf (recordType : Type) : RecordOptions voption =
+        let converterOptionsOf (valueType : Type) : ConverterOptions voption =
             let ofAttribute () =
-                match recordType.GetCustomAttributes (typeof<IJsonFSharpConverterAttribute>, true) with
+                match valueType.GetCustomAttributes (typeof<IJsonFSharpConverterAttribute>, true) with
                 | [||] -> ValueNone
                 | attributes -> ValueSome (attributes[0] :?> IJsonFSharpConverterAttribute).Options
 
@@ -558,15 +865,15 @@ module JsonLayout =
                 match withNull (common.Overrides common) with
                 | null -> ValueNone
                 | overrides ->
-                    match overrides.TryGetValue recordType with
+                    match overrides.TryGetValue valueType with
                     | true, given -> ValueSome given
-                    | _ when recordType.IsGenericType ->
-                        match overrides.TryGetValue (recordType.GetGenericTypeDefinition ()) with
+                    | _ when valueType.IsGenericType ->
+                        match overrides.TryGetValue (valueType.GetGenericTypeDefinition ()) with
                         | true, given -> ValueSome given
                         | _ -> ValueNone
                     | _ -> ValueNone
 
-            match contract.Converters |> Seq.tryFind _.CanConvert(recordType) with
+            match contract.Converters |> Seq.tryFind _.CanConvert(valueType) with
             // The factory of FSharp.SystemTextJson itself, and no class that an application derives from it: such a
             // class can make the converter of a record with other options than the ones it shows.
             | ValueSome (:? JsonFSharpConverter as factory) when Type.(=) (factory.GetType (), typeof<JsonFSharpConverter>) ->
@@ -578,17 +885,10 @@ module JsonLayout =
                     |> ValueOption.defaultValue common
 
                 ValueSome {
+                    Effective = effective
+                    Common = ValueSome common
                     NamingPolicy = contract.PropertyNamingPolicy
                     IgnoresNull = defaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                    SkippableOptionFields = effective.SkippableOptionFields
-                    IncludesProperties = effective.IncludeRecordProperties
-                    // The options that a type has for itself can say that they inherit the encoding of unions.
-                    UnionEncoding =
-                        if effective.UnionEncoding.HasFlag JsonUnionEncoding.Inherit then
-                            common.UnionEncoding
-                        else
-                            effective.UnionEncoding
-                    AllowsNullFields = effective.AllowNullFields
                 }
             | ValueSome _ -> ValueNone
             | ValueNone ->
@@ -598,13 +898,58 @@ module JsonLayout =
                 // can make the converter with options that nothing shows.
                 ofAttribute ()
                 |> ValueOption.map (fun effective -> {
+                    Effective = effective
+                    Common = ValueNone
                     NamingPolicy = null
                     IgnoresNull = false
-                    SkippableOptionFields = effective.SkippableOptionFields
-                    IncludesProperties = effective.IncludeRecordProperties
-                    UnionEncoding = effective.UnionEncoding
-                    AllowsNullFields = effective.AllowNullFields
                 })
+
+        /// <summary>
+        /// How FSharp.SystemTextJson writes unions with the options of a converter.
+        /// </summary>
+        /// <remarks>
+        /// The options that a type has for itself can say that they inherit the encoding of unions, with
+        /// <see cref="F:System.Text.Json.Serialization.JsonUnionEncoding.Inherit"/>: the library then takes the whole
+        /// encoding from the common options, also the parts that the options of the type set. The options that the
+        /// attribute makes say so unless the attribute sets the whole encoding.
+        /// </remarks>
+        let unionEncodingOf (found : ConverterOptions) : JsonUnionEncoding =
+            match found.Common with
+            | ValueSome common when found.Effective.UnionEncoding.HasFlag JsonUnionEncoding.Inherit -> common.UnionEncoding
+            | _ -> found.Effective.UnionEncoding
+
+        /// What FSharp.SystemTextJson reads when it writes the fields of a record type.
+        let recordOptionsOf (recordType : Type) : RecordOptions voption =
+            converterOptionsOf recordType
+            |> ValueOption.map (fun found -> {
+                NamingPolicy = found.NamingPolicy
+                IgnoresNull = found.IgnoresNull
+                SkippableOptionFields = found.Effective.SkippableOptionFields
+                IncludesProperties = found.Effective.IncludeRecordProperties
+                UnionEncoding = unionEncodingOf found
+                AllowsNullFields = found.Effective.AllowNullFields
+            })
+
+        /// What FSharp.SystemTextJson reads when it writes a union type.
+        let unionOptionsOf (unionType : Type) : UnionOptions voption =
+            converterOptionsOf unionType
+            |> ValueOption.map (fun found ->
+                let effective = found.Effective
+
+                {
+                    Encoding = unionEncodingOf found
+                    TagName = effective.UnionTagName
+                    FieldsName = effective.UnionFieldsName
+                    TagNamingPolicy = effective.UnionTagNamingPolicy
+                    FieldNamingPolicy =
+                        match withNull effective.UnionFieldNamingPolicy with
+                        | null -> found.NamingPolicy
+                        | policy -> policy
+                    Common =
+                        found.Common
+                        |> ValueOption.filter (fun common -> obj.ReferenceEquals (common, effective))
+                }
+            )
 
         /// <summary>
         /// Whether the serializer made a contract itself. It chooses the converter by rules that the layout follows: the
@@ -973,9 +1318,17 @@ module JsonLayout =
 
         /// <summary>
         /// The contract that the serializer writes a value with: the one of its type, or the one of the converter
-        /// that the member of the value names. No contract when the layout does not know what writes the value.
+        /// that the member of the value names. No contract when the layout does not know what writes the value. The
+        /// value is asked about by the member that holds it, when a member does, and by its type.
         /// </summary>
-        let valueInfoOf (struct (memberOfDocument : DocumentMember voption, valueType : Type)) : JsonTypeInfo voption =
+        /// <param name="followsConverter">
+        /// Whether the contract of a converter that the member names is given. Without it such a member has no
+        /// contract: the question is one that the class of a converter does not answer.
+        /// </param>
+        let valueInfoWith
+            (followsConverter : bool)
+            (struct (memberOfDocument : DocumentMember voption, valueType : Type))
+            : JsonTypeInfo voption =
             match memberOfDocument with
             | ValueNone -> typeInfoOf valueType
             | ValueSome memberOfDocument ->
@@ -1003,7 +1356,7 @@ module JsonLayout =
 
                         match property.CustomConverter with
                         | null -> typeInfoOf valueType
-                        | converter when isWholeValue () -> ownInfoOf converter memberType
+                        | converter when followsConverter && isWholeValue () -> ownInfoOf converter memberType
                         | _ -> ValueNone
                     | ValueNone -> ValueNone
                 | Writer.Record recordOptions ->
@@ -1014,6 +1367,9 @@ module JsonLayout =
                     else
                         ValueNone
                 | Writer.Unknown -> ValueNone
+
+        /// The contract that the serializer writes a value with, also the one of a converter that its member names.
+        let valueInfoOf (question : struct (DocumentMember voption * Type)) : JsonTypeInfo voption = valueInfoWith true question
 
         /// <summary>
         /// How an enumeration is written. The serializer is asked to write its values, because nothing else tells:
@@ -1116,12 +1472,215 @@ module JsonLayout =
                     MapEncoding.NotDescribed
             | ValueNone -> MapEncoding.NotDescribed
 
+        /// <summary>
+        /// How FSharp.SystemTextJson writes a case of a union with the options that it has for the union. The rules
+        /// are read from the source of the library and compared with what it writes.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// A value that is null is written as null before anything else, and a case without fields as its tag alone
+        /// when such tags are unwrapped. Then the encoding decides where the tag is: in a property next to the
+        /// property of the fields, as the name of the property of the fields, as the first item or a property among
+        /// the fields, or nowhere.
+        /// </para>
+        /// <para>
+        /// The fields are an array of their values or an object with a property for each. A case with one field
+        /// writes that value in place of the fields where the encoding unwraps such cases, which the internal tag and
+        /// the encoding without tags do not do. A case whose one field is a record writes the members of the record
+        /// in place of the fields where the encoding unwraps records. The library writes such a record with the
+        /// options of the union, so it is described only when those are the common ones and the record by itself is
+        /// written by the library as well: then the object is the record as it is written anywhere, and
+        /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.MemberName(FSharp.Azure.Cosmos.Quotations.DocumentMember)"/>
+        /// names its members. Only next to an internal tag is the object more than the record.
+        /// </para>
+        /// </remarks>
+        let writtenCaseOf (options : UnionOptions) (case : UnionCaseInfo) : UnionCaseEncoding =
+            let encoding = options.Encoding
+            let fields = case.GetFields ()
+            let tag = unionTagOf options.TagNamingPolicy case
+            let hasNamedFields = encoding.HasFlag JsonUnionEncoding.NamedFields
+
+            // The case that a union marked to do so represents by null. The compiler lets a union be marked so only
+            // when it has a case with fields as well (FS1196), so the converter of the unions without fields, which
+            // writes a tag for every case, never writes such a union.
+            let isNullCase =
+                fields.Length = 0
+                && (
+                    match FSharpValue.MakeUnion (case, [||], AnyAccessibility) with
+                    | null -> true
+                    | _ -> false
+                )
+
+            // The flag that unwraps records holds the one that names the fields.
+            let unwrapsRecord =
+                fields.Length = 1
+                && FSharpType.IsRecord (fields[0].PropertyType, AnyAccessibility)
+                && encoding.HasFlag JsonUnionEncoding.UnwrapRecordCases
+
+            let unwrapsField =
+                not unwrapsRecord
+                && fields.Length = 1
+                && encoding.HasFlag JsonUnionEncoding.UnwrapSingleFieldCases
+
+            // Whether the record that the case unwraps is written as the layout describes a record of its type. The
+            // converter of the union writes the members of the record with its own options of the serializer and
+            // with the options of FSharp.SystemTextJson that it has, or with the ones that it finds for the record.
+            // The record by itself is written the same way only by a converter that the same converter among the
+            // options makes. One that an attribute of the record makes by itself has no naming policy, and another
+            // converter among the options has other options.
+            let isRecordDescribed () =
+                let recordType = fields[0].PropertyType
+
+                match options.Common, writerOf recordType, converterOptionsOf recordType with
+                | ValueSome common, Writer.Record _, ValueSome ofRecord ->
+                    ofRecord.Common
+                    |> ValueOption.exists (fun forRecords -> obj.ReferenceEquals (forRecords, common))
+                | _ -> false
+
+            let step (container : ImmutableArray<JsonStep>) (next : JsonStep) : ImmutableArray<JsonStep> = container.Add next
+
+            // The fields as the properties of the object at the end of the steps, which holds the tag as well or not.
+            let asProperties (container : ImmutableArray<JsonStep>) (holdsTag : bool) : ImmutableArray<UnionFieldPlace> voption =
+                if unwrapsRecord then
+                    if not (isRecordDescribed ()) then
+                        ValueNone
+                    elif holdsTag then
+                        ValueSome (ImmutableArray.Create (UnionFieldPlace.Members container))
+                    else
+                        // Without a tag in it the object is the record as it is written anywhere.
+                        ValueSome (ImmutableArray.Create (UnionFieldPlace.Value container))
+                else
+                    unionFieldNamesOf options case
+                    |> Seq.map (fun name -> UnionFieldPlace.Value (step container (JsonStep.Property name)))
+                    |> ImmutableArray.CreateRange
+                    |> ValueSome
+
+            // The fields as the items of the array at the end of the steps, from the index that is given.
+            let asItems (container : ImmutableArray<JsonStep>) (first : int) : ImmutableArray<UnionFieldPlace> voption =
+                fields
+                |> Seq.mapi (fun index _ -> UnionFieldPlace.Value (step container (JsonStep.Item (first + index))))
+                |> ImmutableArray.CreateRange
+                |> ValueSome
+
+            // The fields as what the property at the end of the steps holds.
+            let asFields (container : ImmutableArray<JsonStep>) : ImmutableArray<UnionFieldPlace> voption =
+                if unwrapsField then
+                    ValueSome (ImmutableArray.Create (UnionFieldPlace.Value container))
+                elif hasNamedFields then
+                    asProperties container false
+                else
+                    asItems container 0
+
+            let written (mark : UnionCaseMark) (places : ImmutableArray<UnionFieldPlace> voption) : UnionCaseEncoding =
+                match places with
+                | ValueSome places -> UnionCaseEncoding.Written (mark, places)
+                | ValueNone -> UnionCaseEncoding.NotDescribed
+
+            let root = ImmutableArray<JsonStep>.Empty
+
+            if isNullCase then
+                UnionCaseEncoding.Written (UnionCaseMark.Null, ImmutableArray<UnionFieldPlace>.Empty)
+            elif
+                fields.Length = 0
+                && encoding.HasFlag JsonUnionEncoding.UnwrapFieldlessTags
+            then
+                UnionCaseEncoding.Written (UnionCaseMark.Tag (root, tag), ImmutableArray<UnionFieldPlace>.Empty)
+            else
+                match int encoding &&& UnionFormatBits with
+                // No bit says where the tag is: next to the fields.
+                | 0 ->
+                    written
+                        (UnionCaseMark.Tag (ImmutableArray.Create (JsonStep.Property options.TagName), tag))
+                        (asFields (ImmutableArray.Create (JsonStep.Property options.FieldsName)))
+                | bits when bits = int JsonUnionEncoding.ExternalTag ->
+                    let name = propertyNameOf tag
+                    written (UnionCaseMark.Property name) (asFields (ImmutableArray.Create (JsonStep.Property name)))
+                | bits when bits = int JsonUnionEncoding.InternalTag ->
+                    if hasNamedFields then
+                        written
+                            (UnionCaseMark.Tag (ImmutableArray.Create (JsonStep.Property options.TagName), tag))
+                            (asProperties root true)
+                    else
+                        written (UnionCaseMark.Tag (ImmutableArray.Create (JsonStep.Item 0), tag)) (asItems root 1)
+                | UntaggedBit -> written UnionCaseMark.Unmarked (asProperties root false)
+                // Two places for the tag at once: the library fails to write such a union.
+                | _ -> UnionCaseEncoding.NotDescribed
+
+        /// <summary>
+        /// Whether a case is written as an object with two properties of the name of the tag. FSharp.SystemTextJson
+        /// writes one when the options give the property of the fields the name of the tag, and when a field with a
+        /// name, or a member of the record whose members the case writes, has that name next to an internal tag.
+        /// </summary>
+        /// <remarks>
+        /// The place of the tag is then the place of a field or on the way to one. A query reads one property of a
+        /// name, and nothing says which of the two it is: the tag cannot be told, and neither can the field.
+        /// </remarks>
+        let writesTagTwice (options : UnionOptions) (case : UnionCaseInfo) : bool =
+            match writtenCaseOf options case with
+            | UnionCaseEncoding.Written (UnionCaseMark.Tag (tagPath, _), places) ->
+                places
+                |> Seq.exists (fun place ->
+                    match place with
+                    | UnionFieldPlace.Value path -> beginsWith tagPath path
+                    | UnionFieldPlace.Members container ->
+                        // The members of the record are properties of the object that holds the tag.
+                        let fields = case.GetFields ()
+                        let recordType = fields[0].PropertyType
+
+                        FSharpType.GetRecordFields (recordType, AnyAccessibility)
+                        |> Array.exists (fun field ->
+                            nameOf { Holder = recordType; Member = field }
+                            |> ValueOption.exists (fun name -> beginsWith tagPath (container.Add (JsonStep.Property name)))
+                        )
+                )
+            | _ -> false
+
+        /// <summary>
+        /// How a case of a union is written. The contract of the union names the converter, and the converters of
+        /// FSharp.SystemTextJson for unions are told by their classes; the options that the union is written with
+        /// say the rest.
+        /// </summary>
+        /// <remarks>
+        /// No case of a union is described when one of its cases is written with the name of the tag twice: the
+        /// second property of such a document can hold what is the tag of another case.
+        /// </remarks>
+        let unionCaseEncodingOf (struct (memberOfDocument : DocumentMember voption, case : UnionCaseInfo)) : UnionCaseEncoding =
+            let unionType = case.DeclaringType
+
+            match valueInfoWith false (struct (memberOfDocument, unionType)) with
+            | ValueSome info ->
+                let converter = info.Converter.GetType ()
+
+                if isMadeOf typedefof<JsonUnwrappedUnionConverter<_, _>> converter then
+                    // The class says all of it: the one field of the one case is written in place of the union.
+                    UnionCaseEncoding.Written (
+                        UnionCaseMark.Unmarked,
+                        ImmutableArray.Create (UnionFieldPlace.Value ImmutableArray<JsonStep>.Empty)
+                    )
+                elif
+                    isMadeBySerializer info
+                    && (isMadeOf typedefof<JsonUnionConverter<_>> converter
+                        || isMadeOf typedefof<JsonEnumLikeUnionConverter<_>> converter)
+                then
+                    match unionOptionsOf unionType with
+                    | ValueSome options when
+                        FSharpType.GetUnionCases (unionType, AnyAccessibility)
+                        |> Array.exists (writesTagTwice options)
+                        ->
+                        UnionCaseEncoding.NotDescribed
+                    | ValueSome options -> writtenCaseOf options case
+                    | ValueNone -> UnionCaseEncoding.NotDescribed
+                else
+                    UnionCaseEncoding.NotDescribed
+            | ValueNone -> UnionCaseEncoding.NotDescribed
+
         let rememberedName = remembered nameOf
         let rememberedEncoding = remembered encodingOf
         let rememberedEnumEncoding = remembered enumEncodingOf
         let rememberedTupleEncoding = remembered tupleEncodingOf
         let rememberedCollectionEncoding = remembered collectionEncodingOf
         let rememberedMapEncoding = remembered mapEncodingOf
+        let rememberedUnionCaseEncoding = remembered unionCaseEncodingOf
 
         interface IJsonLayout with
 
@@ -1147,6 +1706,10 @@ module JsonLayout =
             /// <inheritdoc />
             member _.MapEncoding (memberOfDocument : DocumentMember voption, mapType : Type) : MapEncoding =
                 rememberedMapEncoding (struct (memberOfDocument, mapType))
+
+            /// <inheritdoc />
+            member _.UnionCaseEncoding (memberOfDocument : DocumentMember voption, case : UnionCaseInfo) : UnionCaseEncoding =
+                rememberedUnionCaseEncoding (struct (memberOfDocument, case))
 
     /// <summary>
     /// The layout of the documents that System.Text.Json writes with <paramref name="options"/>, with or without the
