@@ -32,6 +32,7 @@
     <Compile Include="NormalizerSpellingTests.fs" />
     <Compile Include="NormalizerTests.fs" />
     <Compile Include="NormalizerErrorTests.fs" />
+    <Compile Include="EvaluatorTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
