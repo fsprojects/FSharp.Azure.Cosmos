@@ -54,8 +54,89 @@ type DocumentMember = {
 }
 
 /// <summary>
+/// How a value of an enumeration is written. A query has to know it to compare such values by their order and to test
+/// their bits, which only a number allows.
+/// </summary>
+/// <remarks>
+/// The encoding is the kind of JSON value, and not what is written for one value of the enumeration: a naming policy
+/// can spell a name, an attribute can declare one, and a converter of the application writes what it likes. So what
+/// stands for such a value in a query has to come from the serializer: the encoding does not say it.
+/// </remarks>
+[<RequireQualifiedAccess; Struct>]
+type EnumEncoding =
+    /// As the number under the value.
+    | Number
+    /// <summary>
+    /// As a JSON string: the name of the value in the spelling that its converter gives it, or what a converter of the
+    /// application writes for it. The converter of System.Text.Json writes a value that has no name, alone or as a
+    /// combination of flags, as its number even then, unless it was made to refuse such a value.
+    /// </summary>
+    | String
+    /// <summary>
+    /// The layout does not describe how the values are written: neither as numbers nor as strings, some as numbers
+    /// and others as strings, or not all of them because the converter refuses one.
+    /// </summary>
+    | NotDescribed
+
+/// <summary>
+/// How a tuple is written. A query has to know it to read an item of a tuple that a document holds.
+/// </summary>
+[<RequireQualifiedAccess; Struct>]
+type TupleEncoding =
+    /// As a JSON array of the items in their order. A tuple of more than seven items is one array as well.
+    | Array
+    /// <summary>
+    /// As a JSON object with a property for every item that the serializer writes.
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.MemberName(FSharp.Azure.Cosmos.Quotations.DocumentMember)"/>
+    /// names the property of a member of the tuple type, such as <c>Item1</c>, and has no name for an item that is
+    /// not written. System.Text.Json writes a tuple this way; the items after the seventh are those of the tuple in
+    /// <c>Rest</c>.
+    /// </summary>
+    | Object
+    /// The layout does not describe how the tuple is written: a converter that it does not know writes it.
+    | NotDescribed
+
+/// <summary>
+/// How a collection is written. A query has to know it to ask about the items of a collection that a document holds.
+/// </summary>
+[<RequireQualifiedAccess; Struct>]
+type CollectionEncoding =
+    /// <summary>
+    /// As a JSON array with an item for every item of the collection.
+    /// </summary>
+    /// <param name="element">The type of an item.</param>
+    | Array of element : Type
+    /// <summary>
+    /// Not as an array of its items, or the layout does not know how: an array of bytes is written as one text, and a
+    /// converter that the layout does not know can write anything.
+    /// </summary>
+    | NotDescribed
+
+/// <summary>
+/// How a map or a dictionary is written. A query has to know it to look a key up in a map that a document holds.
+/// </summary>
+[<RequireQualifiedAccess; Struct>]
+type MapEncoding =
+    /// <summary>
+    /// As a JSON object with a property for every key.
+    /// </summary>
+    /// <param name="key">The type of a key.</param>
+    /// <param name="value">The type of a value.</param>
+    | Object of key : Type * value : Type
+    /// <summary>
+    /// As a JSON array with an item for every key, which is an array of the key and its value. FSharp.SystemTextJson
+    /// writes a map this way when its keys are no texts.
+    /// </summary>
+    /// <param name="key">The type of a key.</param>
+    /// <param name="value">The type of a value.</param>
+    | ArrayOfPairs of key : Type * value : Type
+    /// The layout does not describe how the map is written: a converter that it does not know writes it.
+    | NotDescribed
+
+/// <summary>
 /// What a query has to know about how documents were serialized. The translator asks it for every member that a
-/// quotation reads, so that the query reads the property that the serializer wrote.
+/// quotation reads, so that the query reads the property that the serializer wrote, and for every value that is no
+/// JSON object by itself: an enumeration, a tuple, a collection and a map are each written in more than one way.
 /// </summary>
 /// <remarks>
 /// <see cref="M:FSharp.Azure.Cosmos.Quotations.JsonLayout.ofSerializerOptions(System.Text.Json.JsonSerializerOptions)"/>
@@ -90,10 +171,64 @@ type IJsonLayout =
     /// </remarks>
     /// <param name="memberOfDocument">
     /// The member that holds the value, when it is a member of a type written as a JSON object: a member can be left
-    /// out. No value for an item of a collection or of a tuple, which is always written.
+    /// out. No value for an item of a collection or of a tuple that is written as an array, which is always written.
     /// </param>
     /// <param name="valueType">The type of the value, which is the type of the member when there is one.</param>
     abstract OptionalEncoding : memberOfDocument : DocumentMember voption * valueType : Type -> OptionalEncoding
+
+    /// <summary>
+    /// How a value of the enumeration <paramref name="enumType"/> is written.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This member and the three after it are asked alike. <paramref name="memberOfDocument"/> is the member that
+    /// holds the value, when it is a member of a type written as a JSON object: a member can name a converter of its
+    /// own, which writes its value and no other. It has no value for an item of a collection and for an item of a
+    /// tuple that is written as an array, which no member holds.
+    /// </para>
+    /// <para>
+    /// The type that is asked about is the type of the member, or the type under an option, a value option, a
+    /// skippable value or a nullable that the member is: what
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.OptionalEncoding(Microsoft.FSharp.Core.FSharpValueOption{FSharp.Azure.Cosmos.Quotations.DocumentMember},System.Type)"/>
+    /// says of the member tells whether the value under it is written as itself. A converter of the member writes
+    /// the whole value of the member, so with such a converter only the type of the member, or the type that the
+    /// member is a nullable of, is described.
+    /// </para>
+    /// <para>
+    /// A member that the serializer never writes is not described: something else writes its property, in a way of
+    /// its own.
+    /// </para>
+    /// </remarks>
+    /// <param name="memberOfDocument">The member that holds the value, when a member does.</param>
+    /// <param name="enumType">The type of the value: an enumeration, or a nullable of one.</param>
+    abstract EnumEncoding : memberOfDocument : DocumentMember voption * enumType : Type -> EnumEncoding
+
+    /// <summary>
+    /// How a value of the tuple type <paramref name="tupleType"/> is written. It is asked as
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.EnumEncoding(Microsoft.FSharp.Core.FSharpValueOption{FSharp.Azure.Cosmos.Quotations.DocumentMember},System.Type)"/>
+    /// is.
+    /// </summary>
+    /// <param name="memberOfDocument">The member that holds the tuple, when a member does.</param>
+    /// <param name="tupleType">The type of the tuple, a struct tuple or a reference tuple.</param>
+    abstract TupleEncoding : memberOfDocument : DocumentMember voption * tupleType : Type -> TupleEncoding
+
+    /// <summary>
+    /// How a value of <paramref name="collectionType"/> is written, when it is a collection. It is asked as
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.EnumEncoding(Microsoft.FSharp.Core.FSharpValueOption{FSharp.Azure.Cosmos.Quotations.DocumentMember},System.Type)"/>
+    /// is.
+    /// </summary>
+    /// <param name="memberOfDocument">The member that holds the collection, when a member does.</param>
+    /// <param name="collectionType">The type of the collection.</param>
+    abstract CollectionEncoding : memberOfDocument : DocumentMember voption * collectionType : Type -> CollectionEncoding
+
+    /// <summary>
+    /// How a value of <paramref name="mapType"/> is written, when it is a map or a dictionary. It is asked as
+    /// <see cref="M:FSharp.Azure.Cosmos.Quotations.IJsonLayout.EnumEncoding(Microsoft.FSharp.Core.FSharpValueOption{FSharp.Azure.Cosmos.Quotations.DocumentMember},System.Type)"/>
+    /// is.
+    /// </summary>
+    /// <param name="memberOfDocument">The member that holds the map, when a member does.</param>
+    /// <param name="mapType">The type of the map.</param>
+    abstract MapEncoding : memberOfDocument : DocumentMember voption * mapType : Type -> MapEncoding
 
 /// <summary>
 /// The layouts of the serializers that <see cref="T:FSharp.Azure.Cosmos.Quotations.IJsonLayout"/> comes with.
@@ -107,6 +242,35 @@ module JsonLayout =
 
     /// The assembly of System.Text.Json, whose own converters are the ones that it documents.
     let private serializerAssembly = typeof<JsonSerializer>.Assembly
+
+    /// The assembly of FSharp.SystemTextJson, whose own converters are the ones whose way to write is known here.
+    let private fsharpSerializerAssembly = typeof<JsonFSharpConverter>.Assembly
+
+    /// <summary>
+    /// Whether <paramref name="converterType"/> is
+    /// <see cref="T:System.Text.Json.Serialization.BaseJsonTupleConverter`1"/> or a class that is derived from it.
+    /// </summary>
+    let rec private isDerivedFromTupleConverter (converterType : Type | null) : bool =
+        match converterType with
+        | null -> false
+        | converterType ->
+            (converterType.IsGenericType
+             && Type.(=) (converterType.GetGenericTypeDefinition (), typedefof<BaseJsonTupleConverter<_>>))
+            || isDerivedFromTupleConverter converterType.BaseType
+
+    /// <summary>
+    /// Whether <paramref name="converterType"/> is one of the converters of FSharp.SystemTextJson for tuples: it has a
+    /// class for two, three and four items of either kind of tuple and one for every other number, and
+    /// <see cref="T:System.Text.Json.Serialization.BaseJsonTupleConverter`1"/> is the base of all of them.
+    /// </summary>
+    /// <remarks>
+    /// The base class is public, and so are the classes of the library that are derived from it: a converter of an
+    /// application can be derived from any of them and write a tuple in a way of its own. So only a class of the
+    /// library itself is one of its converters.
+    /// </remarks>
+    let private isTupleConverter (converterType : Type) : bool =
+        converterType.Assembly.Equals fsharpSerializerAssembly
+        && isDerivedFromTupleConverter converterType
 
     /// <summary>
     /// The kinds of values that can be absent, as far as the way they are written depends on the kind.
@@ -807,8 +971,157 @@ module JsonLayout =
                             OptionalEncoding.NullOrUndefined
                     | Writer.Unknown -> OptionalEncoding.NotDescribed
 
+        /// <summary>
+        /// The contract that the serializer writes a value with: the one of its type, or the one of the converter
+        /// that the member of the value names. No contract when the layout does not know what writes the value.
+        /// </summary>
+        let valueInfoOf (struct (memberOfDocument : DocumentMember voption, valueType : Type)) : JsonTypeInfo voption =
+            match memberOfDocument with
+            | ValueNone -> typeInfoOf valueType
+            | ValueSome memberOfDocument ->
+                match writerOf memberOfDocument.Holder with
+                | Writer.Serializer info ->
+                    match propertyOf info memberOfDocument.Member with
+                    // The entries of the extension data are properties of the document itself, so no property holds
+                    // the dictionary.
+                    | ValueSome (struct (property, _)) when property.IsExtensionData -> ValueNone
+                    // Whatever writes a property that the serializer never writes decides how.
+                    | ValueSome (struct (property, own)) when isNeverWritten property own -> ValueNone
+                    | ValueSome (struct (property, _)) ->
+                        let memberType = property.PropertyType
+
+                        // The converter of a member writes the whole value of the member, also the nullable that
+                        // the member is. What it writes for a part of the value, such as the value of an option,
+                        // nothing shows.
+                        let isWholeValue () =
+                            Type.(=) (valueType, memberType)
+                            || (
+                                match Nullable.GetUnderlyingType memberType with
+                                | null -> false
+                                | underlying -> Type.(=) (valueType, underlying)
+                            )
+
+                        match property.CustomConverter with
+                        | null -> typeInfoOf valueType
+                        | converter when isWholeValue () -> ownInfoOf converter memberType
+                        | _ -> ValueNone
+                    | ValueNone -> ValueNone
+                | Writer.Record recordOptions ->
+                    // FSharp.SystemTextJson does not read the converter that a member of a record names. A member
+                    // that it does not write is described by nothing: whatever writes its property decides how.
+                    if isWrittenByRecord recordOptions memberOfDocument.Member then
+                        typeInfoOf valueType
+                    else
+                        ValueNone
+                | Writer.Unknown -> ValueNone
+
+        /// <summary>
+        /// How an enumeration is written. The serializer is asked to write its values, because nothing else tells:
+        /// System.Text.Json has one converter for numbers and for names, which keeps to itself what it writes.
+        /// </summary>
+        /// <remarks>
+        /// Every value that has a name is written, and all of them have to come out as one kind of JSON value: a
+        /// converter of the application can write one value as its name and another as a number, and such an
+        /// enumeration is written in no one way.
+        /// </remarks>
+        let enumEncodingOf (struct (_, valueType : Type) as question) : EnumEncoding =
+            let enumType =
+                match Nullable.GetUnderlyingType valueType with
+                | null -> valueType
+                | underlying -> underlying
+
+            if not enumType.IsEnum then
+                EnumEncoding.NotDescribed
+            else
+                match valueInfoOf question with
+                | ValueNone -> EnumEncoding.NotDescribed
+                | ValueSome info ->
+                    // The values with a name: a converter of names writes a value without one as its number. An
+                    // enumeration that declares no value has only such a value to write.
+                    let values = Enum.GetValues enumType
+
+                    let named =
+                        if values.Length = 0 then
+                            Seq.singleton (Enum.ToObject (enumType, 0))
+                        else
+                            Seq.cast<obj> values
+
+                    try
+                        let kinds =
+                            named
+                            |> Seq.map (fun value -> JsonSerializer.SerializeToElement(value, info).ValueKind)
+                            |> Seq.distinct
+                            |> Seq.toArray
+
+                        match kinds with
+                        | [| JsonValueKind.Number |] -> EnumEncoding.Number
+                        | [| JsonValueKind.String |] -> EnumEncoding.String
+                        | _ -> EnumEncoding.NotDescribed
+                    with
+                    | :? JsonException
+                    | :? NotSupportedException ->
+                        // The converter refuses a value, as the one of names does when it was made to. These are the
+                        // two exceptions that the serializer has for a value that a converter does not write.
+                        EnumEncoding.NotDescribed
+
+        /// How a tuple is written: System.Text.Json writes it as an object, FSharp.SystemTextJson as an array.
+        let tupleEncodingOf (struct (_, tupleType : Type) as question) : TupleEncoding =
+            if not (FSharpType.IsTuple tupleType) then
+                TupleEncoding.NotDescribed
+            else
+                match valueInfoOf question with
+                | ValueSome info when info.Kind = JsonTypeInfoKind.Object -> TupleEncoding.Object
+                | ValueSome info when isTupleConverter (info.Converter.GetType ()) -> TupleEncoding.Array
+                | _ -> TupleEncoding.NotDescribed
+
+        /// <summary>
+        /// How a collection is written: as an array when the contract says that the serializer writes its items, or
+        /// when a converter of FSharp.SystemTextJson for lists or sets writes it.
+        /// </summary>
+        let collectionEncodingOf (question : struct (DocumentMember voption * Type)) : CollectionEncoding =
+            match valueInfoOf question with
+            // The contract of a type whose items the serializer writes names the type of an item.
+            | ValueSome info when info.Kind = JsonTypeInfoKind.Enumerable -> CollectionEncoding.Array (nonNull info.ElementType)
+            | ValueSome info ->
+                let converter = info.Converter.GetType ()
+
+                if
+                    isMadeOf typedefof<JsonListConverter<_>> converter
+                    || isMadeOf typedefof<JsonSetConverter<_>> converter
+                then
+                    CollectionEncoding.Array (converter.GetGenericArguments()[0])
+                else
+                    CollectionEncoding.NotDescribed
+            | ValueNone -> CollectionEncoding.NotDescribed
+
+        /// <summary>
+        /// How a map is written: as an object when the contract says that the serializer writes it as a dictionary, and
+        /// as the converter of FSharp.SystemTextJson that writes it does.
+        /// </summary>
+        let mapEncodingOf (question : struct (DocumentMember voption * Type)) : MapEncoding =
+            match valueInfoOf question with
+            // The contract of a dictionary names the types of a key and of a value.
+            | ValueSome info when info.Kind = JsonTypeInfoKind.Dictionary ->
+                MapEncoding.Object (nonNull info.KeyType, nonNull info.ElementType)
+            | ValueSome info ->
+                let converter = info.Converter.GetType ()
+
+                if isMadeOf typedefof<JsonMapObjectConverter<_, _>> converter then
+                    let arguments = converter.GetGenericArguments ()
+                    MapEncoding.Object (arguments[0], arguments[1])
+                elif isMadeOf typedefof<JsonMapArrayOfPairsConverter<_, _>> converter then
+                    let arguments = converter.GetGenericArguments ()
+                    MapEncoding.ArrayOfPairs (arguments[0], arguments[1])
+                else
+                    MapEncoding.NotDescribed
+            | ValueNone -> MapEncoding.NotDescribed
+
         let rememberedName = remembered nameOf
         let rememberedEncoding = remembered encodingOf
+        let rememberedEnumEncoding = remembered enumEncodingOf
+        let rememberedTupleEncoding = remembered tupleEncodingOf
+        let rememberedCollectionEncoding = remembered collectionEncodingOf
+        let rememberedMapEncoding = remembered mapEncodingOf
 
         interface IJsonLayout with
 
@@ -818,6 +1131,22 @@ module JsonLayout =
             /// <inheritdoc />
             member _.OptionalEncoding (memberOfDocument : DocumentMember voption, valueType : Type) : OptionalEncoding =
                 rememberedEncoding (struct (memberOfDocument, valueType))
+
+            /// <inheritdoc />
+            member _.EnumEncoding (memberOfDocument : DocumentMember voption, enumType : Type) : EnumEncoding =
+                rememberedEnumEncoding (struct (memberOfDocument, enumType))
+
+            /// <inheritdoc />
+            member _.TupleEncoding (memberOfDocument : DocumentMember voption, tupleType : Type) : TupleEncoding =
+                rememberedTupleEncoding (struct (memberOfDocument, tupleType))
+
+            /// <inheritdoc />
+            member _.CollectionEncoding (memberOfDocument : DocumentMember voption, collectionType : Type) : CollectionEncoding =
+                rememberedCollectionEncoding (struct (memberOfDocument, collectionType))
+
+            /// <inheritdoc />
+            member _.MapEncoding (memberOfDocument : DocumentMember voption, mapType : Type) : MapEncoding =
+                rememberedMapEncoding (struct (memberOfDocument, mapType))
 
     /// <summary>
     /// The layout of the documents that System.Text.Json writes with <paramref name="options"/>, with or without the
@@ -843,6 +1172,14 @@ module JsonLayout =
     /// FSharp.SystemTextJson writes. A member of a type that another converter writes has no name here, and neither
     /// has a member of a record whose contract a resolver of the application made from a converter: nothing shows how
     /// that converter was made.
+    /// </para>
+    /// <para>
+    /// An enumeration, a tuple, a collection and a map are described as System.Text.Json and FSharp.SystemTextJson
+    /// write them, by the converter that the options have for the type or by the one that a member names for itself.
+    /// What a converter of the application writes is not described, except for an enumeration: the layout has the
+    /// serializer write every value of it that has a name, and describes the enumeration when numbers come out for
+    /// all of them or strings for all of them. An enumeration whose values come out in both ways is not described,
+    /// and neither is one whose converter refuses a value.
     /// </para>
     /// </remarks>
     /// <param name="options">The options of the serializer.</param>
