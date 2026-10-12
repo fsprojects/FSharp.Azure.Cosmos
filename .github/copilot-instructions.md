@@ -15,7 +15,9 @@
 ├── src/Cosmos.Quotations/ – translator of F# quotations into queries (FSharp.Azure.Cosmos.Quotations), built stage by stage and not packed yet
 │   ├── TranslationError.fs – translation errors and the place of a quotation in the source
 │   ├── Normalizer.fs    – normal form of a quotation
-│   └── Evaluator.fs     – value of a part of a quotation that reads no variable
+│   ├── Evaluator.fs     – value of a part of a quotation that reads no variable
+│   ├── Query.fs         – functions that say whether a value is a constant or a parameter of the query
+│   └── Parameterizer.fs – shape of a quotation, by which its translation is found again, and the values of its parameters
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions

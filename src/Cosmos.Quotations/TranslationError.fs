@@ -35,9 +35,10 @@ type TranslationErrorCode =
     /// A construct of F# that a query has no counterpart for, such as a loop, an assignment or a recursive function.
     | Unsupported
     /// <summary>
-    /// A function that exists only as a compiled value is applied to a value of the document. A compiled function
-    /// cannot be read, so it cannot become a part of the query; a quotation or a function marked with
-    /// <see cref="T:Microsoft.FSharp.Core.ReflectedDefinitionAttribute"/> can.
+    /// A function that exists only as a compiled value is applied to a value of the document, or is passed into
+    /// the query as a value. A compiled function cannot be read, so it cannot become a part of the query, and it is
+    /// no value that a parameter of a query can hold; a quotation or a function marked with
+    /// <see cref="T:Microsoft.FSharp.Core.ReflectedDefinitionAttribute"/> can be read.
     /// </summary>
     | CapturedFunctionValue
     /// <summary>
