@@ -183,6 +183,7 @@ module FSharpAnalyzers =
 
 
 module DocsTool =
+
     let quoted s = $"\"%s{s}\""
 
     let fsDocsDotnetOptions (o : DotNet.Options) = { o with WorkingDirectory = rootDirectory }
