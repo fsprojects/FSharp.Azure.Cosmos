@@ -440,6 +440,50 @@ type EvaluatorTests () =
         )
 
     [<TestMethod>]
+    member _.``Every part that the evaluator computes must be told computable`` () =
+        let refused =
+            seq {
+                for computation in computations do
+                    if not (Evaluator.canEvaluate (Evaluator.Refused ()) computation.Part) then
+                        computation.Name
+
+                for struct (name, part, _) in failures do
+                    if not (Evaluator.canEvaluate (Evaluator.Refused ()) part) then
+                        name
+            }
+            |> Seq.toArray
+
+        Assert.IsEmpty (
+            refused,
+            "A part that has a value, or that raises while it is computed, is made only of what the evaluator computes."
+        )
+
+    [<TestMethod>]
+    member _.``A part that holds a function, a variable or a quotation must be told not computable, and none of it must run`` () =
+        let meter = Meter ()
+        let variable = Expr.Var (Var ("number", typeof<int>))
+
+        // In each of the first two the part before the one that cannot be computed can be: asking must not run it.
+        let withVariable = <@@ [| meter.Read 1; %%variable |] @@>
+        let withFunction = <@@ List.map (fun number -> number + 1) [ meter.Read 1 ] @@>
+        let quotation = Expr.QuoteTyped <@@ 1 @@>
+
+        let refused = Evaluator.Refused ()
+
+        Assert.IsFalse (Evaluator.canEvaluate refused withVariable, "A variable has a value only inside the query.")
+        Assert.IsFalse (Evaluator.canEvaluate refused withFunction, "A function cannot be computed without compiling it.")
+        Assert.IsFalse (Evaluator.canEvaluate refused quotation, "A quotation inside the quotation is not computed.")
+        Assert.AreEqual<int>(0, meter.Readings, "Asking whether a part can be computed should run no code of it.")
+
+        Assert.IsFalse (Evaluator.canEvaluate refused withVariable, "A part that was refused stays refused.")
+        Assert.IsTrue (refused.Holds variable, "The variable is the reason, so it is remembered with the array around it.")
+
+        match withVariable with
+        | NewArray (_, [ first; _ ]) ->
+            Assert.IsTrue (Evaluator.canEvaluate refused first, "The item before the variable can be computed on its own.")
+        | other -> Assert.Fail $"The quotation should be an array of two items: %A{other}"
+
+    [<TestMethod>]
     member _.``A value that is bound once must be computed once for all its places in a part`` () =
         let meter = Meter ()
 
@@ -508,29 +552,16 @@ type EvaluatorTests () =
     member _.``The default value of a struct must be its zeroed value when the struct has a constructor without parameters`` () =
         // F# declares no struct with a constructor without parameters, as C# can, so the test makes one: its
         // constructor sets the field to 7.
-        let declared =
-            AssemblyBuilder
-                .DefineDynamicAssembly(AssemblyName "EvaluatorTests.Dynamic", AssemblyBuilderAccess.Run)
-                .DefineDynamicModule("Structs")
-                .DefineType(
-                    "Seven",
-                    TypeAttributes.Public
-                    ||| TypeAttributes.Sealed
-                    ||| TypeAttributes.SequentialLayout,
-                    typeof<ValueType>
+        let seven =
+            DynamicStruct.withConstructor
+                "Seven"
+                (fun code field ->
+                    code.Emit OpCodes.Ldarg_0
+                    code.Emit (OpCodes.Ldc_I4, 7)
+                    code.Emit (OpCodes.Stfld, field)
+                    code.Emit OpCodes.Ret
                 )
 
-        let field = declared.DefineField ("Value", typeof<int>, FieldAttributes.Public)
-
-        let code =
-            declared.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, Type.EmptyTypes).GetILGenerator()
-
-        code.Emit OpCodes.Ldarg_0
-        code.Emit (OpCodes.Ldc_I4, 7)
-        code.Emit (OpCodes.Stfld, field)
-        code.Emit OpCodes.Ret
-
-        let seven = declared.CreateType ()
         let valueOf (instance : objnull) = (nonNull (seven.GetField "Value")).GetValue instance
 
         Assert.AreEqual<objnull>(
