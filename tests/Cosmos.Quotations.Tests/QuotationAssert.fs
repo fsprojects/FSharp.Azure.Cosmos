@@ -10,7 +10,11 @@ open FSharp.Quotations.Patterns
 
 open Swensen.Unquote
 
+// The functions of FSharp.Core that give an option or reference tuples are shadowed there. So are the cases of a
+// result, by the results of the item operations, which is why a result is matched with its full case names here.
+open FSharp.Azure.Cosmos
 open FSharp.Azure.Cosmos.Quotations
+open FSharp.Azure.Cosmos.Tests
 
 /// Questions about a quotation that the assertions and the tests ask.
 [<RequireQualifiedAccess>]
@@ -121,8 +125,8 @@ module NormalizerAssert =
     /// </summary>
     let WantNormal (expr : Expr) : Expr =
         match Normalizer.normalize expr with
-        | Ok normal -> normal
-        | Error error ->
+        | Result.Ok normal -> normal
+        | Result.Error error ->
             raise (
                 AssertFailedException
                     $"The quotation should have a normal form, but: %s{error.Message}\n%s{error.Fragment}\n%A{expr}"
@@ -133,8 +137,9 @@ module NormalizerAssert =
     /// </summary>
     let WantError (expr : Expr) : TranslationError =
         match Normalizer.normalize expr with
-        | Ok normal -> raise (AssertFailedException $"The quotation should be an error, but has the normal form\n%A{normal}")
-        | Error error -> error
+        | Result.Ok normal ->
+            raise (AssertFailedException $"The quotation should be an error, but has the normal form\n%A{normal}")
+        | Result.Error error -> error
 
     /// <summary>
     /// Asserts that <paramref name="expected"/> and <paramref name="actual"/> are the same quotation up to their bound
@@ -175,3 +180,65 @@ module NormalizerAssert =
                 evaluated input,
                 $"The quotation should compute what the code computes for %A{input}.\n%A{quotation}"
             )
+
+/// Questions about a template that the tests ask.
+[<RequireQualifiedAccess>]
+module internal Templates =
+
+    /// <summary>
+    /// The quotation of <paramref name="template"/> with the value of every slot at the place of its variable, which
+    /// is a quotation that can be evaluated again. A slot without a value gets the default value of its type: it is in
+    /// a branch that is not taken, so nothing reads it.
+    /// </summary>
+    let withValues (template : Template) : Expr =
+        template.Body.Substitute (fun variable ->
+            template.Slots
+            |> Seq.tryFindIndex (fun slot -> obj.ReferenceEquals (slot.Variable, variable))
+            |> ValueOption.map (fun index ->
+                match template.Values[index] with
+                | ValueSome value -> Expr.Value (value, variable.Type)
+                | ValueNone -> Expr.DefaultValue variable.Type
+            )
+            // The substitution of FSharp.Core takes an option.
+            |> ValueOption.toOption
+        )
+
+/// Assertions on what the parameterizer makes of a quotation.
+[<RequireQualifiedAccess>]
+module internal ParameterizerAssert =
+
+    /// <summary>
+    /// The shape of the normal form of <paramref name="expr"/>; fails when the parameterizer reports an error.
+    /// </summary>
+    let WantShape (expr : Expr) : Shape =
+        Assert.WantOk (
+            expr |> NormalizerAssert.WantNormal |> Parameterizer.shapeOf,
+            $"The quotation should have a shape.\n%A{expr}"
+        )
+
+    /// <summary>
+    /// The template of the normal form of <paramref name="expr"/>; fails when the parameterizer reports an error.
+    /// </summary>
+    let WantTemplate (expr : Expr) : Template =
+        Assert.WantOk (
+            expr
+            |> NormalizerAssert.WantNormal
+            |> Parameterizer.templateOf,
+            $"The quotation should have a template.\n%A{expr}"
+        )
+
+    /// <summary>
+    /// The error that the parameterizer reports for the normal form of <paramref name="expr"/>; fails when it gives a
+    /// result, and when it reports one error for the shape and another for the template.
+    /// </summary>
+    let WantError (expr : Expr) : TranslationError =
+        let normal = NormalizerAssert.WantNormal expr
+        let ofShape =
+            Assert.WantError (Parameterizer.shapeOf normal, $"The quotation should have no shape.\n%A{expr}")
+
+        let ofTemplate =
+            Assert.WantError (Parameterizer.templateOf normal, $"The quotation should have no template.\n%A{expr}")
+
+        Assert.AreEqual<TranslationErrorCode>(ofShape.Code, ofTemplate.Code, "The shape and the template should fail alike.")
+        Assert.AreEqual<string>(ofShape.Message, ofTemplate.Message, "The shape and the template should fail alike.")
+        ofShape

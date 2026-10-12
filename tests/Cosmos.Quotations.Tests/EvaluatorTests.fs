@@ -440,6 +440,50 @@ type EvaluatorTests () =
         )
 
     [<TestMethod>]
+    member _.``Every part that the evaluator computes must be told computable`` () =
+        let refused =
+            seq {
+                for computation in computations do
+                    if not (Evaluator.canEvaluate (Evaluator.Refused ()) computation.Part) then
+                        computation.Name
+
+                for struct (name, part, _) in failures do
+                    if not (Evaluator.canEvaluate (Evaluator.Refused ()) part) then
+                        name
+            }
+            |> Seq.toArray
+
+        Assert.IsEmpty (
+            refused,
+            "A part that has a value, or that raises while it is computed, is made only of what the evaluator computes."
+        )
+
+    [<TestMethod>]
+    member _.``A part that holds a function, a variable or a quotation must be told not computable, and none of it must run`` () =
+        let meter = Meter ()
+        let variable = Expr.Var (Var ("number", typeof<int>))
+
+        // In each of the first two the part before the one that cannot be computed can be: asking must not run it.
+        let withVariable = <@@ [| meter.Read 1; %%variable |] @@>
+        let withFunction = <@@ List.map (fun number -> number + 1) [ meter.Read 1 ] @@>
+        let quotation = Expr.QuoteTyped <@@ 1 @@>
+
+        let refused = Evaluator.Refused ()
+
+        Assert.IsFalse (Evaluator.canEvaluate refused withVariable, "A variable has a value only inside the query.")
+        Assert.IsFalse (Evaluator.canEvaluate refused withFunction, "A function cannot be computed without compiling it.")
+        Assert.IsFalse (Evaluator.canEvaluate refused quotation, "A quotation inside the quotation is not computed.")
+        Assert.AreEqual<int>(0, meter.Readings, "Asking whether a part can be computed should run no code of it.")
+
+        Assert.IsFalse (Evaluator.canEvaluate refused withVariable, "A part that was refused stays refused.")
+        Assert.IsTrue (refused.Holds variable, "The variable is the reason, so it is remembered with the array around it.")
+
+        match withVariable with
+        | NewArray (_, [ first; _ ]) ->
+            Assert.IsTrue (Evaluator.canEvaluate refused first, "The item before the variable can be computed on its own.")
+        | other -> Assert.Fail $"The quotation should be an array of two items: %A{other}"
+
+    [<TestMethod>]
     member _.``A value that is bound once must be computed once for all its places in a part`` () =
         let meter = Meter ()
 
