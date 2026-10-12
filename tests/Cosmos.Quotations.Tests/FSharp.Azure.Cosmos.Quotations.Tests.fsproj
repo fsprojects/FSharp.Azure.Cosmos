@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Unit tests of FSharp.Azure.Cosmos.Quotations; none of them needs the Cosmos DB Emulator. IsTestProject and
+    IsPackable come from tests/Directory.Build.props, which also references the shared test infrastructure.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Quotations.Tests</AssemblyName>
+
+    <OutputType>Exe</OutputType>
+    <EnableMSTestRunner>true</EnableMSTestRunner>
+
+    <!--
+      The compiler records where every part of a quotation was written, which is what gives a translation error its
+      place in the source. The tests are compiled this way to check that place; a quotation built through the API has
+      none, so both cases are covered.
+    -->
+    <OtherFlags>$(OtherFlags) --quotations-debug+</OtherFlags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="testconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="TestCategories.fs" />
+    <Compile Include="Model.fs" />
+    <Compile Include="QuotationAssert.fs" />
+    <Compile Include="NormalizerSpellingTests.fs" />
+    <Compile Include="NormalizerTests.fs" />
+    <Compile Include="NormalizerErrorTests.fs" />
+    <Compile Include="EvaluatorTests.fs" />
+    <Compile Include="ParameterizerShapeTests.fs" />
+    <Compile Include="ParameterizerTests.fs" />
+    <Compile Include="StoredModel.fs" />
+    <Compile Include="JsonLayoutTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" />
+    <PackageReference Include="Unquote" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cosmos.Quotations\FSharp.Azure.Cosmos.Quotations.fsproj" />
+  </ItemGroup>
+
+</Project>
