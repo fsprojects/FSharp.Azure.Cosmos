@@ -26,9 +26,11 @@
     <Compile Include="Evaluator.fs" />
     <Compile Include="Query.fs" />
     <Compile Include="Parameterizer.fs" />
+    <Compile Include="JsonLayout.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FSharp.SystemTextJson" />
     <PackageReference Include="Microsoft.SourceLink.GitHub">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
