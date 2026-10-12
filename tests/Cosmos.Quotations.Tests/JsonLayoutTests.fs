@@ -84,6 +84,16 @@ module SerializerProfiles =
             )
             ignore
 
+    /// System.Text.Json writing an enumeration as the name of its value.
+    let enumerationsByName =
+        plain
+            "System.Text.Json that writes enumerations by name"
+            (fun options -> options.Converters.Add (JsonStringEnumConverter ()))
+
+    /// System.Text.Json leaving out the properties that are only read.
+    let ignoringReadOnlyProperties =
+        plain "System.Text.Json that ignores read-only properties" (fun options -> options.IgnoreReadOnlyProperties <- true)
+
     /// Every profile.
     let all =
         seq {
@@ -105,13 +115,14 @@ module SerializerProfiles =
                 "System.Text.Json that ignores default values"
                 (fun options -> options.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingDefault)
             plain "System.Text.Json that includes fields" (fun options -> options.IncludeFields <- true)
-            plain "System.Text.Json that ignores read-only properties" (fun options -> options.IgnoreReadOnlyProperties <- true)
+            ignoringReadOnlyProperties
             plain
                 "System.Text.Json that includes fields and ignores read-only ones"
                 (fun options ->
                     options.IncludeFields <- true
                     options.IgnoreReadOnlyFields <- true
                 )
+            enumerationsByName
 
             fsharpSystemTextJson
             fsharp
@@ -170,6 +181,28 @@ module SerializerProfiles =
                 "FSharp.SystemTextJson that ignores read-only properties"
                 id
                 (fun options -> options.IgnoreReadOnlyProperties <- true)
+            fsharp
+                "FSharp.SystemTextJson that writes enumerations by name"
+                id
+                (fun options -> options.Converters.Add (JsonStringEnumConverter ()))
+            fsharp "FSharp.SystemTextJson that writes every map as an object" _.WithMapFormat(MapFormat.Object) ignore
+            fsharp
+                "FSharp.SystemTextJson that writes every map as an array of pairs"
+                _.WithMapFormat(MapFormat.ArrayOfPairs)
+                ignore
+            fsharp
+                "FSharp.SystemTextJson without its converters of tuples"
+                _.WithTypes(JsonFSharpTypes.All &&& ~~~JsonFSharpTypes.Tuples)
+                ignore
+            fsharp
+                "FSharp.SystemTextJson without its converters of lists, sets and maps"
+                _.WithTypes(
+                    JsonFSharpTypes.All
+                    &&& ~~~JsonFSharpTypes.Lists
+                    &&& ~~~JsonFSharpTypes.Sets
+                    &&& ~~~JsonFSharpTypes.Maps
+                )
+                ignore
             {
                 Name = "FSharp.SystemTextJson with one converter for unions and another one for the other types"
                 Create =
@@ -191,7 +224,7 @@ module SerializerProfiles =
                 HasFSharpConverter = true
             }
             fsharp
-                "FSharp.SystemTextJson with internal tags, options that are always skipped and snake case names"
+                "FSharp.SystemTextJson with internal tags, options that are always skipped, snake case names and enumerations by name"
                 (fun _ ->
                     JsonFSharpOptions(
                         JsonUnionEncoding.InternalTag
@@ -206,7 +239,10 @@ module SerializerProfiles =
                         .WithSkippableOptionFields(SkippableOptionFields.Always, true)
                         .WithMapFormat(MapFormat.Object)
                 )
-                (fun options -> options.PropertyNamingPolicy <- JsonNamingPolicy.SnakeCaseLower)
+                (fun options ->
+                    options.PropertyNamingPolicy <- JsonNamingPolicy.SnakeCaseLower
+                    options.Converters.Add (JsonStringEnumConverter ())
+                )
         }
         |> ImmutableArray.CreateRange
 
