@@ -219,41 +219,6 @@ module SerializerProfiles =
 [<TestClass; UnitTestCategory; JsonLayoutTestCategory>]
 type JsonLayoutTests () =
 
-    /// The members of a type that hold data: its properties and fields, without what the compiler adds.
-    static let dataMembersOf (documentType : Type) : MemberInfo seq = seq {
-        for found in
-            documentType.GetMembers (
-                BindingFlags.Instance
-                ||| BindingFlags.Public
-                ||| BindingFlags.NonPublic
-            ) do
-            match found with
-            | :? PropertyInfo as property when property.GetIndexParameters().Length = 0 && property.CanRead -> found
-            // The field that the compiler makes for a property has a name that no source can write.
-            | :? FieldInfo as field when
-                not (
-                    field.Name.Contains ('@', StringComparison.Ordinal)
-                    || field.Name.Contains ('<', StringComparison.Ordinal)
-                )
-                ->
-                found
-            | _ -> ()
-    }
-
-    /// The value that a member holds in a value of the model.
-    static let valueOf (holder : obj) (dataMember : MemberInfo) : objnull =
-        match dataMember with
-        | :? PropertyInfo as property -> property.GetValue holder
-        | :? FieldInfo as field -> field.GetValue holder
-        | other -> invalidOp $"The member is neither a property nor a field: %s{other.Name}"
-
-    /// The type of the value of a member.
-    static let typeOf (dataMember : MemberInfo) : Type =
-        match dataMember with
-        | :? PropertyInfo as property -> property.PropertyType
-        | :? FieldInfo as field -> field.FieldType
-        | other -> invalidOp $"The member is neither a property nor a field: %s{other.Name}"
-
     /// <summary>
     /// The text or the number that a value comes down to when the options, value options and skippable values around
     /// it are taken off; no value for a value that is absent at any level, and for a value of another kind.
@@ -300,32 +265,6 @@ type JsonLayoutTests () =
         |> ValueOption.map _.Name
 
     /// <summary>
-    /// The value under the outer layer of an optional value, with its type: what an option, a value option or a
-    /// skippable value holds, and a nullable or a reference itself. No value when the outer layer has none.
-    /// </summary>
-    static let unwrapped (value : objnull) (valueType : Type) : struct (objnull * Type) voption =
-        let isMadeOf (definition : Type) =
-            valueType.IsGenericType
-            && Type.(=) (valueType.GetGenericTypeDefinition (), definition)
-
-        if
-            isMadeOf typedefof<_ option>
-            || isMadeOf typedefof<_ voption>
-            || isMadeOf typedefof<Skippable<_>>
-        then
-            match value with
-            | null -> ValueNone
-            | value ->
-                match FSharpValue.GetUnionFields (value, valueType) with
-                | _, [| inner |] -> ValueSome (struct (inner, valueType.GetGenericArguments()[0]))
-                | _ -> ValueNone
-        else
-            match value, Nullable.GetUnderlyingType valueType with
-            | null, _ -> ValueNone
-            | value, null -> ValueSome (struct (value, valueType))
-            | value, underlying -> ValueSome (struct (value, underlying))
-
-    /// <summary>
     /// Everything the layout says about the members of a sample that the documents of the sample do not confirm; empty
     /// when the layout is right.
     /// </summary>
@@ -337,8 +276,8 @@ type JsonLayoutTests () =
         let absent = JsonSerializer.SerializeToElement (sample.Absent, documentType, options)
 
         let scalars =
-            dataMembersOf documentType
-            |> Seq.map (fun dataMember -> struct (dataMember, scalarOf (valueOf sample.Present dataMember)))
+            ModelMembers.ofType documentType
+            |> Seq.map (fun dataMember -> struct (dataMember, scalarOf (ModelMembers.valueOf sample.Present dataMember)))
             |> Seq.toArray
 
         // A member can be found in the document only by a value that no other member holds.
@@ -369,12 +308,12 @@ type JsonLayoutTests () =
                         $"%s{dataMember.Name}: the layout names it %A{name}, the document %A{writtenName}"
 
                     // What the member is without a value shows where it has one in one document and none in the other.
-                    let memberType = typeOf dataMember
+                    let memberType = ModelMembers.typeOf dataMember
 
                     match
                         writtenName,
-                        unwrapped (valueOf sample.Present dataMember) memberType,
-                        unwrapped (valueOf sample.Absent dataMember) memberType
+                        ModelMembers.unwrapped (ModelMembers.valueOf sample.Present dataMember) memberType,
+                        ModelMembers.unwrapped (ModelMembers.valueOf sample.Absent dataMember) memberType
                     with
                     | ValueSome writtenAs, ValueSome (struct (inner, innerType)), ValueNone ->
                         // The value is written as itself when the property holds what the serializer writes for the
@@ -813,13 +752,13 @@ type JsonLayoutTests () =
 
         Assert.AreEqual<struct (objnull * Type) voption>(
             ValueSome (struct (box (Some "nested-1"), typeof<string option>)),
-            unwrapped (box (Some (Some "nested-1"))) typeof<string option option>,
+            ModelMembers.unwrapped (box (Some (Some "nested-1"))) typeof<string option option>,
             "One layer of an optional value is taken off at a time."
         )
 
         Assert.AreEqual<struct (objnull * Type) voption>(
             ValueNone,
-            unwrapped (box (Skip : Skippable<int>)) typeof<Skippable<int>>,
+            ModelMembers.unwrapped (box (Skip : Skippable<int>)) typeof<Skippable<int>>,
             "A skipped value has nothing under it."
         )
 
