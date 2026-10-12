@@ -24,6 +24,8 @@
     <Compile Include="TranslationError.fs" />
     <Compile Include="Normalizer.fs" />
     <Compile Include="Evaluator.fs" />
+    <Compile Include="Query.fs" />
+    <Compile Include="Parameterizer.fs" />
   </ItemGroup>
 
   <ItemGroup>
