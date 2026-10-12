@@ -120,6 +120,21 @@ type Folder = {
         | Some parent -> parent.Depth + 1
         | None -> 0
 
+/// A pass for values that counts them: a test tells by it how often a part of a quotation was computed.
+type Meter () =
+
+    let mutable readings = 0
+
+    /// How many values have passed.
+    member _.Readings = readings
+
+    /// <summary>
+    /// <paramref name="value"/>, counted.
+    /// </summary>
+    member _.Read (value : 'Value) : 'Value =
+        readings <- readings + 1
+        value
+
 /// <summary>
 /// Members added to <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.Person"/> outside its definition: the compiler
 /// makes them static methods that take the person first.
