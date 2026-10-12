@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="InternalsVisibleTo.fs" />
     <Compile Include="TranslationError.fs" />
     <Compile Include="Normalizer.fs" />
   </ItemGroup>

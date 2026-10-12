@@ -4,6 +4,7 @@
     "projects": [
       "src\\Cosmos.Quotations\\FSharp.Azure.Cosmos.Quotations.fsproj",
       "src\\Cosmos\\FSharp.Azure.Cosmos.fsproj",
+      "tests\\Cosmos.Quotations.Tests\\FSharp.Azure.Cosmos.Quotations.Tests.fsproj",
       "tests\\Cosmos.Tests.Infrastructure\\FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj",
       "tests\\Cosmos.Tests\\FSharp.Azure.Cosmos.Tests.fsproj"
     ]
