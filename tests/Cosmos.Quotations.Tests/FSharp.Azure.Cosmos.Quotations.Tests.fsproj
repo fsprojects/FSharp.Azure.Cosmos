@@ -32,7 +32,10 @@
     <Compile Include="NormalizerSpellingTests.fs" />
     <Compile Include="NormalizerTests.fs" />
     <Compile Include="NormalizerErrorTests.fs" />
+    <Compile Include="DynamicStruct.fs" />
     <Compile Include="EvaluatorTests.fs" />
+    <Compile Include="ParameterizerShapeTests.fs" />
+    <Compile Include="ParameterizerTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

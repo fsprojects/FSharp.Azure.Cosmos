@@ -27,3 +27,14 @@ type NormalizerTestCategoryAttribute () =
 
     /// <inheritdoc />
     override _.TestCategories = [| "Normalizer" |] :> IList<string>
+
+/// <summary>
+/// Categorizes a test of the parameterizer, which tells the shape of a quotation from the values it was written
+/// with: <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.ParameterizerShapeTests"/> and
+/// <see cref="T:FSharp.Azure.Cosmos.Quotations.Tests.ParameterizerTests"/>.
+/// </summary>
+type ParameterizerTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Parameterizer" |] :> IList<string>
