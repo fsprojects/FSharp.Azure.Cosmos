@@ -129,6 +129,56 @@ type StoredDeal =
     /// A case without fields.
     | Undealt
 
+/// <summary>
+/// A union whose cases hold what can be without a value, one field of every kind, in every arrangement that the fields
+/// of a case have: with names, without names, and alone. Two more cases hold values of the types that are null in
+/// ways of their own, and of the types that are written in more than one way.
+/// </summary>
+type StoredParcel =
+    /// Fields with names.
+    | Packed of
+        note : string option *
+        weight : int voption *
+        mark : Skippable<string> *
+        count : Nullable<int> *
+        sender : (string | null)
+    /// Fields without names.
+    | Loose of string option * int voption * Skippable<string> * Nullable<int> * (string | null)
+    /// One field, an option.
+    | WithNote of string option
+    /// One field, a value option.
+    | WithWeight of int voption
+    /// One field, a skippable value.
+    | WithMark of Skippable<string>
+    /// One field, a nullable.
+    | WithCount of Nullable<int>
+    /// One field, a reference.
+    | WithSender of (string | null)
+    /// A record, a union and a union with a case that is null.
+    | Enclosed of author : StoredAuthor * shape : StoredShape * grade : StoredGrade
+    /// An enumeration, a tuple, a collection and a map.
+    | Listed of colour : StoredColour * pair : struct (int * string) * tags : string list * scores : Map<string, int>
+    /// A case without fields.
+    | Unpacked
+
+    /// A property that is no field of a case, of a type that can be null.
+    member _.Remark : string | null = null
+
+    /// A property that is no field of a case, of a type that is written in more than one way.
+    member _.Shade : StoredColour = StoredColour.Red
+
+/// A union with options of its own in an attribute, which name the fields and always skip an option without a value.
+[<JsonFSharpConverter(UnionEncoding =
+                          (JsonUnionEncoding.AdjacentTag
+                           ||| JsonUnionEncoding.NamedFields
+                           ||| JsonUnionEncoding.UnwrapOption),
+                      SkippableOptionFields = SkippableOptionFields.Always)>]
+type StoredSeal =
+    /// A case with an option and a value option.
+    | Sealed of by : string option * year : int voption
+    /// A case without fields.
+    | Unsealed
+
 /// A union that FSharp.SystemTextJson refuses: a case may have one attribute with its names, and this one has two.
 type StoredTwice =
     /// The case with two attributes.
@@ -211,8 +261,61 @@ type StoredUnionSample = {
     Values : ImmutableArray<objnull>
 }
 
+/// <summary>
+/// Two values of one case of a union: one in which every field that can be without a value has one, and one in
+/// which none of them has. A test sees in the two documents how a field is written without a value.
+/// </summary>
+[<Struct>]
+type StoredCasePair = {
+    /// The union type.
+    UnionType : Type
+    /// The value with its fields present.
+    Present : objnull
+    /// The value with its fields absent.
+    Absent : objnull
+}
+
 /// The values of the unions.
 module StoredUnionSamples =
+
+    /// A pair of values of one case.
+    let private pair (present : 'Union) (absent : 'Union) : StoredCasePair = {
+        UnionType = typeof<'Union>
+        Present = box present
+        Absent = box absent
+    }
+
+    /// Every case that has a field that can be without a value, with the field present and absent.
+    let pairs =
+        seq {
+            pair
+                (Packed (Some "note", ValueSome 21, Include "mark", Nullable 22, "sender"))
+                (Packed (None, ValueNone, Skip, Nullable (), null))
+            pair
+                (Loose (Some "note", ValueSome 23, Include "mark", Nullable 24, "sender"))
+                (Loose (None, ValueNone, Skip, Nullable (), null))
+            pair (WithNote (Some "note")) (WithNote None)
+            pair (WithWeight (ValueSome 25)) (WithWeight ValueNone)
+            pair (WithMark (Include "mark")) (WithMark Skip)
+            pair (WithCount (Nullable 26)) (WithCount (Nullable ()))
+            pair (WithSender "sender") (WithSender null)
+            pair
+                (Enclosed ({ Name = "author" }, Circle 27, Graded 28))
+                (Enclosed (Unchecked.defaultof<StoredAuthor>, Unchecked.defaultof<StoredShape>, Ungraded))
+            pair (StoredNote (Some "note")) (StoredNote None)
+            pair (Sealed (Some "sealer", ValueSome 2026)) (Sealed (None, ValueNone))
+        }
+        |> ImmutableArray.CreateRange
+
+    /// The values of the pairs that are of one union type.
+    let private ofPairs<'Union> : 'Union seq =
+        pairs
+        |> Seq.filter (fun pair -> Type.(=) (pair.UnionType, typeof<'Union>))
+        |> Seq.collect (fun pair -> seq {
+            pair.Present
+            pair.Absent
+        })
+        |> Seq.cast<'Union>
 
     /// A sample of a union type.
     let private sample (name : string) (values : 'Union seq) : StoredUnionSample = {
@@ -326,6 +429,25 @@ module StoredUnionSamples =
                 (seq {
                     Unlabelled
                     Labelled ("label", 14)
+                })
+            sample
+                "a union with fields that can be without a value"
+                (seq {
+                    yield! ofPairs<StoredParcel>
+                    Listed (
+                        StoredColour.DarkBlue,
+                        struct (29, "pair"),
+                        List.singleton "tag",
+                        Map.ofSeq (Seq.singleton ("score", 30))
+                    )
+                    Unpacked
+                })
+            sample "a union that wraps an option" ofPairs<StoredNote>
+            sample
+                "a union with options of its own that skip an option"
+                (seq {
+                    yield! ofPairs<StoredSeal>
+                    Unsealed
                 })
         }
         |> ImmutableArray.CreateRange

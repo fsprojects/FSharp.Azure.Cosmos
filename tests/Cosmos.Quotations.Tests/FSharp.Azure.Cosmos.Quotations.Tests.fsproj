@@ -43,6 +43,7 @@
     <Compile Include="JsonLayoutTests.fs" />
     <Compile Include="JsonLayoutValueTests.fs" />
     <Compile Include="JsonLayoutUnionTests.fs" />
+    <Compile Include="JsonLayoutUnionFieldTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
