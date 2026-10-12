@@ -17,7 +17,8 @@
 │   ├── Normalizer.fs    – normal form of a quotation
 │   ├── Evaluator.fs     – value of a part of a quotation that reads no variable
 │   ├── Query.fs         – functions that say whether a value is a constant or a parameter of the query
-│   └── Parameterizer.fs – shape of a quotation, by which its translation is found again, and the values of its parameters
+│   ├── Parameterizer.fs – shape of a quotation, by which its translation is found again, and the values of its parameters
+│   └── JsonLayout.fs    – how the serializer writes the members of a document: their names and what a member without a value is
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
@@ -46,6 +47,7 @@
 * [`FSharp.Control.TaskSeq`](https://github.com/fsprojects/FSharp.Control.TaskSeq) – `IAsyncEnumerable` / `taskSeq` support
 * [`FSharp.Control.Reactive`](https://github.com/fsprojects/FSharp.Reactive) – Rx extensions for F#
 * [`FsToolkit.ErrorHandling`](https://github.com/demystifyfp/FsToolkit.ErrorHandling) – `taskResult`, `Result`, `voption` CEs
+* [`FSharp.SystemTextJson`](https://github.com/Tarmil/FSharp.SystemTextJson) – F# types in `System.Text.Json`; `FSharp.Azure.Cosmos.Quotations` reads its options to know how documents are written
 * [`Unquote`](https://github.com/SwensenSoftware/unquote) – test assertions
 * [`MSTest`](https://github.com/microsoft/testfx) – test framework
 
