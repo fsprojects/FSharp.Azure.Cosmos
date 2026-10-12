@@ -442,9 +442,10 @@ type StoredContractResolver<'Value> (make : JsonSerializerOptions -> JsonTypeInf
 
 /// <summary>
 /// A converter factory that counts how often it makes a converter, and hands the type to the converter that the
-/// options have for it. A test sees by the count whether the layout asked the serializer again.
+/// options have for it. A test sees by the count whether the layout asked the serializer again. Every type argument
+/// has a count of its own: tests run at a time, and each test that counts names a type that no other test names.
 /// </summary>
-type StoredCountingConverterFactory () =
+type StoredCountingConverterFactory<'Counted> () =
     inherit JsonConverterFactory ()
 
     static let mutable made = 0
@@ -467,7 +468,7 @@ type StoredCounted () =
     member val Title = "" with get, set
 
     /// The collection.
-    [<JsonConverter(typeof<StoredCountingConverterFactory>)>]
+    [<JsonConverter(typeof<StoredCountingConverterFactory<StoredCounted>>)>]
     member _.Stamps = [| "stamp" |]
 
 /// <summary>
