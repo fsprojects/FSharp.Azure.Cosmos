@@ -46,6 +46,12 @@ type TranslationErrorCode =
     /// finish within its limit of steps.
     /// </summary>
     | NormalizationDiverged
+    /// <summary>
+    /// A part of the quotation that reads nothing of the document has to be computed before the query runs, and
+    /// computing it failed: the code in it raised an exception, which is the
+    /// <see cref="P:FSharp.Azure.Cosmos.Quotations.TranslationError.Cause"/>.
+    /// </summary>
+    | ClientEvaluationFailed
 
 /// <summary>
 /// Why a quotation cannot be translated into a query, with the part of the quotation that is the reason.
@@ -70,6 +76,8 @@ type TranslationError = {
     Location : SourceRange voption
     /// What to write instead, in English; empty when there is no general advice.
     Hints : ImmutableArray<string>
+    /// The exception that code of the quotation raised, when that is the reason.
+    Cause : exn voption
 }
 
 /// <summary>
@@ -140,7 +148,20 @@ module internal TranslationError =
         Fragment = string fragment
         Location = SourceRange.tryOfQuotation fragment
         Hints = hints
+        Cause = ValueNone
     }
+
+    /// <summary>
+    /// The error with <paramref name="code"/>, <paramref name="message"/> and <paramref name="hints"/> about
+    /// <paramref name="fragment"/> that the exception <paramref name="cause"/> is the reason of.
+    /// </summary>
+    let ofException
+        (code : TranslationErrorCode)
+        (message : string)
+        (hints : ImmutableArray<string>)
+        (cause : exn)
+        (fragment : Expr)
+        : TranslationError = { ofQuotation code message hints fragment with Cause = ValueSome cause }
 
     /// <summary>
     /// The error with <paramref name="code"/> and <paramref name="message"/> about a quotation as a whole: it names no
@@ -152,4 +173,5 @@ module internal TranslationError =
         Fragment = ""
         Location = ValueNone
         Hints = ImmutableArray.Empty
+        Cause = ValueNone
     }

@@ -23,6 +23,7 @@
     <Compile Include="InternalsVisibleTo.fs" />
     <Compile Include="TranslationError.fs" />
     <Compile Include="Normalizer.fs" />
+    <Compile Include="Evaluator.fs" />
   </ItemGroup>
 
   <ItemGroup>
