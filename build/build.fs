@@ -182,9 +182,9 @@ module FSharpAnalyzers =
             member s.Usage = ""
 
 
-let quoted s = $"\"%s{s}\""
-
 module DocsTool =
+    let quoted s = $"\"%s{s}\""
+
     let fsDocsDotnetOptions (o : DotNet.Options) = { o with WorkingDirectory = rootDirectory }
 
     let fsDocsBuildParams configuration (p : Fsdocs.BuildCommandParams) = {
@@ -357,26 +357,26 @@ let dotnetTest ctx =
     // Create test results directory if it doesn't exist
     Directory.create testResultsDir
 
-    let dotnetConfiguration = configuration (ctx.Context.AllExecutingTargets) |> string
-
-    let args = [
-        "--no-build"
-        "--configuration"
-        dotnetConfiguration
-        if enableCodeCoverage then
-            "--coverage"
-            "--coverage-output-format"
-            "cobertura"
-            "--results-directory"
-            quoted testResultsDir
-    ]
+    let dotnetConfiguration = configuration (ctx.Context.AllExecutingTargets)
 
     !!testsGlob
     |> Seq.iter (fun testProject ->
-        [ "--project"; quoted testProject; yield! args ]
-        |> String.concat " "
-        |> DotNet.exec id "test"
-        |> failOnBadExitAndPrint
+        DotNet.testMTP
+            (fun options -> {
+                options with
+                    NoBuild = true
+                    Configuration = Some dotnetConfiguration
+                    ResultsDirectory = if enableCodeCoverage then Some testResultsDir else None
+                    CodeCoverage =
+                        if enableCodeCoverage then
+                            Some {
+                                DotNet.MTPCodeCoverageOptions.Create () with
+                                    OutputFormat = Some DotNet.MTPCoverageFormat.Cobertura
+                            }
+                        else
+                            None
+            })
+            (DotNet.MTPTestTarget.Project testProject)
     )
 
 let generateCoverageReport _ =
