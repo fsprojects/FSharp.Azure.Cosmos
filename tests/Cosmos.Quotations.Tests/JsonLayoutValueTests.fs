@@ -22,134 +22,6 @@ open FSharp.Azure.Cosmos.Tests
 [<TestClass; JsonLayoutUnitTestCategory>]
 type JsonLayoutValueTests () =
 
-    /// The type arguments of the first of the generic types that a type is or implements.
-    static let argumentsOf (definitions : Type seq) (valueType : Type) : Type array voption =
-        seq {
-            valueType
-            yield! valueType.GetInterfaces ()
-        }
-        |> Seq.tryPick (fun candidate ->
-            if
-                candidate.IsGenericType
-                && definitions
-                   |> Seq.exists (fun definition -> Type.(=) (candidate.GetGenericTypeDefinition (), definition))
-            then
-                ValueSome (candidate.GetGenericArguments ())
-            else
-                ValueNone
-        )
-
-    /// The types of the keys and values of a map or a dictionary; no value for any other type.
-    static let keyAndValueOf (valueType : Type) : struct (Type * Type) voption =
-        argumentsOf
-            (seq {
-                typedefof<Map<_, _>>
-                typedefof<IDictionary<_, _>>
-                typedefof<IReadOnlyDictionary<_, _>>
-            })
-            valueType
-        |> ValueOption.map (fun arguments -> struct (arguments[0], arguments[1]))
-
-    /// The type of the items of a collection; no value for a text and for a type that is no collection.
-    static let elementOf (valueType : Type) : Type voption =
-        if Type.(=) (valueType, typeof<string>) then
-            ValueNone
-        else
-            argumentsOf (Seq.singleton typedefof<IEnumerable<_>>) valueType
-            |> ValueOption.map (fun arguments -> arguments[0])
-
-    /// Whether a type is an enumeration or a nullable of one.
-    static let isEnumeration (valueType : Type) : bool =
-        match Nullable.GetUnderlyingType valueType with
-        | null -> valueType.IsEnum
-        | underlying -> underlying.IsEnum
-
-    /// The names that the layout has for the members of a type, in the order of the names.
-    static let namesOf (layout : IJsonLayout) (holderType : Type) : string array =
-        seq {
-            for dataMember in ModelMembers.ofType holderType do
-                match layout.MemberName { Holder = holderType; Member = dataMember } with
-                | ValueSome name -> name
-                | ValueNone -> ()
-        }
-        |> Seq.sort
-        |> Seq.toArray
-
-    /// The names of the properties of a JSON object, in the order of the names.
-    static let propertiesOf (written : JsonElement) : string array =
-        written.EnumerateObject ()
-        |> Seq.map _.Name
-        |> Seq.sort
-        |> Seq.toArray
-
-    /// <summary>
-    /// Where what the layout says of a value differs from what the serializer wrote for it, as texts for a failure
-    /// message. The kind of the written JSON value says what the layout should say: a number or a string for an
-    /// enumeration, an array or an object for a tuple, an array for a collection, an object or an array for a map.
-    /// A value that was not written has no kind, and the layout should not describe it.
-    /// </summary>
-    static let disagreementsAbout
-        (layout : IJsonLayout)
-        (named : string)
-        (memberOfDocument : DocumentMember voption)
-        (valueType : Type)
-        (written : JsonElement)
-        : string seq = seq {
-        if isEnumeration valueType then
-            let expected =
-                match written.ValueKind with
-                | JsonValueKind.Number -> EnumEncoding.Number
-                | JsonValueKind.String -> EnumEncoding.String
-                | _ -> EnumEncoding.NotDescribed
-
-            let said = layout.EnumEncoding (memberOfDocument, valueType)
-
-            if said <> expected then
-                $"%s{named}: the layout says %A{said} of the enumeration, the document %A{expected}"
-        elif FSharpType.IsTuple valueType then
-            let expected =
-                match written.ValueKind with
-                | JsonValueKind.Array -> TupleEncoding.Array
-                | JsonValueKind.Object -> TupleEncoding.Object
-                | _ -> TupleEncoding.NotDescribed
-
-            let said = layout.TupleEncoding (memberOfDocument, valueType)
-
-            if said <> expected then
-                $"%s{named}: the layout says %A{said} of the tuple, the document %A{expected}"
-            elif expected.IsObject then
-                // The properties of the object are the members of the tuple that the layout names.
-                let writtenNames = propertiesOf written
-                let saidNames = namesOf layout valueType
-
-                if saidNames <> writtenNames then
-                    $"%s{named}: the layout names the items of the tuple %A{saidNames}, the document %A{writtenNames}"
-        else
-            match keyAndValueOf valueType, elementOf valueType with
-            | ValueSome (struct (key, value)), _ ->
-                let expected =
-                    match written.ValueKind with
-                    | JsonValueKind.Object -> MapEncoding.Object (key, value)
-                    | JsonValueKind.Array -> MapEncoding.ArrayOfPairs (key, value)
-                    | _ -> MapEncoding.NotDescribed
-
-                let said = layout.MapEncoding (memberOfDocument, valueType)
-
-                if said <> expected then
-                    $"%s{named}: the layout says %A{said} of the map, the document %A{expected}"
-            | ValueNone, ValueSome element ->
-                let expected =
-                    match written.ValueKind with
-                    | JsonValueKind.Array -> CollectionEncoding.Array element
-                    | _ -> CollectionEncoding.NotDescribed
-
-                let said = layout.CollectionEncoding (memberOfDocument, valueType)
-
-                if said <> expected then
-                    $"%s{named}: the layout says %A{said} of the collection, the document %A{expected}"
-            | ValueNone, ValueNone -> ()
-    }
-
     /// <summary>
     /// Everything the layout says about the members of a sample that the document of the sample does not confirm;
     /// empty when the layout is right.
@@ -162,8 +34,8 @@ type JsonLayoutValueTests () =
 
         seq {
             // Without this a layout that names no member would have nothing to disagree about.
-            let saidNames = namesOf layout holderType
-            let writtenNames = propertiesOf document
+            let saidNames = WrittenValues.namesOf layout holderType
+            let writtenNames = WrittenValues.propertiesOf document
 
             if saidNames <> writtenNames then
                 $"The layout names the members %A{saidNames}, the document %A{writtenNames}"
@@ -182,7 +54,7 @@ type JsonLayoutValueTests () =
                         | false, _ -> JsonElement ()
                     | ValueNone -> JsonElement ()
 
-                yield! disagreementsAbout layout dataMember.Name (ValueSome memberOfDocument) memberType written
+                yield! WrittenValues.disagreementsAbout layout dataMember.Name (ValueSome memberOfDocument) memberType written
 
                 // The value under an option or a nullable is asked about as well, where the member is written as that
                 // value: the serializer writes the same for the member as for the value alone.
@@ -195,7 +67,7 @@ type JsonLayoutValueTests () =
                         && written.GetRawText () = alone.GetRawText ()
                     then
                         yield!
-                            disagreementsAbout
+                            WrittenValues.disagreementsAbout
                                 layout
                                 $"what %s{dataMember.Name} holds"
                                 (ValueSome memberOfDocument)
@@ -273,7 +145,7 @@ type JsonLayoutValueTests () =
             seq {
                 for struct (name, value, valueType) in StoredValueSamples.alone do
                     let written = JsonSerializer.SerializeToElement (value, valueType, options)
-                    yield! disagreementsAbout layout name ValueNone valueType written
+                    yield! WrittenValues.disagreementsAbout layout name ValueNone valueType written
             }
             |> Seq.toArray
 
