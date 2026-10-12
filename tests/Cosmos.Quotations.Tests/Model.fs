@@ -120,6 +120,21 @@ type Folder = {
         | Some parent -> parent.Depth + 1
         | None -> 0
 
+/// A function as a class that code declares; the class of every compiled function is made of the same type.
+type TagTest (wanted : string) =
+    inherit FSharpFunc<string, bool> ()
+
+    /// <inheritdoc />
+    override _.Invoke (tag : string) : bool = tag = wanted
+
+/// A union with a case that is represented by null, as the None of an option is.
+[<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
+type Rank =
+    /// The case that is null.
+    | Unranked
+    /// A case with a value.
+    | Ranked of int
+
 /// A pass for values that counts them: a test tells by it how often a part of a quotation was computed.
 type Meter () =
 
