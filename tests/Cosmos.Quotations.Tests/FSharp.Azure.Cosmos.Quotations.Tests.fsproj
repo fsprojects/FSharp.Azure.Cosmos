@@ -35,6 +35,8 @@
     <Compile Include="EvaluatorTests.fs" />
     <Compile Include="ParameterizerShapeTests.fs" />
     <Compile Include="ParameterizerTests.fs" />
+    <Compile Include="StoredModel.fs" />
+    <Compile Include="JsonLayoutTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
