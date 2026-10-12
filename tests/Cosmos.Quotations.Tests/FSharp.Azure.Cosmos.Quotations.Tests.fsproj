@@ -38,8 +38,10 @@
     <Compile Include="ModelMembers.fs" />
     <Compile Include="StoredModel.fs" />
     <Compile Include="StoredValues.fs" />
+    <Compile Include="StoredUnions.fs" />
     <Compile Include="JsonLayoutTests.fs" />
     <Compile Include="JsonLayoutValueTests.fs" />
+    <Compile Include="JsonLayoutUnionTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

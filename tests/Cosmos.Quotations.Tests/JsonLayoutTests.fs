@@ -246,6 +246,140 @@ module SerializerProfiles =
         }
         |> ImmutableArray.CreateRange
 
+    /// FSharp.SystemTextJson with one of its encodings of unions.
+    let private encoded (way : string) (encoding : JsonUnionEncoding) : SerializerProfile =
+        fsharp $"FSharp.SystemTextJson that writes a union %s{way}" _.WithUnionEncoding(encoding) ignore
+
+    /// <summary>
+    /// The ways to set FSharp.SystemTextJson up that write a union differently: every place for the tag with every
+    /// way to write the fields, and what else the library reads when it writes a union. The tests of unions write
+    /// their model with these and with <see cref="P:FSharp.Azure.Cosmos.Quotations.Tests.SerializerProfiles.all"/>.
+    /// </summary>
+    let unions =
+        seq {
+            encoded "with the tag next to the fields" JsonUnionEncoding.AdjacentTag
+            encoded
+                "with the tag next to the fields, which have names"
+                (JsonUnionEncoding.AdjacentTag
+                 ||| JsonUnionEncoding.NamedFields)
+            encoded
+                "with the tag next to the fields, and one field in place of the fields"
+                (JsonUnionEncoding.AdjacentTag
+                 ||| JsonUnionEncoding.UnwrapSingleFieldCases)
+            encoded
+                "with the tag next to the fields, and a case without fields as its tag"
+                (JsonUnionEncoding.AdjacentTag
+                 ||| JsonUnionEncoding.UnwrapFieldlessTags)
+            encoded
+                "with the tag next to the fields, and the members of a record in place of the fields"
+                (JsonUnionEncoding.AdjacentTag
+                 ||| JsonUnionEncoding.UnwrapRecordCases)
+            encoded
+                "with the tag next to the fields, which have the names of their types"
+                (JsonUnionEncoding.AdjacentTag
+                 ||| JsonUnionEncoding.NamedFields
+                 ||| JsonUnionEncoding.UnionFieldNamesFromTypes)
+            encoded "with the tag as the name of the fields" JsonUnionEncoding.ExternalTag
+            encoded
+                "with the tag as the name of the fields, which have names"
+                (JsonUnionEncoding.ExternalTag
+                 ||| JsonUnionEncoding.NamedFields)
+            encoded
+                "with the tag as the name of the fields, and one field in place of the fields"
+                (JsonUnionEncoding.ExternalTag
+                 ||| JsonUnionEncoding.UnwrapSingleFieldCases)
+            encoded
+                "with the tag as the name of the fields, and a case without fields as its tag"
+                (JsonUnionEncoding.ExternalTag
+                 ||| JsonUnionEncoding.UnwrapFieldlessTags)
+            encoded
+                "with the tag as the name of the fields, and the members of a record in place of the fields"
+                (JsonUnionEncoding.ExternalTag
+                 ||| JsonUnionEncoding.UnwrapRecordCases)
+            encoded "with the tag before the fields" JsonUnionEncoding.InternalTag
+            encoded
+                "with the tag among the fields, which have names"
+                (JsonUnionEncoding.InternalTag
+                 ||| JsonUnionEncoding.NamedFields)
+            encoded
+                "with the tag among the members of a record"
+                (JsonUnionEncoding.InternalTag
+                 ||| JsonUnionEncoding.UnwrapRecordCases)
+            encoded "without a tag" JsonUnionEncoding.Untagged
+            encoded
+                "without a tag, and the members of a record in place of the fields"
+                (JsonUnionEncoding.Untagged
+                 ||| JsonUnionEncoding.UnwrapRecordCases)
+            encoded "as Thoth does" JsonUnionEncoding.ThothLike
+            encoded "as FSharpLu does" JsonUnionEncoding.FSharpLuLike
+            fsharp
+                "FSharp.SystemTextJson with names of its own for the tag and the fields of a union"
+                _.WithUnionTagName("kind").WithUnionFieldsName("data").WithUnionNamedFields()
+                ignore
+            fsharp
+                "FSharp.SystemTextJson with a naming policy for the tags of a union"
+                _.WithUnionTagNamingPolicy(JsonNamingPolicy.SnakeCaseUpper).WithUnionUnwrapFieldlessTags()
+                ignore
+            fsharp
+                "FSharp.SystemTextJson with a naming policy for the tags of a union that are names of properties"
+                _.WithUnionExternalTag().WithUnionTagNamingPolicy(JsonNamingPolicy.CamelCase)
+                ignore
+            fsharp
+                "FSharp.SystemTextJson with a naming policy for the fields of a union"
+                _.WithUnionNamedFields().WithUnionFieldNamingPolicy(JsonNamingPolicy.SnakeCaseUpper)
+                (fun options -> options.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase)
+            fsharp
+                "FSharp.SystemTextJson with named fields of a union and camel case names"
+                _.WithUnionNamedFields()
+                (fun options -> options.PropertyNamingPolicy <- JsonNamingPolicy.CamelCase)
+            fsharp
+                "FSharp.SystemTextJson with other options for some union types"
+                (fun converterOptions ->
+                    converterOptions.WithOverrides (fun common ->
+                        let overrides = Dictionary<Type, JsonFSharpOptions>()
+
+                        overrides.Add (
+                            typeof<StoredShape>,
+                            common.WithUnionInternalTag().WithUnionNamedFields().WithUnionTagName "shape"
+                        )
+
+                        // For every type that is made of the generic union, but for the one that has options itself.
+                        overrides.Add (typedefof<StoredOutcome<_>>, common.WithUnionExternalTag ())
+                        overrides.Add (typeof<StoredOutcome<string>>, common.WithUnionUntagged ())
+                        overrides :> IDictionary<Type, JsonFSharpOptions>
+                    )
+                )
+                ignore
+            fsharp
+                "FSharp.SystemTextJson with options for a union type that inherit the encoding"
+                (fun converterOptions ->
+                    converterOptions
+                        .WithUnionExternalTag()
+                        .WithOverrides(fun _ ->
+                            let overrides = Dictionary<Type, JsonFSharpOptions>()
+
+                            // The options say that they inherit the encoding, so the tag is where the common options
+                            // have it, and the name that they give the tag is not used.
+                            overrides.Add (
+                                typeof<StoredShape>,
+                                JsonFSharpOptions.InheritUnionEncoding().WithUnionTagName "shape"
+                            )
+
+                            overrides :> IDictionary<Type, JsonFSharpOptions>
+                        )
+                )
+                ignore
+            fsharp
+                "FSharp.SystemTextJson that lets an attribute give the options of a type and has another encoding of unions"
+                _.WithAllowOverride().WithUnionInternalTag().WithUnionNamedFields()
+                ignore
+            fsharp
+                "FSharp.SystemTextJson without its converters of unions"
+                _.WithTypes(JsonFSharpTypes.All &&& ~~~JsonFSharpTypes.Unions)
+                ignore
+        }
+        |> ImmutableArray.CreateRange
+
 /// <summary>
 /// <see cref="T:FSharp.Azure.Cosmos.Quotations.IJsonLayout"/> of
 /// <see cref="M:FSharp.Azure.Cosmos.Quotations.JsonLayout.ofSerializerOptions(System.Text.Json.JsonSerializerOptions)"/>:
