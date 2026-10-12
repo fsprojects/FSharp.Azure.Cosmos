@@ -377,6 +377,20 @@ module SerializerProfiles =
                 "FSharp.SystemTextJson without its converters of unions"
                 _.WithTypes(JsonFSharpTypes.All &&& ~~~JsonFSharpTypes.Unions)
                 ignore
+
+            // What becomes of a field of a case that has a name and no value
+            fsharp
+                "FSharp.SystemTextJson that names the fields of a union and ignores null"
+                _.WithUnionNamedFields()
+                (fun options -> options.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull)
+            fsharp
+                "FSharp.SystemTextJson that names the fields of a union and always skips an option without a value"
+                _.WithUnionNamedFields().WithSkippableOptionFields(SkippableOptionFields.Always)
+                ignore
+            fsharp
+                "FSharp.SystemTextJson that writes a union without a tag and ignores null"
+                _.WithUnionUntagged()
+                (fun options -> options.DefaultIgnoreCondition <- JsonIgnoreCondition.WhenWritingNull)
         }
         |> ImmutableArray.CreateRange
 
@@ -1533,30 +1547,6 @@ type JsonLayoutTests () =
             ValueSome "Marks",
             layout.MemberName (propertyOf typeof<StoredPerson> "Marks"),
             "A member without a converter of its own is written by the contract of the resolver."
-        )
-
-    [<TestMethod>]
-    member _.``A member of a union must not be described`` () =
-        let options = SerializerProfiles.fsharpSystemTextJson.Create ()
-        let layout = JsonLayout.ofSerializerOptions options
-        let tag = propertyOf typeof<StoredMark> "Tag"
-
-        Assert.AreEqual<string>(
-            "{\"Case\":\"Marked\",\"Fields\":[3]}",
-            JsonSerializer.Serialize (Marked 3, options),
-            "FSharp.SystemTextJson should write the union in its own way, or the test checks nothing."
-        )
-
-        Assert.AreEqual<string voption>(
-            ValueNone,
-            layout.MemberName tag,
-            "The converter among the options takes a union as it takes a record, and writes it with another converter, which the layout does not describe."
-        )
-
-        Assert.AreEqual<OptionalEncoding>(
-            OptionalEncoding.NotDescribed,
-            layout.OptionalEncoding (ValueSome tag, typeof<int>),
-            "So nothing is known about a member of the union without a value."
         )
 
     [<TestMethod>]
