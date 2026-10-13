@@ -25,18 +25,6 @@ jobs:
           dotnet-version: |
             10.x
 
-      - name: Install Azure Cosmos DB Emulator (Windows)
-        id: install_cosmos_windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: ./.github/scripts/windows/install-cosmos-emulator.ps1
-        continue-on-error: true
-
-      - name: Start Azure Cosmos DB Emulator (Windows)
-        if: runner.os == 'Windows' && steps.install_cosmos_windows.outputs.installed == 'true'
-        shell: pwsh
-        run: ./.github/scripts/windows/start-cosmos-emulator.ps1
-
       - name: Start Azure Cosmos DB Emulator container
         if: runner.os == 'Linux'
         run: bash ./.github/scripts/linux/start-cosmos-emulator.sh
