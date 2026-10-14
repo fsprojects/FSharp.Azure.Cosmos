@@ -354,31 +354,45 @@ let fsharpAnalyzers _ =
         dotnet.fsharpAnalyzer id args
     )
 
-let dotnetTest ctx =
-    // Create test results directory if it doesn't exist
-    Directory.create testResultsDir
-
+/// <summary>
+/// Runs <c>dotnet test</c> with the Microsoft.Testing.Platform runner for every test application, without building, in
+/// the configuration of the executing targets and with the options that <paramref name="configure"/> changes.
+/// </summary>
+let dotnetTestApplications ctx (configure : DotNet.MTPTestOptions -> DotNet.MTPTestOptions) =
     let dotnetConfiguration = configuration (ctx.Context.AllExecutingTargets)
 
     !!testsGlob
     |> Seq.iter (fun testProject ->
         DotNet.testMTP
-            (fun options -> {
-                options with
-                    NoBuild = true
-                    Configuration = Some dotnetConfiguration
-                    ResultsDirectory = if enableCodeCoverage then Some testResultsDir else None
-                    CodeCoverage =
-                        if enableCodeCoverage then
-                            Some {
-                                DotNet.MTPCodeCoverageOptions.Create () with
-                                    OutputFormat = Some DotNet.MTPCoverageFormat.Cobertura
-                            }
-                        else
-                            None
-            })
+            (fun options -> configure { options with NoBuild = true; Configuration = Some dotnetConfiguration })
             (DotNet.MTPTestTarget.Project testProject)
     )
+
+let dotnetTest ctx =
+    // Create test results directory if it doesn't exist
+    Directory.create testResultsDir
+
+    dotnetTestApplications
+        ctx
+        (fun options -> {
+            options with
+                ResultsDirectory = if enableCodeCoverage then Some testResultsDir else None
+                CodeCoverage =
+                    if enableCodeCoverage then
+                        Some {
+                            DotNet.MTPCodeCoverageOptions.Create () with
+                                OutputFormat = Some DotNet.MTPCoverageFormat.Cobertura
+                        }
+                    else
+                        None
+        })
+
+/// <summary>
+/// Lists the tests of every test application without running them. MSTest 4 fails the discovery of a whole assembly
+/// when one test method has a signature that it cannot run, such as a property method that returns a value, and the F#
+/// build gives no warning for it; listing reports that before the run, which needs the emulator, starts.
+/// </summary>
+let dotnetListTests ctx = dotnetTestApplications ctx (fun options -> { options with ListTests = true })
 
 let generateCoverageReport _ =
 
@@ -393,8 +407,8 @@ let generateCoverageReport _ =
         sprintf "-targetdir:\"%s\"" coverageReportDir
         // Add source dir
         sprintf "-sourcedirs:\"%s\"" sourceDirs
-        // Ignore test assemblies and the helper libraries they share
-        sprintf "-assemblyfilters:\"%s\"" "-*.Tests;-*.Tests.Infrastructure"
+        // Ignore test assemblies, the helper libraries they share and the Hedgehog packages that property tests load
+        sprintf "-assemblyfilters:\"%s\"" "-*.Tests;-*.Tests.Infrastructure;-Hedgehog;-Hedgehog.MSTest"
         // Generate HTML and Cobertura reports
         sprintf "-reporttypes:%s" "Html;Cobertura"
     ]
@@ -640,6 +654,7 @@ let initTargets (ctx : Context.FakeExecutionContext) =
     Target.createFinal "DeleteChangelogBackupFile" deleteChangelogBackupFile // Do NOT put this in the dependency chain
     Target.create "DotnetBuild" dotnetBuild
     Target.create "FSharpAnalyzers" fsharpAnalyzers
+    Target.create "DotnetListTests" dotnetListTests
     Target.create "DotnetTest" dotnetTest
     Target.create "GenerateCoverageReport" generateCoverageReport
     Target.create "ShowCoverageReport" showCoverageReport
@@ -701,6 +716,7 @@ let initTargets (ctx : Context.FakeExecutionContext) =
 
     "DotnetRestore" =?> ("CheckFormatCode", isCI.Value)
     ==> "DotnetBuild"
+    ==> "DotnetListTests"
     ==> "DotnetTest"
     ==> "DotnetPack"
     ==> "PublishToNuGet"
@@ -711,6 +727,7 @@ let initTargets (ctx : Context.FakeExecutionContext) =
     =?> ("CheckFormatCode", isCI.Value)
     =?> ("GenerateAssemblyInfo", isPublishToGitHub)
     ==> "DotnetBuild"
+    ==> "DotnetListTests"
     ==> "DotnetTest"
     ==> "DotnetPack"
     ==>! "PublishToGitHub"
