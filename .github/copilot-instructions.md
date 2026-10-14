@@ -12,6 +12,18 @@
 
 ```text
 /
+├── src/Cosmos.Sql/      – Cosmos DB SQL model (FSharp.Azure.Cosmos.Sql)
+│   ├── EquatableArray.fs – immutable array with structural equality
+│   ├── ImmutableArrayPatterns.fs – active patterns that match an `ImmutableArray` by its length
+│   ├── Syntax.fs        – syntax tree of the query language
+│   ├── Keywords.fs      – reserved words and the identifier rule
+│   ├── FunctionSpec.fs  – specification of a built-in function
+│   ├── CatalogData.fs   – one row per built-in function
+│   ├── Catalog.fs       – lookup of built-in functions
+│   ├── ValidationError.fs – validation errors and options
+│   ├── Inline.fs        – replacement of parameters by literals
+│   ├── Printer.fs       – printer of the query text
+│   └── Validator.fs     – rules of the query language that the grammar cannot express
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
@@ -28,6 +40,10 @@
 ├── src/Shared/          – source files that every F# project under src and tests compiles
 │   └── ValueCollections.fs – `Seq`, `List` and `Array` functions that return `voption` and struct tuples
 ├── tests/Cosmos.Tests/  – MSTest integration test project
+├── tests/Cosmos.Sql.Tests/ – MSTest unit tests of FSharp.Azure.Cosmos.Sql, no emulator needed
+├── tests/Cosmos.Sql.Hedgehog/ – Hedgehog generators that the tests share: helpers (`Sample`, `Gen`, `CollectionGen`, `TextGen`) and the SQL syntax tree (`SqlGenerators`, `SqlAutoGenConfig`)
+├── tests/Cosmos.Sql.Grammar/ – the SDK's parser of Cosmos DB SQL as a test oracle: `SdkGrammar.parse` reads query text into the syntax tree
+├── tests/Cosmos.Sql.Grammar.Generated/ – C#: the SDK's grammar `sql.g4` and the parser ANTLR generated from it, copied unchanged
 ├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
 ├── build/               – FAKE build scripts
 └── docsSrc/             – FSharp.Formatting documentation source
@@ -40,6 +56,7 @@
 * [`FSharp.Control.Reactive`](https://github.com/fsprojects/FSharp.Reactive) – Rx extensions for F#
 * [`FsToolkit.ErrorHandling`](https://github.com/demystifyfp/FsToolkit.ErrorHandling) – `taskResult`, `Result`, `voption` CEs
 * [`Unquote`](https://github.com/SwensenSoftware/unquote) – test assertions
+* [`Hedgehog`](https://github.com/hedgehogqa/fsharp-hedgehog) and [`Hedgehog.MSTest`](https://www.nuget.org/packages/Hedgehog.MSTest) – property-based testing, with `[<Property>]` test methods
 * [`MSTest`](https://github.com/microsoft/testfx) – test framework
 
 Use GitHub MCP tools for code search in these repositories when needed.
@@ -239,6 +256,10 @@ module MyTypeExtensions =
 * `COSMOS_TEST_LEFTOVER_AGE_MINUTES` is how many minutes a `fsac-test-` database must stay unmodified before the leftover sweep of `[<AssemblyInitialize>]` and `[<AssemblyCleanup>]` deletes it (default `60`), so that the live databases of another test process on the same emulator are kept; `0` deletes every test database and is safe only while no other test process uses the emulator.
 * `COSMOS_REWRITE_BASELINES` set to `1` or `true` makes a test that compares SQL with its golden baseline (`Baseline.assertMatches`, files under `Baselines/<suite>/` of the test project) write what it produced into the baseline instead of comparing; the test then reports itself inconclusive, the rewritten files are reviewed in the diff, and CI refuses to rewrite.
 * Every test project under `tests/` references `tests/Cosmos.Tests.Infrastructure` through `tests/Directory.Build.props`; a new test project gets it without a `ProjectReference` of its own.
+* Property tests are methods of `[<TestClass>]` types marked `[<Property>]` (from `Hedgehog.MSTest`), whose parameters Hedgehog generates; never call `Property.check` inside a `[<TestMethod>]`. A property is an instance method that returns `unit`, `Task` or `ValueTask` and fails by throwing: MSTest 4 rejects static methods and other return types, and one such method fails the discovery of the whole assembly, which `--list-tests` shows before a run. MSTest creates the test class and runs `[<TestInitialize>]` and `[<TestCleanup>]` for every generated case and every shrink step. A failed property reports a `[<Recheck("…")>]` to add next to its `Property` attribute, which then replays the counterexample. Hedgehog 2.0.4 cannot generate `DateOnly` and `TimeOnly`: the generators of [hedgehogqa/fsharp-hedgehog#488](https://github.com/hedgehogqa/fsharp-hedgehog/pull/488) are merged and not released, so a parameter of either type, or of a type that holds one, needs a generator from a `GenAttribute` or an `AutoGenConfig`.
+* Generators are in `tests/Cosmos.Sql.Hedgehog`, namespace `FSharp.Azure.Cosmos.Tests.Models`. `Sample` draws values outside of a property; data that a failure must be able to replay comes from `Sample.singleWith` and `Sample.multipleWith`, which take a seed. `Gen` and `CollectionGen` generate optional values and collections; a function with the suffix `Balanced` gives the absent value or the empty collection in one draw of two at every size, the others make it rarer as the size grows. A generator file opens `Hedgehog` and `Hedgehog.FSharp`, never `Hedgehog.Linq`, and names a parameter that holds a generator `source` or `element`, never `gen`, which hides the `gen { }` builder. A generator makes valid values by construction: no `Gen.filter`, no `Gen.sample` inside it, no clock and no current culture.
+* A property over the SQL syntax tree names `SqlAutoGenConfig` on its class or method (`[<Properties(typeof<SqlAutoGenConfig>)>]`): every `SqlQuery` and `ScalarExpression` parameter is then a tree that `SqlQuery.validate` accepts. A parameter that needs another generator of `SqlGenerators` – any tree, valid or not (`arbitrarySqlQueryGen`), a constant that JSON can carry (`constantGen`) – takes it through an attribute derived from `GenAttribute<'T>`, declared in the test file. A law never asks the code it checks for the expected answer: the printer laws find the parameters of a tree with a traversal of their own.
+* `SdkGrammar.parse` (`tests/Cosmos.Sql.Grammar`) reads query text with the parser the SDK runs and gives the `SqlQuery` it means, or the first syntax error. Use it to check that a text is a query the SDK reads, and that it reads it as the tree the text was written from. The generated parser is in `tests/Cosmos.Sql.Grammar.Generated`; only `tests/Cosmos.Sql.Grammar` names its types `sqlParser` and `sqlLexer`, and that project must never reference `Microsoft.Azure.Cosmos`: the SDK assembly has internal types of the same names, and F# then resolves the names to those. Three distinctions of a tree are not in its text, so a valid generated tree has them the way the parser reads them: a chain of joins is left-deep, a number without a fraction is an integer literal, and under `PropertyStyle.DotWhenSafe` a string step of an input path is written like an identifier step.
 * `CollectionAssert` cannot work with F# lists – use F# array syntax (`[| ... |]`) instead.
 * `StringAssert` has overloads with `StringComparison`.
 * Use `Assert.Contains` instead of `Assert.IsTrue (str.Contains ..., "message")`, and do not put the actual value into the message.

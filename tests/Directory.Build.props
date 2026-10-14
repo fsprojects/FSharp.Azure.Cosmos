@@ -6,10 +6,15 @@
     </PropertyGroup>
 
     <!--
-      Every test project shares the test infrastructure (fixtures, emulator budget, assertion helpers); the
-      infrastructure project itself is excluded, because a project cannot reference itself.
+      Every test project shares the test infrastructure (fixtures, emulator budget, assertion helpers). Excluded are
+      the infrastructure project itself, because a project cannot reference itself; the generator library, which only
+      generates values and never touches a database; and the two grammar projects, which read query text with the SDK's
+      generated parser and must not reference the SDK.
     -->
-    <ItemGroup Condition="'$(MSBuildProjectName)' != 'FSharp.Azure.Cosmos.Tests.Infrastructure'">
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'FSharp.Azure.Cosmos.Tests.Infrastructure'
+                          AND '$(MSBuildProjectName)' != 'FSharp.Azure.Cosmos.Sql.Grammar'
+                          AND '$(MSBuildProjectName)' != 'FSharp.Azure.Cosmos.Sql.Grammar.Generated'
+                          AND '$(MSBuildProjectName)' != 'FSharp.Azure.Cosmos.Sql.Hedgehog'">
         <ProjectReference Include="$(MSBuildThisFileDirectory)Cosmos.Tests.Infrastructure/FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj" />
     </ItemGroup>
 </Project>
