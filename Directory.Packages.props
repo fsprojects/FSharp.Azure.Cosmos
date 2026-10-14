@@ -8,6 +8,7 @@
     <PackageVersion Include="FSharp.Control.Reactive" Version="6.1.2" />
     <PackageVersion Include="FSharp.Control.TaskSeq" Version="1.0.0" />
     <PackageVersion Include="FSharp.Core" Version="10.0.100" />
+    <PackageVersion Include="FSharp.SystemTextJson" Version="1.4.36" />
     <PackageVersion Include="FsToolkit.ErrorHandling" Version="5.0.0" />
     <PackageVersion Include="IcedTasks" Version="0.11.10-beta001" />
   </ItemGroup>
@@ -24,6 +25,8 @@
     <PackageVersion Include="Fake.DotNet.Paket" Version="6.2.0" />
     <PackageVersion Include="Fake.IO.FileSystem" Version="6.2.0" />
     <PackageVersion Include="Fake.Tools.Git" Version="6.2.0" />
+    <PackageVersion Include="Hedgehog" Version="2.0.4" />
+    <PackageVersion Include="Hedgehog.MSTest" Version="1.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
     <PackageVersion Include="MSTest" Version="4.2.3" />

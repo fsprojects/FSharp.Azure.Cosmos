@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Hedgehog generators for the tests: the helper modules that every generator project of this repository shares
+    (Sample, Gen, CollectionGen, TextGen). The generators of the Cosmos DB SQL model join them in this project.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Sql.Hedgehog</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      A library that test projects reference, not a test application: tests/Directory.Build.props marks every project
+      under tests/ as a test project, so this one opts out explicitly. It needs no test framework at all.
+    -->
+    <IsTestProject>false</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Sample.fs" />
+    <Compile Include="Gen.fs" />
+    <Compile Include="CollectionGen.fs" />
+    <Compile Include="TextGen.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only for the generators of Skippable values -->
+    <PackageReference Include="FSharp.SystemTextJson" />
+    <PackageReference Include="Hedgehog" />
+  </ItemGroup>
+
+</Project>
