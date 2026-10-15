@@ -26,6 +26,7 @@
     <Compile Include="TaskSeq.fs" />
     <Compile Include="CosmosResponse.fs" />
     <Compile Include="SubStatusCodes.fs" />
+    <Compile Include="JsonConverters.fs" />
     <Compile Include="Cosmos.fs" />
     <Compile Include="Create.fs" />
     <Compile Include="Upsert.fs" />

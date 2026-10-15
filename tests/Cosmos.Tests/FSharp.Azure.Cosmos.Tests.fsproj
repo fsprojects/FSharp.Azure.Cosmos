@@ -24,6 +24,7 @@
     <Compile Include="ValueCollectionsTests.fs" />
     <Compile Include="CosmosNameTests.fs" />
     <Compile Include="ResponseMessageTests.fs" />
+    <Compile Include="TimeSpanTicksConverterTests.fs" />
     <Compile Include="DatabaseIdentifierTests.fs" />
     <Compile Include="PartitionBudgetTests.fs" />
     <Compile Include="LeftoverSweepTests.fs" />
@@ -38,6 +39,7 @@
     <Compile Include="ReadManyOperationTests.fs" />
     <Compile Include="ReadExtensionsTests.fs" />
     <Compile Include="IterationExtensionsTests.fs" />
+    <Compile Include="TimeSpanTicksConverterIntegrationTests.fs" />
     <Compile Include="BuilderUnitTests.fs" />
   </ItemGroup>
 
