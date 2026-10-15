@@ -81,6 +81,21 @@ type TestInfrastructureUnitTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Unit"; "TestInfrastructure" |] :> IList<string>
 
+/// <summary>
+/// Categorizes an emulator-backed integration test as covering <see cref="FSharp.Azure.Cosmos.TimeSpanTicksConverter"/>.
+/// </summary>
+type TimeSpanTicksConverterTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "TimeSpanTicksConverter" |] :> IList<string>
+
+/// <summary>
+/// Categorizes <see cref="TimeSpanTicksConverterTests"/> as both a fast, emulator-free unit test and coverage for
+/// <see cref="FSharp.Azure.Cosmos.TimeSpanTicksConverter"/>.
+/// </summary>
+type TimeSpanTicksConverterUnitTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Unit"; "TimeSpanTicksConverter" |] :> IList<string>
+
 type UpsertTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Upsert" |] :> IList<string>
