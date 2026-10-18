@@ -45,7 +45,7 @@ The file of a scenario is `tests/<project>/Scenarios/<Name>Scenario.fs`.
 
   ```xml
   <Compile Include="Scenarios\ThreeItemsScenario.fs" />
-  <Compile Include="ThreeItemsTests.fs" />
+  <Compile Include="Extensions\ThreeItemsTests.fs" />
   ```
 
 The scenarios of `tests/Cosmos.Tests/Scenarios/` are examples: `SingleItemScenario.fs` and `MultipleItemsScenario.fs`.
