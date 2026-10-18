@@ -3,23 +3,21 @@ namespace FSharp.Azure.Cosmos.Tests.Integration
 open System.Threading.Tasks
 open FSharp.Control
 open FSharp.Azure.Cosmos.Tests
+open FSharp.Azure.Cosmos.Tests.Integration.MultipleItemsScenario
 open Microsoft.Azure.Cosmos
 open Microsoft.Azure.Cosmos.Linq
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
 [<TestClass; IterationExtensionsTestCategory>]
 type IterationExtensionsIntegrationTests () =
-    inherit OperationTestBase<MultipleItemsScenario> ()
+    inherit OperationTestBase<MultipleItemsScenario.TestApplicationFactory> ()
 
-    override _.CreateApplication context = MultipleItemsScenario (context)
+    override _.CreateApplication context = MultipleItemsScenario.TestApplicationFactory (context)
 
     [<TestMethod>]
     member this.``FeedIterator AsAsyncEnumerable iterates seeded items`` () : Task = task {
         let! container = this.GetContainer ()
-        let firstItem, secondItem =
-            match this.Application.SeededItems with
-            | [ firstItem; secondItem ] -> firstItem, secondItem
-            | seededItems -> failwith $"Expected exactly two seeded items but got {seededItems.Length}."
+        let { FirstSeededItem = firstItem; SecondSeededItem = secondItem } = this.Application.TestData
 
         let query =
             QueryDefinition("SELECT * FROM c WHERE c.partitionKey = @partitionKey").WithParameter("@partitionKey", "integration")
@@ -41,10 +39,7 @@ type IterationExtensionsIntegrationTests () =
     [<TestMethod>]
     member this.``IQueryable AsAsyncEnumerable iterates seeded items`` () : Task = task {
         let! container = this.GetContainer ()
-        let firstItem, secondItem =
-            match this.Application.SeededItems with
-            | [ firstItem; secondItem ] -> firstItem, secondItem
-            | seededItems -> failwith $"Expected exactly two seeded items but got {seededItems.Length}."
+        let { FirstSeededItem = firstItem; SecondSeededItem = secondItem } = this.Application.TestData
 
         let queryable =
             container.GetItemLinqQueryable<TestItem>(

@@ -2,52 +2,23 @@ namespace FSharp.Azure.Cosmos.Tests.Integration
 
 open System
 open System.Net
-open System.Threading
 open System.Threading.Tasks
 open FSharp.Azure.Cosmos
 open FSharp.Azure.Cosmos.Tests
+open FSharp.Azure.Cosmos.Tests.Integration.SingleItemScenario
 open Microsoft.Azure.Cosmos
 open Microsoft.VisualStudio.TestTools.UnitTesting
 
-type SingleItemScenario (testContext : TestContext) as this =
-    inherit DatabaseTestApplicationFactory (testContext)
-
-    let containerId = "operation-tests"
-
-    let seededItem : TestItem = {
-        id = $"{testContext.TestName}-read"
-        partitionKey = "integration"
-        name = "item-read"
-        quantity = 1
-    }
-
-    member _.SeededItem = seededItem
-
-    override _.SeedDataAsync (cancellationToken : CancellationToken) : Task = task {
-        let! container = this.GetOrCreateContainerAsync (containerId, "/partitionKey", cancellationToken)
-
-        let! createResponse =
-            container.ExecuteAsync (
-                create {
-                    item seededItem
-                    partitionKey seededItem.partitionKey
-                },
-                cancellationToken
-            )
-
-        CosmosAssert.IsOk (createResponse.Result, "Read scenario seed create should succeed.")
-    }
-
 [<TestClass; ReadTestCategory>]
 type ReadOperationIntegrationTests () =
-    inherit OperationTestBase<SingleItemScenario> ()
+    inherit OperationTestBase<SingleItemScenario.TestApplicationFactory> ()
 
-    override _.CreateApplication context = SingleItemScenario (context)
+    override _.CreateApplication context = SingleItemScenario.TestApplicationFactory (context)
 
     [<TestMethod>]
     member this.``Read execute returns existing and not found states`` () : Task = task {
         let! container = this.GetContainer ()
-        let testItem = this.Application.SeededItem
+        let { SeededItem = testItem } = this.Application.TestData
 
         let! foundResponse =
             container.ExecuteAsync (
@@ -79,7 +50,7 @@ type ReadOperationIntegrationTests () =
     [<TestMethod>]
     member this.``Read execute returns NotModified when eTag matches current item`` () : Task = task {
         let! container = this.GetContainer ()
-        let testItem = this.Application.SeededItem
+        let { SeededItem = testItem } = this.Application.TestData
 
         let! foundResponse =
             container.ExecuteAsync (
@@ -128,7 +99,7 @@ type ReadOperationIntegrationTests () =
     [<TestMethod>]
     member this.``ExecuteAsyncOption returns Some for existing item and None for missing item`` () : Task = task {
         let! container = this.GetContainer ()
-        let testItem = this.Application.SeededItem
+        let { SeededItem = testItem } = this.Application.TestData
 
         let! foundOption =
             container.ExecuteAsyncOption (
@@ -158,7 +129,7 @@ type ReadOperationIntegrationTests () =
     [<TestMethod>]
     member this.``ExecuteAsyncValueOption returns ValueSome for existing item and ValueNone for missing item`` () : Task = task {
         let! container = this.GetContainer ()
-        let testItem = this.Application.SeededItem
+        let { SeededItem = testItem } = this.Application.TestData
 
         let! foundValueOption =
             container.ExecuteAsyncValueOption (
@@ -191,7 +162,7 @@ type ReadOperationIntegrationTests () =
     [<TestMethod>]
     member this.``FeedIterator FirstAsync returns Ok for matching query and NotFound for empty query`` () : Task = task {
         let! container = this.GetContainer ()
-        let testItem = this.Application.SeededItem
+        let { SeededItem = testItem } = this.Application.TestData
 
         let matchingQuery =
             QueryDefinition("SELECT * FROM c WHERE c.id = @id").WithParameter("@id", testItem.id)

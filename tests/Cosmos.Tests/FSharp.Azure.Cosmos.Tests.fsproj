@@ -29,6 +29,8 @@
     <Compile Include="LeftoverSweepTests.fs" />
     <Compile Include="BaselineTests.fs" />
     <Compile Include="OperationTestInfrastructure.fs" />
+    <Compile Include="Scenarios\SingleItemScenario.fs" />
+    <Compile Include="Scenarios\MultipleItemsScenario.fs" />
     <Compile Include="CreateOperationTests.fs" />
     <Compile Include="ReadOperationTests.fs" />
     <Compile Include="UpsertOperationTests.fs" />
