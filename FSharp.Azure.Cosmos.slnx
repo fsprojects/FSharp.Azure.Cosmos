@@ -10,7 +10,9 @@
     <File Path="README.md" />
   </Folder>
   <Project Path="build/build.fsproj" />
+  <Project Path="src/Cosmos.Quotations/FSharp.Azure.Cosmos.Quotations.fsproj" />
   <Project Path="src/Cosmos/FSharp.Azure.Cosmos.fsproj" />
+  <Project Path="tests/Cosmos.Quotations.Tests/FSharp.Azure.Cosmos.Quotations.Tests.fsproj" />
   <Project Path="tests/Cosmos.Tests.Infrastructure/FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj" />
   <Project Path="tests/Cosmos.Tests/FSharp.Azure.Cosmos.Tests.fsproj" />
 </Solution>
