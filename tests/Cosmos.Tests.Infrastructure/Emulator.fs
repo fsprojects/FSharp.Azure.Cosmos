@@ -213,6 +213,45 @@ let private isReachableAsync (cancellationToken : CancellationToken) : Task<bool
 }
 
 /// <summary>
+/// The emulator that answers at <see cref="endpoint"/>.
+/// </summary>
+[<RequireQualifiedAccess>]
+type Kind =
+    /// The Windows emulator.
+    | Windows
+    /// The Linux vNext preview emulator, which CI and the dev container run.
+    | VNext
+
+/// <summary>
+/// Tells which <see cref="Kind"/> of emulator answers at <see cref="endpoint"/>, for the few query semantics in which
+/// the two differ. The <c>Server</c> header of each answer names the product: <c>PGSQL</c> for the vNext emulator,
+/// whose gateway keeps the data in PostgreSQL, and <c>Microsoft-HTTPAPI</c> (HTTP.sys) for the Windows emulator.
+/// </summary>
+/// <exception cref="InvalidOperationException">The <c>Server</c> header names neither product.</exception>
+let readKindAsync (cancellationToken : CancellationToken) : Task<Kind> = task {
+    use httpClient = new HttpClient (createHttpMessageHandler (), true, Timeout = reachabilityTimeout)
+    // Both emulators send the header with each answer, also with the refusal of a request without authorization
+    use! response = httpClient.GetAsync (endpoint, cancellationToken)
+
+    let namesProduct (name : string) =
+        response.Headers.Server
+        |> Seq.exists (fun server ->
+            match server.Product with
+            | null -> false
+            | product -> String.Equals (product.Name, name, StringComparison.Ordinal)
+        )
+
+    return
+        if namesProduct "PGSQL" then
+            Kind.VNext
+        elif namesProduct "Microsoft-HTTPAPI" then
+            Kind.Windows
+        else
+            invalidOp
+                $"The emulator at {endpoint} answered with the Server header '{response.Headers.Server}', which names neither the vNext emulator (PGSQL) nor the Windows emulator (Microsoft-HTTPAPI)."
+}
+
+/// <summary>
 /// Deletes the databases whose identifier starts with <see cref="DatabaseIdentifier.Prefix"/> and that stayed
 /// unmodified for at least the leftover age (<see cref="readLeftoverAge"/>): databases of tests whose cleanup failed
 /// and of runs that were aborted, which would otherwise keep their containers' partitions.
