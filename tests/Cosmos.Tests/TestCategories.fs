@@ -36,6 +36,10 @@ type IterationExtensionsTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Iteration extensions" |] :> IList<string>
 
+type JsonConverterTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "JSON converter" |] :> IList<string>
+
 type PatchTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Patch" |] :> IList<string>
@@ -70,6 +74,10 @@ type ResponseMessageTestCategoryAttribute () =
 type TestInfrastructureTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Test infrastructure" |] :> IList<string>
+
+type TimeSpanTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "TimeSpan" |] :> IList<string>
 
 type UpsertTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
