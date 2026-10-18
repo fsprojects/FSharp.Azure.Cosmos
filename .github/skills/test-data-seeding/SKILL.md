@@ -85,10 +85,7 @@ type TestData = {
 /// Writes three items into one partition of the container of <see cref="OperationTestBase{T}"/>.
 /// </summary>
 type TestApplicationFactory (testContext : TestContext) =
-    inherit DatabaseTestApplicationFactory (testContext)
-
-    // The container of OperationTestBase
-    let containerId = "operation-tests"
+    inherit OperationTestApplicationFactory (testContext)
 
     let partition = "integration"
 
@@ -106,11 +103,9 @@ type TestApplicationFactory (testContext : TestContext) =
     member val TestData : TestData = { Partition = partition; Items = items }
 
     override this.SeedDataAsync (cancellationToken : CancellationToken) : Task = task {
-        let! container = this.GetOrCreateContainerAsync (containerId, "/partitionKey", cancellationToken)
-
         for seededItem in items do
             let! response =
-                container.ExecuteAsync (
+                this.Container.ExecuteAsync (
                     create {
                         item seededItem
                         partitionKey seededItem.partitionKey
@@ -122,13 +117,16 @@ type TestApplicationFactory (testContext : TestContext) =
     }
 ```
 
-* Make the factory inherit from `DatabaseTestApplicationFactory`.
-* Use `this.GetOrCreateContainerAsync` for each container. The container of `OperationTestBase` is `operation-tests`, with the partition key path `/partitionKey`.
-* If the scenario creates more than one container, override `ContainerCount`. The fixture takes one partition of the emulator for each container.
+* If the scenario writes into the container of `OperationTestBase`, make the factory inherit from `OperationTestApplicationFactory`. Write the items with `this.Container`.
+* Otherwise, make the factory inherit from `DatabaseTestApplicationFactory`. Override `Containers` and return a `ContainerSet` with the containers of the scenario: `ContainerSet.Create (ContainerProperties ("orders", "/customerId"))`. To add a container to the containers of a base class, call `base.Containers.Add other`. Get a container from the database of the fixture: `this.Client.GetContainer (this.DatabaseId, id)`.
+* Do not create a container in `SeedDataAsync`. `InitializeAsync` of the fixture creates the `Containers` before `SeedDataAsync` runs.
+* Declare each container once. A `ContainerSet` throws `ArgumentException` for a second declaration of an identifier. Without it, `CreateContainerIfNotExistsAsync` ignores all settings of the second declaration, except the partition key path.
+* The fixture takes one partition of the emulator for each declared container. Override `ContainerCount` only if a test creates more containers.
 * Write each item with its partition key.
 * Examine the response of each write with `CosmosAssert.IsOk`. Thus a failed seed stops the test with a clear message.
 * Give the cancellation token of `SeedDataAsync` to each call.
-* If a client with other serializer options must write the documents, create the client in `SeedDataAsync` with `use`. Do not keep it in the factory.
+* If a client with other serializer options must write the documents, create the client in `SeedDataAsync` with `use`. Do not keep the client in the factory.
+* In a scenario of `OperationTestApplicationFactory`, get the container of that client with `this.GetContainerOf client`. In another scenario, get it with `client.GetContainer (this.DatabaseId, id)`.
 * For a static collection of values, pipe a sequence expression into `ImmutableArray.CreateRange`.
 * Each test has a database of its own. Thus an identifier must be unique only in the scenario.
 

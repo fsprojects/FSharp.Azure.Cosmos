@@ -23,6 +23,7 @@
     <Compile Include="PartitionBudget.fs" />
     <Compile Include="DatabaseIdentifier.fs" />
     <Compile Include="Emulator.fs" />
+    <Compile Include="ContainerSet.fs" />
     <Compile Include="IntegrationInfrastructure.fs" />
     <Compile Include="CosmosAssert.fs" />
   </ItemGroup>
