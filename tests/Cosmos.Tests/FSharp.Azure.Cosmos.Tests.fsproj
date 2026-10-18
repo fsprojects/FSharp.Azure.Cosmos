@@ -19,33 +19,34 @@
   <ItemGroup>
     <Compile Include="TestCategories.fs" />
     <Compile Include="TestAssembly.fs" />
-    <Compile Include="IcedTasksProbeTests.fs" />
-    <Compile Include="IterationExtensionsUnitTests.fs" />
-    <Compile Include="ValueCollectionsTests.fs" />
+    <Compile Include="OperationTestInfrastructure.fs" />
     <Compile Include="CosmosNameTests.fs" />
     <Compile Include="ResponseMessageTests.fs" />
-    <Compile Include="TimeSpanTicksConverterTests.fs" />
-    <Compile Include="DatabaseIdentifierTests.fs" />
-    <Compile Include="ContainerSetTests.fs" />
-    <Compile Include="PartitionBudgetTests.fs" />
-    <Compile Include="LeftoverSweepTests.fs" />
-    <Compile Include="BaselineTests.fs" />
-    <Compile Include="OperationTestInfrastructure.fs" />
+    <Compile Include="IcedTasksProbeTests.fs" />
+    <Compile Include="ValueCollectionsTests.fs" />
+    <Compile Include="QuerySemanticsTests.fs" />
+    <Compile Include="TestInfrastructure\BaselineTests.fs" />
+    <Compile Include="TestInfrastructure\ContainerSetTests.fs" />
+    <Compile Include="TestInfrastructure\DatabaseIdentifierTests.fs" />
+    <Compile Include="TestInfrastructure\LeftoverSweepTests.fs" />
+    <Compile Include="TestInfrastructure\PartitionBudgetTests.fs" />
     <Compile Include="Scenarios\SingleItemScenario.fs" />
     <Compile Include="Scenarios\MultipleItemsScenario.fs" />
     <Compile Include="Scenarios\DurationsScenario.fs" />
-    <Compile Include="CreateOperationTests.fs" />
-    <Compile Include="ReadOperationTests.fs" />
-    <Compile Include="UpsertOperationTests.fs" />
-    <Compile Include="ReplaceOperationTests.fs" />
-    <Compile Include="PatchOperationTests.fs" />
-    <Compile Include="DeleteOperationTests.fs" />
-    <Compile Include="ReadManyOperationTests.fs" />
-    <Compile Include="ReadExtensionsTests.fs" />
-    <Compile Include="IterationExtensionsTests.fs" />
-    <Compile Include="QuerySemanticsTests.fs" />
-    <Compile Include="TimeSpanTicksConverterIntegrationTests.fs" />
-    <Compile Include="BuilderUnitTests.fs" />
+    <Compile Include="Operations\CreateOperationTests.fs" />
+    <Compile Include="Operations\ReadOperationTests.fs" />
+    <Compile Include="Operations\UpsertOperationTests.fs" />
+    <Compile Include="Operations\ReplaceOperationTests.fs" />
+    <Compile Include="Operations\PatchOperationTests.fs" />
+    <Compile Include="Operations\DeleteOperationTests.fs" />
+    <Compile Include="Operations\ReadManyOperationTests.fs" />
+    <!-- Last of the folder, as it was last of the project: its private record BuilderTestItem has the labels id and partitionKey of TestItem, and F# resolves a record expression to the latest record that has the label. Earlier in the list it takes the type of the record expressions of the tests after it. -->
+    <Compile Include="Operations\BuilderUnitTests.fs" />
+    <Compile Include="Extensions\IterationExtensionsUnitTests.fs" />
+    <Compile Include="Extensions\ReadExtensionsTests.fs" />
+    <Compile Include="Extensions\IterationExtensionsTests.fs" />
+    <Compile Include="Json\TimeSpanTicksConverterTests.fs" />
+    <Compile Include="Json\TimeSpanTicksConverterIntegrationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
