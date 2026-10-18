@@ -12,6 +12,10 @@
 
 ```text
 /
+├── src/Cosmos.Quotations/ – translator of F# quotations into queries (FSharp.Azure.Cosmos.Quotations), built stage by stage and not packed yet
+│   ├── TranslationError.fs – translation errors and the place of a quotation in the source
+│   ├── Normalizer.fs    – normal form of a quotation
+│   └── Evaluator.fs     – value of a part of a quotation that reads no variable
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
@@ -28,6 +32,7 @@
 ├── src/Shared/          – source files that every F# project under src and tests compiles
 │   └── ValueCollections.fs – `Seq`, `List` and `Array` functions that return `voption` and struct tuples
 ├── tests/Cosmos.Tests/  – MSTest integration test project
+├── tests/Cosmos.Quotations.Tests/ – MSTest unit tests of FSharp.Azure.Cosmos.Quotations, no emulator needed
 ├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
 ├── build/               – FAKE build scripts
 └── docsSrc/             – FSharp.Formatting documentation source
