@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 * `TimeSpanTicksConverter`, a `System.Text.Json` converter that writes a `TimeSpan` as a JSON number of ticks. Cosmos DB sorts and compares a number in time order, but not the text that `System.Text.Json` writes (`"2.00:00:00"` sorts after `"10.00:00:00"`). The converter also reads that text, so old documents stay readable. See [How To store a duration](https://fsprojects.github.io/FSharp.Azure.Cosmos/How_Tos/Store_Durations.html)
+* `FSharp.Azure.Cosmos.Sql` package: an immutable syntax tree of the Azure Cosmos DB NoSQL query language that mirrors the grammar of the .NET SDK, a deterministic printer with a parameterized and an inline mode, a validator for the rules the grammar cannot express and the catalog of the built-in functions as data, without a dependency on the Azure Cosmos DB SDK
 
 ### Changed
 * BREAKING: the package targets `net10.0` only and no longer supports `net8.0`, which makes this a major release
