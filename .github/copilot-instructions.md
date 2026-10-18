@@ -61,6 +61,16 @@ Agents discover servers from #file:'.mcp.json'; these are only hints on when to 
 * If you are running outside of an IDE, or the IDE does not provide F# semantic tools, use FsLangMCP as the primary tool for F# code navigation, symbol discovery, diagnostics, usage search and refactoring preview. Prefer its semantic tools over plain text search.
 * The compiler generates `IsCaseName` instance properties (for example `IsOk`, `IsNotFound`) for each DU case – use them when a single-case check is needed.
 
+### Layout
+
+* Add an empty line after the declaration line of a module, or of a type that has members, before the first member, `let` binding or nested declaration (`module Name =`, `type Name () =`, `type IName =`). A record or a union has its fields or cases directly under the declaration.
+
+  ```fsharp
+  module DocsTool =
+
+      let quoted s = $"\"%s{s}\""
+  ```
+
 ### Asynchrony and Cancellation
 
 * Prefer `task` CE over `async` CE.
