@@ -10,6 +10,7 @@ open System
 open System.Globalization
 open System.Net.Http
 open System.Net.Security
+open System.Text.Json
 open System.Threading
 open System.Threading.Tasks
 
@@ -172,20 +173,28 @@ let private createHttpMessageHandler () =
             )
     )
 
+// The shared settings are in a static member, not in a function, because F# sets the named properties of the object
+// that a method returns. Thus each client adds its own settings in a class initializer.
+type private ClientOptions =
+    static member Create () =
+        CosmosClientOptions (
+            ConnectionMode = ConnectionMode.Gateway,
+            HttpClientFactory = Func<HttpClient>(fun () -> new HttpClient (createHttpMessageHandler (), true))
+        )
+
 /// <summary>
 /// Creates a <see cref="CosmosClient"/> for the emulator in <see cref="ConnectionMode.Gateway"/> mode, the only mode
 /// the Linux vNext emulator serves, whose <see cref="HttpClient"/> accepts the emulator's self-signed certificate from
 /// local hosts only.
 /// </summary>
-let createClient () : CosmosClient =
-    new CosmosClient (
-        endpoint,
-        key,
-        CosmosClientOptions (
-            ConnectionMode = ConnectionMode.Gateway,
-            HttpClientFactory = Func<HttpClient>(fun () -> new HttpClient (createHttpMessageHandler (), true))
-        )
-    )
+let createClient () : CosmosClient = new CosmosClient (endpoint, key, ClientOptions.Create ())
+
+/// <summary>
+/// Creates a <see cref="CosmosClient"/> like <see cref="createClient"/>, whose serializer is System.Text.Json with
+/// <paramref name="serializerOptions"/>. The client of a test that checks how a converter stores a type.
+/// </summary>
+let createClientWithJson (serializerOptions : JsonSerializerOptions) : CosmosClient =
+    new CosmosClient (endpoint, key, ClientOptions.Create (UseSystemTextJsonSerializerWithOptions = serializerOptions))
 
 // How long the sweep waits for an answer before it concludes that no emulator runs. Without this check, a run of
 // the unit tests alone on a machine without an emulator would wait for the SDK to give up (seconds per request).
