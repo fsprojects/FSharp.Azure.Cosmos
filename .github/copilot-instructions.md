@@ -12,6 +12,18 @@
 
 ```text
 /
+├── src/Cosmos.Sql/      – Cosmos DB SQL model (FSharp.Azure.Cosmos.Sql)
+│   ├── EquatableArray.fs – immutable array with structural equality
+│   ├── ImmutableArrayPatterns.fs – active patterns that match an `ImmutableArray` by its length
+│   ├── Syntax.fs        – syntax tree of the query language
+│   ├── Keywords.fs      – reserved words and the identifier rule
+│   ├── FunctionSpec.fs  – specification of a built-in function
+│   ├── CatalogData.fs   – one row per built-in function
+│   ├── Catalog.fs       – lookup of built-in functions
+│   ├── ValidationError.fs – validation errors and options
+│   ├── Inline.fs        – replacement of parameters by literals
+│   ├── Printer.fs       – printer of the query text
+│   └── Validator.fs     – rules of the query language that the grammar cannot express
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
@@ -28,6 +40,7 @@
 ├── src/Shared/          – source files that every F# project under src and tests compiles
 │   └── ValueCollections.fs – `Seq`, `List` and `Array` functions that return `voption` and struct tuples
 ├── tests/Cosmos.Tests/  – MSTest integration test project
+├── tests/Cosmos.Sql.Tests/ – MSTest unit tests of FSharp.Azure.Cosmos.Sql, no emulator needed
 ├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
 ├── build/               – FAKE build scripts
 └── docsSrc/             – FSharp.Formatting documentation source
