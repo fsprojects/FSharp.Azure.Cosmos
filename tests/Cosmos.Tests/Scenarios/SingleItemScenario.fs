@@ -20,10 +20,7 @@ type TestData = {
 /// Writes one item into the container of <see cref="OperationTestBase{T}"/>.
 /// </summary>
 type TestApplicationFactory (testContext : TestContext) =
-    inherit DatabaseTestApplicationFactory (testContext)
-
-    // The container of OperationTestBase
-    let containerId = "operation-tests"
+    inherit OperationTestApplicationFactory (testContext)
 
     let seededItem : TestItem = {
         id = $"{testContext.TestName}-read"
@@ -36,10 +33,8 @@ type TestApplicationFactory (testContext : TestContext) =
     member val TestData : TestData = { SeededItem = seededItem }
 
     override this.SeedDataAsync (cancellationToken : CancellationToken) : Task = task {
-        let! container = this.GetOrCreateContainerAsync (containerId, "/partitionKey", cancellationToken)
-
         let! createResponse =
-            container.ExecuteAsync (
+            this.Container.ExecuteAsync (
                 create {
                     item seededItem
                     partitionKey seededItem.partitionKey

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -25,6 +25,7 @@
     <Compile Include="CosmosNameTests.fs" />
     <Compile Include="ResponseMessageTests.fs" />
     <Compile Include="DatabaseIdentifierTests.fs" />
+    <Compile Include="ContainerSetTests.fs" />
     <Compile Include="PartitionBudgetTests.fs" />
     <Compile Include="LeftoverSweepTests.fs" />
     <Compile Include="BaselineTests.fs" />
