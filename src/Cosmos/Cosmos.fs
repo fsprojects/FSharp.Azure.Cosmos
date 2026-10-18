@@ -2,6 +2,7 @@ namespace FSharp.Azure.Cosmos
 
 open System
 open System.Net
+open System.Reflection
 open System.Runtime.InteropServices
 open System.Threading
 open System.Threading.Tasks
@@ -52,6 +53,20 @@ module CosmosName =
 
 module internal RequestOptions =
 
+    let private throughputBucketProperty =
+        let propertyInfo =
+            typeof<RequestOptions>
+                .GetProperty(
+                    "ThroughputBucket",
+                    BindingFlags.Instance
+                    ||| BindingFlags.Public
+                    ||| BindingFlags.NonPublic
+                )
+
+        match propertyInfo with
+        | null -> invalidOp "Cosmos SDK RequestOptions.ThroughputBucket is unavailable."
+        | propertyInfo -> propertyInfo
+
     let internal createOrUpdate setter requestOptions =
         let options =
             match requestOptions with
@@ -59,6 +74,9 @@ module internal RequestOptions =
             | ValueNone -> ItemRequestOptions ()
         setter options
         options
+
+    let internal setThroughputBucket (throughputBucket : Nullable<int>) (requestOptions : RequestOptions) =
+        throughputBucketProperty.SetValue (requestOptions, throughputBucket)
 
 /// <summary>
 /// Extensions for <see cref="ResponseMessage"/>, the response of the SDK's stream APIs.

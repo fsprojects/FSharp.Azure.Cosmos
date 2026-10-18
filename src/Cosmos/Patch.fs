@@ -148,6 +148,12 @@ type PatchBuilder<'T> (enableContentResponseOnWrite : bool) =
         state.RequestOptions.SessionToken <- sessionToken
         state
 
+    /// Sets the throughput bucket
+    [<CustomOperation "throughputBucket">]
+    member _.ThroughputBucket (state : PatchOperation<_>, throughputBucket : int) =
+        RequestOptions.setThroughputBucket (Nullable throughputBucket) state.RequestOptions
+        state
+
 /// <summary>
 /// Computation expression builder for <see cref="PatchConcurrentlyOperation{T, E}"/>.
 /// </summary>
