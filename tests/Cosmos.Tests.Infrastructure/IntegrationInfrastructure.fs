@@ -31,7 +31,8 @@ type TestBase () =
 
 /// <summary>
 /// The fixture of one emulator-backed test: a <see cref="CosmosClient"/> and a database of its own, created before the
-/// test and deleted after it. Scenarios derive from it and override <see cref="SeedDataAsync"/>.
+/// test and deleted after it. Scenarios derive from it, declare their containers in <see cref="Containers"/> and write
+/// their data in <see cref="SeedDataAsync"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -89,16 +90,32 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
     member _.Database = database
 
     /// <summary>
-    /// The number of containers this fixture creates at most, each of which costs one partition of the emulator.
-    /// Override it in a scenario that creates more than one container.
+    /// The containers that <see cref="InitializeAsync"/> creates in the database of this fixture. A scenario overrides
+    /// this member to declare the containers that it writes into.
     /// </summary>
+    /// <remarks>
+    /// <see cref="InitializeAsync"/> creates these containers before <see cref="SeedDataAsync"/> runs. Thus a scenario
+    /// does not create a container itself. A test that needs another container creates it with
+    /// <see cref="GetOrCreateContainerAsync"/>. A <see cref="ContainerSet"/> throws if a scenario declares a
+    /// container twice.
+    /// </remarks>
+    abstract Containers : ContainerSet
+    default _.Containers = ContainerSet.Empty
+
+    /// <summary>
+    /// The number of containers this fixture creates at most. Each container costs one partition of the emulator.
+    /// </summary>
+    /// <remarks>
+    /// The default is the number of <see cref="Containers"/>, or one if there is no container. Override it in a test
+    /// that creates more containers with <see cref="GetOrCreateContainerAsync"/>.
+    /// </remarks>
     abstract ContainerCount : int
-    default _.ContainerCount = 1
+    default this.ContainerCount = max 1 this.Containers.Count
 
     /// <summary>
     /// Takes the <see cref="PartitionBudget"/> permits of <see cref="ContainerCount"/> containers and creates the
     /// database of this fixture, empty: a database of the same identifier that an earlier run left behind is deleted
-    /// and created anew.
+    /// and created anew. Then it creates the <see cref="Containers"/>.
     /// </summary>
     member this.InitializeAsync (cancellationToken : CancellationToken) : Task = task {
         let! acquired = partitionBudget.AcquireAsync (this.ContainerCount, cancellationToken)
@@ -126,6 +143,10 @@ type DatabaseTestApplicationFactory (testContext : TestContext) =
                 })
 
         database <- ValueSome createdDatabase
+
+        for containerProperties in this.Containers do
+            let! _ = this.GetOrCreateContainerAsync (containerProperties, cancellationToken)
+            ()
     }
 
     /// <summary>
