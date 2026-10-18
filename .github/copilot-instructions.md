@@ -12,6 +12,18 @@
 
 ```text
 /
+├── src/Cosmos.Sql/      – Cosmos DB SQL model (FSharp.Azure.Cosmos.Sql)
+│   ├── EquatableArray.fs – immutable array with structural equality
+│   ├── ImmutableArrayPatterns.fs – active patterns that match an `ImmutableArray` by its length
+│   ├── Syntax.fs        – syntax tree of the query language
+│   ├── Keywords.fs      – reserved words and the identifier rule
+│   ├── FunctionSpec.fs  – specification of a built-in function
+│   ├── CatalogData.fs   – one row per built-in function
+│   ├── Catalog.fs       – lookup of built-in functions
+│   ├── ValidationError.fs – validation errors and options
+│   ├── Inline.fs        – replacement of parameters by literals
+│   ├── Printer.fs       – printer of the query text
+│   └── Validator.fs     – rules of the query language that the grammar cannot express
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
@@ -28,6 +40,8 @@
 ├── src/Shared/          – source files that every F# project under src and tests compiles
 │   └── ValueCollections.fs – `Seq`, `List` and `Array` functions that return `voption` and struct tuples
 ├── tests/Cosmos.Tests/  – MSTest integration test project
+├── tests/Cosmos.Sql.Tests/ – MSTest unit tests of FSharp.Azure.Cosmos.Sql, no emulator needed
+├── tests/Cosmos.Sql.Hedgehog/ – Hedgehog generator helpers that the tests share (`Sample`, `Gen`, `CollectionGen`, `TextGen`)
 ├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
 ├── build/               – FAKE build scripts
 └── docsSrc/             – FSharp.Formatting documentation source
@@ -251,6 +265,7 @@ module MyTypeExtensions =
 * `COSMOS_REWRITE_BASELINES` set to `1` or `true` makes a test that compares SQL with its golden baseline (`Baseline.assertMatches`, files under `Baselines/<suite>/` of the test project) write what it produced into the baseline instead of comparing; the test then reports itself inconclusive, the rewritten files are reviewed in the diff, and CI refuses to rewrite.
 * Every test project under `tests/` references `tests/Cosmos.Tests.Infrastructure` through `tests/Directory.Build.props`; a new test project gets it without a `ProjectReference` of its own.
 * Property tests are methods of `[<TestClass>]` types marked `[<Property>]` (from `Hedgehog.MSTest`), whose parameters Hedgehog generates; never call `Property.check` inside a `[<TestMethod>]`. A test project with property tests references the `Hedgehog` and `Hedgehog.MSTest` packages, as `tests/Cosmos.Tests` does. A property is an instance method that returns `unit`, `Task` or `ValueTask` and fails by throwing: MSTest 4 rejects static methods and other return types, and one such method fails the discovery of the whole assembly, which `--list-tests` shows before a run. MSTest creates the test class and runs `[<TestInitialize>]` and `[<TestCleanup>]` for every generated case and every shrink step. A failed property reports a `[<Recheck("…")>]` to add next to its `Property` attribute, which then replays the counterexample. Hedgehog 2.0.4 cannot generate `DateOnly` and `TimeOnly`: the generators of [hedgehogqa/fsharp-hedgehog#488](https://github.com/hedgehogqa/fsharp-hedgehog/pull/488) are merged and not released, so a parameter of either type, or of a type that holds one, needs a generator from a `GenAttribute` or an `AutoGenConfig`.
+* Generators are in `tests/Cosmos.Sql.Hedgehog`, namespace `FSharp.Azure.Cosmos.Tests.Models`. `Sample` draws values outside of a property; data that a failure must be able to replay comes from `Sample.singleWith` and `Sample.multipleWith`, which take a seed. `Gen` and `CollectionGen` generate optional values and collections; a function with the suffix `Balanced` gives the absent value or the empty collection in one draw of two at every size, the others make it rarer as the size grows. A generator file opens `Hedgehog` and `Hedgehog.FSharp`, never `Hedgehog.Linq`, and names a parameter that holds a generator `source` or `element`, never `gen`, which hides the `gen { }` builder. A generator makes valid values by construction: no `Gen.filter`, no `Gen.sample` inside it, no clock and no current culture.
 * `CollectionAssert` cannot work with F# lists – use F# array syntax (`[| ... |]`) instead.
 * `StringAssert` has overloads with `StringComparison`.
 * Use `Assert.Contains` instead of `Assert.IsTrue (str.Contains ..., "message")`, and do not put the actual value into the message.

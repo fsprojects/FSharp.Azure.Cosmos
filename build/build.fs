@@ -407,8 +407,9 @@ let generateCoverageReport _ =
         sprintf "-targetdir:\"%s\"" coverageReportDir
         // Add source dir
         sprintf "-sourcedirs:\"%s\"" sourceDirs
-        // Ignore test assemblies, the helper libraries they share and the Hedgehog packages that property tests load
-        sprintf "-assemblyfilters:\"%s\"" "-*.Tests;-*.Tests.Infrastructure;-Hedgehog;-Hedgehog.MSTest"
+        // Ignore test assemblies, the helper and generator libraries they share and the Hedgehog packages that property
+        // tests load
+        sprintf "-assemblyfilters:\"%s\"" "-*.Tests;-*.Tests.Infrastructure;-*.Hedgehog;-Hedgehog;-Hedgehog.MSTest"
         // Generate HTML and Cobertura reports
         sprintf "-reporttypes:%s" "Html;Cobertura"
     ]
