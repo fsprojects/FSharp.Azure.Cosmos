@@ -27,4 +27,16 @@ applyTo: "tests/**/*.fs"
 | `Json/` | `JsonConverter`, `TimeSpan` |
 | root | `IcedTasksProbe`, `QuerySemantics`, `ResponseMessage`, `Validation`, `ValueCollections` (one file for each category) |
 
+## Groups of `tests/Gremlin.Tests`
+
+| Folder | Test categories |
+|---|---|
+| `GraphModel/` | `GraphModel`, `SerializerProfile` |
+
+## Groups of `tests/Cosmos.Gremlin.Tests`
+
+| Folder | Test categories |
+|---|---|
+| root | `Connection` (one file) |
+
 Each name in the second column is the name of a category attribute without the `TestCategoryAttribute` suffix.

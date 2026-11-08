@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests of FSharp.Azure.Cosmos.Gremlin. IsTestProject and IsPackable come from tests/Directory.Build.props, which
+    also references the shared test infrastructure.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Gremlin.Tests</AssemblyName>
+
+    <OutputType>Exe</OutputType>
+    <EnableMSTestRunner>true</EnableMSTestRunner>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="testconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="TestCategories.fs" />
+    <Compile Include="CosmosGremlinConnectionTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cosmos.Gremlin\FSharp.Azure.Cosmos.Gremlin.fsproj" />
+  </ItemGroup>
+
+</Project>

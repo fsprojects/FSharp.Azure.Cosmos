@@ -2,9 +2,13 @@
   "solution": {
     "path": "FSharp.Azure.Cosmos.slnx",
     "projects": [
+      "src\\Cosmos.Gremlin\\FSharp.Azure.Cosmos.Gremlin.fsproj",
       "src\\Cosmos\\FSharp.Azure.Cosmos.fsproj",
+      "src\\Gremlin\\FSharp.Gremlin.fsproj",
+      "tests\\Cosmos.Gremlin.Tests\\FSharp.Azure.Cosmos.Gremlin.Tests.fsproj",
       "tests\\Cosmos.Tests.Infrastructure\\FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj",
-      "tests\\Cosmos.Tests\\FSharp.Azure.Cosmos.Tests.fsproj"
+      "tests\\Cosmos.Tests\\FSharp.Azure.Cosmos.Tests.fsproj",
+      "tests\\Gremlin.Tests\\FSharp.Gremlin.Tests.fsproj"
     ]
   }
 }

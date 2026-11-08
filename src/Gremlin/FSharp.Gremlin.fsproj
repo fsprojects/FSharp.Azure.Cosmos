@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The core of the Gremlin libraries. It does not depend on a provider. It holds the graph model of F# records, and
+    the next steps add the steps of a traversal, the Groovy writer, the wire formats and the typed queries.
+    FSharp.Azure.Cosmos.Gremlin adds Azure Cosmos DB for Apache Gremlin. The library is built step by step. Until a
+    query runs end to end, no package is made of it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>FSharp.Gremlin</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet">
+    <PackageId>FSharp.Gremlin</PackageId>
+    <Title>FSharp.Gremlin</Title>
+    <Summary>Typed Gremlin traversals over immutable F# records</Summary>
+    <Description>Provides typed Gremlin traversals over immutable F# records, with meta-properties and System.Text.Json serialization</Description>
+    <PackageTags>F#;FSharp;Gremlin;Graph;TinkerPop;Apache TinkerPop</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Attributes.fs" />
+    <Compile Include="VertexProperty.fs" />
+    <Compile Include="GraphModelException.fs" />
+    <Compile Include="ElementModel.fs" />
+    <Compile Include="SerializerProfile.fs" />
+    <Compile Include="GraphModel.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FSharp.SystemTextJson" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
