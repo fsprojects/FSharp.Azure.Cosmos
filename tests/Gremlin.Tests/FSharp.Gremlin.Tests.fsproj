@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Unit tests of FSharp.Gremlin. IsTestProject and IsPackable come from tests/Directory.Build.props, which also
+    references the shared test infrastructure.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>FSharp.Gremlin.Tests</AssemblyName>
+
+    <OutputType>Exe</OutputType>
+    <EnableMSTestRunner>true</EnableMSTestRunner>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="testconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="TestCategories.fs" />
+    <Compile Include="GraphModel\AttributeTests.fs" />
+    <Compile Include="GraphModel\VertexPropertyTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Gremlin\FSharp.Gremlin.fsproj" />
+  </ItemGroup>
+
+</Project>
