@@ -11,3 +11,9 @@ type GraphModelTestCategoryAttribute () =
 
     /// <inheritdoc />
     override _.TestCategories = [| "Graph model" |] :> IList<string>
+
+type SerializerProfileTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+
+    /// <inheritdoc />
+    override _.TestCategories = [| "Serializer profile" |] :> IList<string>

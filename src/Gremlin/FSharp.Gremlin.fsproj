@@ -31,9 +31,14 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Attributes.fs" />
     <Compile Include="VertexProperty.fs" />
+    <Compile Include="GraphModelException.fs" />
+    <Compile Include="ElementModel.fs" />
+    <Compile Include="SerializerProfile.fs" />
+    <Compile Include="GraphModel.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FSharp.SystemTextJson" />
     <PackageReference Include="Microsoft.SourceLink.GitHub">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

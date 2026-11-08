@@ -20,7 +20,11 @@
 
   <ItemGroup>
     <Compile Include="TestCategories.fs" />
+    <Compile Include="Profiles.fs" />
+    <Compile Include="GraphRecords.fs" />
     <Compile Include="GraphModel\AttributeTests.fs" />
+    <Compile Include="GraphModel\GraphModelTests.fs" />
+    <Compile Include="GraphModel\SerializerProfileTests.fs" />
     <Compile Include="GraphModel\VertexPropertyTests.fs" />
   </ItemGroup>
 

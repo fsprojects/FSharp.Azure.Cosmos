@@ -31,7 +31,7 @@ applyTo: "tests/**/*.fs"
 
 | Folder | Test categories |
 |---|---|
-| `GraphModel/` | `GraphModel` |
+| `GraphModel/` | `GraphModel`, `SerializerProfile` |
 
 ## Groups of `tests/Cosmos.Gremlin.Tests`
 

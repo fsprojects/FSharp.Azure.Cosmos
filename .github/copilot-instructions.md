@@ -29,7 +29,11 @@
 │   └── UniqueKey.fs     – unique key helpers
 ├── src/Gremlin/         – Gremlin traversals over F# records, without a provider (FSharp.Gremlin)
 │   ├── Attributes.fs    – `[<Label>]` and `[<PartitionKey>]` for the records of a graph
-│   └── VertexProperty.fs – a vertex property with its meta-properties
+│   ├── VertexProperty.fs – a vertex property with its meta-properties
+│   ├── GraphModelException.fs – the refusal of a record that a graph cannot store
+│   ├── ElementModel.fs  – how a graph stores a record: label, id, partition key, properties and their shapes
+│   ├── SerializerProfile.fs – the options of System.Text.Json and FSharp.SystemTextJson that the model reads
+│   └── GraphModel.fs    – `GraphModel`: builds and keeps the model of each record type
 ├── src/Shared/          – source files that every F# project under src and tests compiles
 │   └── ValueCollections.fs – `Seq`, `List` and `Array` functions that return `voption` and struct tuples
 ├── tests/Cosmos.Gremlin.Tests/ – MSTest tests of FSharp.Azure.Cosmos.Gremlin
