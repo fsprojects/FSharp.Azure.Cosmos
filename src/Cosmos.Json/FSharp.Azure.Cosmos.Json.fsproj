@@ -3,7 +3,8 @@
   <!--
     The converters do not use the Azure Cosmos DB SDK. Thus they are in a package of their own: a project that does
     not reference the SDK can use them, for example a client of the API for Gremlin. FSharp.Azure.Cosmos references
-    this package.
+    this package. The record converter uses the attributes and the Skippable type of FSharp.SystemTextJson, which
+    writes the other types of F#.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -15,9 +16,9 @@
   <PropertyGroup Label="NuGet">
     <PackageId>FSharp.Azure.Cosmos.Json</PackageId>
     <Title>FSharp.Azure.Cosmos.Json</Title>
-    <Summary>System.Text.Json converters for the values that Azure Cosmos DB stores</Summary>
-    <Description>Provides System.Text.Json converters that write a value in a form that Azure Cosmos DB sorts and compares in the correct order, for example a TimeSpan as a number of ticks</Description>
-    <PackageTags>F#;FSharp;Cosmos;CosmosDB;Cosmos DB;System.Text.Json;JSON;Converter</PackageTags>
+    <Summary>System.Text.Json converters for the values and the F# records that Azure Cosmos DB stores</Summary>
+    <Description>Provides System.Text.Json converters that write a value in a form that Azure Cosmos DB sorts and compares in the correct order, for example a TimeSpan as a number of ticks, and a converter of F# records that lets a document leave fields out or have null for them</Description>
+    <PackageTags>F#;FSharp;Cosmos;CosmosDB;Cosmos DB;System.Text.Json;JSON;Converter;Record</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -28,9 +29,11 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="JsonConverters.fs" />
+    <Compile Include="RecordConverter.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FSharp.SystemTextJson" />
     <PackageReference Include="Microsoft.SourceLink.GitHub">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
