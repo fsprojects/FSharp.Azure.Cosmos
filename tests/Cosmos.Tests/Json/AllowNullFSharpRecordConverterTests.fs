@@ -657,3 +657,38 @@ type AllowNullFSharpRecordConverterTests () =
             AllowNullFSharpRecordConverterFactory(true).CanConvert typeof<Point>,
             "The factory should take a record of a module, which is a nested type, and a struct record."
         )
+
+    [<TestMethod>]
+    member _.``FieldNames gives the name of each field that the converter writes`` () =
+        let fieldNamesOf (recordType : Type) =
+            // A type test from a class to an interface that the class does not implement needs an object
+            match box (AllowNullFSharpRecordConverterFactory(true).CreateConverter(recordType, allowing)) with
+            | :? IRecordFieldNames as described ->
+                described.FieldNames
+                |> Seq.map (fun pair -> $"{pair.Key}: {pair.Value}")
+                |> Seq.toArray
+            | _ -> raise (AssertFailedException $"The converter of {recordType.Name} should implement IRecordFieldNames.")
+
+        CollectionAssert.AreEquivalent (
+            [|
+                "Id: id"
+                "Always: always"
+                "NotNull: notNull"
+                "NotDefault: notDefault"
+                "WriteOnly: writeOnly"
+            |],
+            fieldNamesOf typeof<Ignored>,
+            "FieldNames should have each field that the converter can write, and no field that JsonIgnore keeps from the document."
+        )
+
+        CollectionAssert.AreEquivalent (
+            [|
+                "Id: id"
+                "WithJsonName: first"
+                "WithPropertyName: property"
+                "WithBoth: both"
+                "WithFieldName: withFieldName"
+            |],
+            fieldNamesOf typeof<Named>,
+            "FieldNames should give the name that the converter writes a field under."
+        )

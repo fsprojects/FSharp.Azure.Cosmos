@@ -206,6 +206,22 @@ type internal RecordField (recordType : Type, field : PropertyInfo, options : Js
             absentValue
 
 /// <summary>
+/// A converter of a record type that tells the names that it writes the fields of the record under.
+/// </summary>
+/// <remarks>
+/// The contract of a record type that a converter writes has no properties, so a library that describes the documents
+/// of a serializer cannot get the names from the contract. Such a library reads the names from this interface. For
+/// example, the graph model of FSharp.Gremlin reads them.
+/// </remarks>
+type IRecordFieldNames =
+
+    /// <summary>
+    /// The name that the converter writes each field under, by the name of the field. A field that the converter never
+    /// writes is not in it.
+    /// </summary>
+    abstract FieldNames : IReadOnlyDictionary<string, string>
+
+/// <summary>
 /// Reads and writes an F# record as a JSON object, and lets a document leave fields out or have null for them.
 /// </summary>
 /// <remarks>
@@ -217,7 +233,8 @@ type internal RecordField (recordType : Type, field : PropertyInfo, options : Js
 /// document that was written before the field had an attribute stays readable. Two fields that the converter writes
 /// cannot have one name, and two fields that it reads cannot have one declared name. A field that the converter does
 /// not write or does not read does not keep its name for that operation, so a new field can replace an old field with
-/// <see cref="T:System.Text.Json.Serialization.JsonIgnoreAttribute"/> under the same name.
+/// <see cref="T:System.Text.Json.Serialization.JsonIgnoreAttribute"/> under the same name. The converter tells the names
+/// that it writes through <see cref="T:FSharp.Azure.Cosmos.IRecordFieldNames"/>.
 /// </para>
 /// <para>
 /// The converter does not write a field that has no value: null,
@@ -367,6 +384,12 @@ type AllowNullFSharpRecordConverter<'Record> (options : JsonSerializerOptions, a
         if not (reader.TrySkip ()) then
             raise (JsonException $"The document of the record {recordType.Name} ends in the middle of a value.")
 
+    // The names that the converter writes the fields under, by the names of the fields
+    let fieldNames : IReadOnlyDictionary<string, string> =
+        fields
+        |> Seq.filter (fun field -> not field.IsIgnoredOnWrite)
+        |> _.ToFrozenDictionary(_.Member.Name, _.Name, StringComparer.Ordinal)
+
     /// Whether a document can leave out a field or have null for it.
     member _.AllowNullFields = allowNullFields
 
@@ -420,6 +443,11 @@ type AllowNullFSharpRecordConverter<'Record> (options : JsonSerializerOptions, a
                 JsonSerializer.Serialize (writer, fieldValue, field.Type, options)
 
         writer.WriteEndObject ()
+
+    interface IRecordFieldNames with
+
+        /// <inheritdoc />
+        member _.FieldNames = fieldNames
 
 /// <summary>
 /// Makes an <see cref="T:FSharp.Azure.Cosmos.AllowNullFSharpRecordConverter`1"/> for each F# record type that

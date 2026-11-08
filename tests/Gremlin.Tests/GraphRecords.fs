@@ -1,6 +1,7 @@
 namespace FSharp.Gremlin.Tests
 
 open System
+open System.Collections.Frozen
 open System.Collections.Generic
 open System.Collections.Immutable
 open System.Globalization
@@ -8,6 +9,7 @@ open System.Net.Mail
 open System.Text.Json
 open System.Text.Json.Serialization
 
+open FSharp.Azure.Cosmos
 open FSharp.Gremlin
 
 /// <summary>
@@ -311,3 +313,101 @@ module Refused =
     /// A record with options of its own in an attribute.
     [<JsonFSharpConverter>]
     type MarkedWithOptions = { Id : string; Name : string voption }
+
+/// <summary>
+/// Records that a converter writes, and the converter tells the names of their fields: the record converter of
+/// FSharp.Azure.Cosmos.Json, and converters of an application.
+/// </summary>
+module Described =
+
+    /// A vertex with each condition of JsonIgnore that changes which fields the record converter writes.
+    type ConvertedVertex = {
+        Id : string
+        PlainName : string
+        [<JsonName "jsonName">]
+        WithJsonName : int
+        [<JsonPropertyName "propertyName">]
+        WithPropertyName : int
+        // FSharp.SystemTextJson 1.4.36 cannot read an ignored field of a value type, and the record converter can
+        [<JsonIgnore>]
+        Count : int
+        [<JsonIgnore(Condition = JsonIgnoreCondition.WhenWriting)>]
+        ReadOnly : string
+        [<JsonIgnore(Condition = JsonIgnoreCondition.WhenReading)>]
+        WriteOnly : string
+        [<JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)>]
+        Note : string voption
+    }
+
+    /// The value that the comparison writes. Each field has a value, so the converter writes each field that it can.
+    let vertex = {
+        Id = "v1"
+        PlainName = "a"
+        WithJsonName = 1
+        WithPropertyName = 2
+        Count = 3
+        ReadOnly = "r"
+        WriteOnly = "w"
+        Note = ValueSome "n"
+    }
+
+    /// A vertex that a converter of the application writes, with a name that no rule gives.
+    type TaggedVertex = { Id : string; Name : string }
+
+    /// <summary>
+    /// Writes <see cref="T:FSharp.Gremlin.Tests.Described.TaggedVertex"/> with the name <c>tag</c> for the field
+    /// <see cref="P:FSharp.Gremlin.Tests.Described.TaggedVertex.Name"/>, and tells the names that it writes.
+    /// </summary>
+    type TaggedVertexConverter () =
+        inherit JsonConverter<TaggedVertex> ()
+
+        static let names =
+            seq {
+                KeyValuePair ("Id", "id")
+                KeyValuePair ("Name", "tag")
+            }
+            |> _.ToFrozenDictionary(StringComparer.Ordinal)
+
+        /// <inheritdoc />
+        override _.Read (reader, _, _) =
+            reader.Skip ()
+            { Id = ""; Name = "" }
+
+        /// <inheritdoc />
+        override _.Write (writer, value, _) =
+            writer.WriteStartObject ()
+            writer.WriteString ("id", value.Id)
+            writer.WriteString ("tag", value.Name)
+            writer.WriteEndObject ()
+
+        interface IRecordFieldNames with
+
+            /// <inheritdoc />
+            member _.FieldNames = names :> IReadOnlyDictionary<_, _>
+
+    /// <summary>
+    /// Tells the names <c>v</c> and <c>m</c> for the fields of a vertex property of SkillGro, which the naming policy
+    /// does not give.
+    /// </summary>
+    type RenamedVertexPropertyConverter () =
+        inherit JsonConverter<VertexProperty<DateTimeOffset, SkillGro.EmployeeAction>> ()
+
+        static let names =
+            seq {
+                KeyValuePair ("Value", "v")
+                KeyValuePair ("Meta", "m")
+            }
+            |> _.ToFrozenDictionary(StringComparer.Ordinal)
+
+        /// <inheritdoc />
+        override _.Read (_reader, _, _) =
+            raise (NotSupportedException "The tests only ask this converter for its names.")
+
+        /// <inheritdoc />
+        override _.Write (_, _, _) =
+            raise (NotSupportedException "The tests only ask this converter for its names.")
+
+        interface IRecordFieldNames with
+
+            /// <inheritdoc />
+            member _.FieldNames = names :> IReadOnlyDictionary<_, _>

@@ -46,6 +46,22 @@ type SerializerProfileTests () =
     static let contractOf (options : JsonSerializerOptions) (valueType : Type) : JsonTypeInfo =
         JsonSerializerOptions(options, TypeInfoResolver = DefaultJsonTypeInfoResolver ()).GetTypeInfo valueType
 
+    // The names of the properties of a JSON object, in the sequence of the text
+    static let writtenNames (json : string) : string array =
+        use document = JsonDocument.Parse json
+
+        document.RootElement.EnumerateObject ()
+        |> Seq.map _.Name
+        |> Seq.toArray
+
+    // The name of the id and the names of the properties of a model, in the sequence of the fields
+    static let modelledNames (model : ElementModel) : string array =
+        seq {
+            yield! model.Id |> ValueOption.map _.Name |> ValueOption.toArray
+            yield! model.Properties |> Seq.map _.Name
+        }
+        |> Seq.toArray
+
     // The set-ups that the gate refuses, by the names of the rows
     static let refusedSetUp (name : string) : JsonSerializerOptions =
         match name with
@@ -83,7 +99,9 @@ type SerializerProfileTests () =
     [<DataRow("camel case")>]
     [<DataRow("snake case")>]
     [<DataRow("SkillGro")>]
+    [<DataRow("SkillGro with the record converter")>]
     [<DataRow("Ecierge")>]
+    [<DataRow("Ecierge with the record converter")>]
     member _.``GraphModel.create accepts a set-up of the serializer that the model supports`` (profile : string) =
         Assert.IsEmpty (
             refusalsOf GraphModelOptions.Default (Profiles.named profile),
@@ -154,25 +172,26 @@ type SerializerProfileTests () =
     [<DataRow("snake case")>]
     member _.``Canary: the names of the model are the names that the serializer writes`` (profile : string) =
         let options = Profiles.named profile
-        let model = (modelOf options).VertexOf typeof<Named.NamedVertex>
-
-        let written =
-            use document = JsonDocument.Parse (JsonSerializer.Serialize (Named.vertex, options))
-            document.RootElement.EnumerateObject ()
-            |> Seq.map _.Name
-            |> Seq.toArray
-
-        let modelled =
-            seq {
-                yield! model.Id |> ValueOption.map _.Name |> ValueOption.toArray
-                yield! model.Properties |> Seq.map _.Name
-            }
-            |> Seq.toArray
 
         CollectionAssert.AreEqual (
-            written,
-            modelled,
+            writtenNames (JsonSerializer.Serialize (Named.vertex, options)),
+            modelledNames ((modelOf options).VertexOf typeof<Named.NamedVertex>),
             "The model should name the id and the properties as FSharp.SystemTextJson writes the fields: JsonName first, then JsonPropertyName, then the naming policy."
+        )
+
+    [<TestMethod>]
+    [<DataRow("defaults")>]
+    [<DataRow("camel case")>]
+    [<DataRow("snake case")>]
+    member _.``Canary: the names of the model are the names that the record converter of FSharp.Azure.Cosmos.Json writes``
+        (profile : string)
+        =
+        let options = Profiles.withRecordConverter (Profiles.named profile)
+
+        CollectionAssert.AreEqual (
+            writtenNames (JsonSerializer.Serialize (Described.vertex, options)),
+            modelledNames ((modelOf options).VertexOf typeof<Described.ConvertedVertex>),
+            "The model should name the id and the properties as the record converter writes the fields, and know which fields the converter does not write."
         )
 
     [<TestMethod>]

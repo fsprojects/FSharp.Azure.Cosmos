@@ -37,6 +37,16 @@
     <Compile Include="GraphModel.fs" />
   </ItemGroup>
 
+  <!--
+    The record converter of FSharp.Azure.Cosmos.Json lets a document leave out fields, and it tells the graph model the
+    names that it writes the fields under. That package does not use the Azure Cosmos DB SDK. Remove this reference when
+    FSharp.SystemTextJson can read a record without a field (Tarmil/FSharp.SystemTextJson#24), skip a value when it
+    reads a stream in parts (#206), and read a record with an ignored field of a value type (#217).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Cosmos.Json\FSharp.Azure.Cosmos.Json.fsproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="FSharp.SystemTextJson" />
     <PackageReference Include="Microsoft.SourceLink.GitHub">

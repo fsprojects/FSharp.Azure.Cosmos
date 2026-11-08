@@ -4,6 +4,8 @@ open System.Globalization
 open System.Text.Json
 open System.Text.Json.Serialization
 
+open FSharp.Azure.Cosmos
+
 /// <summary>
 /// Writes a <see cref="T:System.Globalization.CultureInfo"/> as its name, as the converter of SkillGro does.
 /// </summary>
@@ -91,6 +93,15 @@ module Profiles =
         options
 
     /// <summary>
+    /// Puts the record converter of FSharp.Azure.Cosmos.Json before the converter of FSharp.SystemTextJson in
+    /// <paramref name="options"/>, as the Ecierge application does. Then the record converter writes each record, and a
+    /// document can leave out each field.
+    /// </summary>
+    let withRecordConverter (options : JsonSerializerOptions) : JsonSerializerOptions =
+        options.Converters.Insert (0, AllowNullFSharpRecordConverterFactory true)
+        options
+
+    /// <summary>
     /// The set-up named <paramref name="name"/>, for the rows of a test.
     /// </summary>
     let named (name : string) : JsonSerializerOptions =
@@ -99,5 +110,7 @@ module Profiles =
         | "camel case" -> camelCase ()
         | "snake case" -> snakeCase ()
         | "SkillGro" -> skillGro ()
+        | "SkillGro with the record converter" -> withRecordConverter (skillGro ())
         | "Ecierge" -> ecierge ()
+        | "Ecierge with the record converter" -> withRecordConverter (ecierge ())
         | _ -> invalidArg (nameof name) $"No set-up of the serializer has the name '{name}'."

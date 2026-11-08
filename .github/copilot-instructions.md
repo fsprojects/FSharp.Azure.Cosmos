@@ -16,7 +16,7 @@
 │   └── CosmosGremlinConnection.fs – connection settings of an account in Azure or of the emulator
 ├── src/Cosmos.Json/     – System.Text.Json converters (FSharp.Azure.Cosmos.Json), no Azure Cosmos DB SDK
 │   ├── JsonConverters.fs – `TimeSpanTicksConverter`, which writes a `TimeSpan` as a number of ticks
-│   └── RecordConverter.fs – `AllowNullFSharpRecordConverterFactory`: F# records whose fields a document can leave out
+│   └── RecordConverter.fs – `AllowNullFSharpRecordConverterFactory`: F# records whose fields a document can leave out, and `IRecordFieldNames`
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions

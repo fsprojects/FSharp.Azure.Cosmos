@@ -139,3 +139,16 @@ when it writes the document again.
 
 The converter skips the properties of a document that are no field of the record, for example `_rid`, `_self` and
 `_ts` of Cosmos DB. To refuse such a property, set `UnmappedMemberHandling` of the options to `Disallow`.
+
+## Get the names that the converter writes
+
+The converter implements `IRecordFieldNames`. Its property `FieldNames` gives the name that the converter writes each
+field under, by the name of the field. A field that the converter never writes is not in it. The graph model of the
+Gremlin library reads these names, because the contract of a record that a converter writes has no properties:
+
+``` F#
+let names =
+    match serializerOptions.GetTypeInfo(typeof<Customer>).Converter with
+    | :? IRecordFieldNames as converter -> converter.FieldNames
+    | _ -> failwith "Another converter writes the record."
+```

@@ -152,15 +152,32 @@ module internal GraphModelBuilder =
     let private isIdField (field : PropertyInfo) = String.Equals (field.Name, IdField, StringComparison.Ordinal)
 
     /// <summary>
-    /// The fields of a record that the graph stores: all but those marked with
-    /// <see cref="T:System.Text.Json.Serialization.JsonIgnoreAttribute"/>.
+    /// Whether the serializer writes a field of a record. A converter that tells its names writes the fields that have a
+    /// name. FSharp.SystemTextJson writes the fields without
+    /// <see cref="T:System.Text.Json.Serialization.JsonIgnoreAttribute"/>, whatever the condition of the attribute is.
     /// </summary>
-    let private storedFields (recordType : Type) (role : Role) : PropertyInfo array =
+    let private isWritten (writer : RecordWriter) (field : PropertyInfo) : bool =
+        match writer with
+        | RecordWriter.Described names -> names.ContainsKey field.Name
+        | _ -> not (isIgnored field)
+
+    /// <summary>
+    /// The name that the serializer writes a field of a record under: the name that the converter tells, or the name of
+    /// the rule of FSharp.SystemTextJson.
+    /// </summary>
+    let private nameOf (profile : SerializerProfile) (writer : RecordWriter) (field : PropertyInfo) : string =
+        match writer with
+        | RecordWriter.Described names -> names.[field.Name]
+        | _ -> SerializerProfile.memberName profile field
+
+    /// The fields of a record that the graph stores: the fields that the serializer writes.
+    let private storedFields (writer : RecordWriter) (recordType : Type) (role : Role) : PropertyInfo array =
         FSharpType.GetRecordFields (recordType, AnyAccessibility)
         |> Array.filter (fun field ->
-            if not (isIgnored field) then
+            if isWritten writer field then
                 true
-            elif field.PropertyType.IsValueType then
+            // The record converter of FSharp.Azure.Cosmos.Json gives such a field its default value
+            elif writer.IsLibrary && field.PropertyType.IsValueType then
                 // Tarmil/FSharp.SystemTextJson#217. The canary test "a record with an ignored field of a value type
                 // cannot be read" of SerializerProfileTests fails when a version of the library reads such a record, and
                 // then this refusal can go.
@@ -175,12 +192,17 @@ module internal GraphModelBuilder =
                 false
         )
 
-    /// The checks that every record type of the model passes: vertices, edges and the records of meta-properties.
-    let private checkRecord (profile : SerializerProfile) (recordType : Type) (role : Role) =
+    /// <summary>
+    /// The checks that every record type of the model passes: vertices, edges and the records of meta-properties. Gives
+    /// the converter that writes the record: the record converter of FSharp.SystemTextJson, or a converter that tells
+    /// its names.
+    /// </summary>
+    let private checkRecord (profile : SerializerProfile) (recordType : Type) (role : Role) : RecordWriter =
         if not (FSharpType.IsRecord (recordType, AnyAccessibility)) then
             refuseRecord recordType role "it is not an F# record."
 
         match SerializerProfile.recordWriter profile recordType with
+        | RecordWriter.Described _ as described -> described
         | RecordWriter.Library ->
             // FSharp.SystemTextJson also writes a public property that is no field when the property has
             // JsonIncludeAttribute, and it requires the property when it reads the record
@@ -201,6 +223,8 @@ module internal GraphModelBuilder =
                         "property"
                         property
                         "FSharp.SystemTextJson writes it because it has JsonIncludeAttribute, and a graph stores only the fields of a record."
+
+            RecordWriter.Library
         | RecordWriter.OwnOptions ->
             refuseRecord
                 recordType
@@ -210,7 +234,7 @@ module internal GraphModelBuilder =
             refuseRecord
                 recordType
                 role
-                "the options write it with another converter than the record converter of FSharp.SystemTextJson, so the graph model does not know the names of its fields."
+                "the options write it with another converter than the record converter of FSharp.SystemTextJson, and that converter does not tell the names of the fields through IRecordFieldNames, so the graph model does not know them."
 
     /// <summary>
     /// The model of a record of meta-properties: the fields of the record, each one a meta-property that holds one
@@ -218,17 +242,17 @@ module internal GraphModelBuilder =
     /// </summary>
     let buildMeta (profile : SerializerProfile) (metaType : Type) : MetaModel =
         let role = Role.Meta
-        checkRecord profile metaType role
+        let writer = checkRecord profile metaType role
 
         let properties =
-            storedFields metaType role
+            storedFields writer metaType role
             |> Seq.map (fun field ->
                 let struct (optionality, valueType) = unwrapOption field.PropertyType
 
                 match classify profile valueType with
                 | ValueKind.Scalar -> {
                     Member = field
-                    Name = SerializerProfile.memberName profile field
+                    Name = nameOf profile writer field
                     Optionality = optionality
                     Shape = PropertyShape.Scalar valueType
                   }
@@ -283,10 +307,26 @@ module internal GraphModelBuilder =
 
         // The value of a vertex property and its meta-properties
         let checkVertexProperty (valueType : Type) (metaType : Type) =
-            match
-                SerializerProfile.recordWriter profile (typedefof<VertexProperty<_, _>>.MakeGenericType(valueType, metaType))
-            with
+            let vertexPropertyType = typedefof<VertexProperty<_, _>>.MakeGenericType(valueType, metaType)
+
+            // The meta model has the names of the rule of FSharp.SystemTextJson for the value and the meta-properties,
+            // so a converter that tells its names has to write them under these names
+            let writesNamesOfRule (names : IReadOnlyDictionary<string, string>) =
+                [| "Value"; "Meta" |]
+                |> Array.forall (fun field ->
+                    let ruleName = SerializerProfile.memberName profile (nonNull (vertexPropertyType.GetProperty field))
+
+                    match names.TryGetValue field with
+                    | true, name -> String.Equals (name, ruleName, StringComparison.Ordinal)
+                    | false, _ -> false
+                )
+
+            match SerializerProfile.recordWriter profile vertexPropertyType with
             | RecordWriter.Library -> ()
+            | RecordWriter.Described names when writesNamesOfRule names -> ()
+            | RecordWriter.Described _ ->
+                refuse
+                    "the converter of VertexProperty writes the fields Value and Meta under other names than the naming policy gives them."
             | RecordWriter.OwnOptions
             | RecordWriter.Other ->
                 refuse "the options write VertexProperty in another way than the record converter of FSharp.SystemTextJson."
@@ -372,16 +412,16 @@ module internal GraphModelBuilder =
         if recordType.Name.StartsWith ("<>f__AnonymousType", StringComparison.Ordinal) then
             refuseRecord recordType role "an anonymous record has no name that can be its label."
 
-        checkRecord profile recordType role
+        let writer = checkRecord profile recordType role
         let label = labelOf recordType role
-        let fields = storedFields recordType role
+        let fields = storedFields writer recordType role
 
         let modelOf (field : PropertyInfo) : PropertyModel =
             let struct (optionality, shape) = shapeOf profile metaOf recordType role field
 
             {
                 Member = field
-                Name = SerializerProfile.memberName profile field
+                Name = nameOf profile writer field
                 Optionality = optionality
                 Shape = shape
             }
@@ -463,7 +503,7 @@ module internal GraphModelBuilder =
                             recordType
                             role
                             $"the graph keeps the partition key in the property {propertyName}. Mark the field that gives it with PartitionKeyAttribute, or give a field the name {propertyName}."
-                    | [| markedField |], _ when isIgnored markedField ->
+                    | [| markedField |], _ when not (isWritten writer markedField) ->
                         refuseField recordType role markedField "the field that gives the partition key cannot be ignored."
                     | [| markedField |], ValueSome property when not (property.Member.Equals markedField) ->
                         refuseField
@@ -594,6 +634,12 @@ module GraphModel =
     /// a record that are no field (<c>IncludeRecordProperties</c>) or replace the attributes of members
     /// (<c>WithOverrideMembers</c>). The options must not handle references, write numbers as texts, or ignore
     /// read-only members.
+    /// </para>
+    /// <para>
+    /// The model also describes a record that another converter writes, when that converter tells the names of the
+    /// fields through <see cref="T:FSharp.Azure.Cosmos.IRecordFieldNames"/>. The record converter that
+    /// <see cref="T:FSharp.Azure.Cosmos.AllowNullFSharpRecordConverterFactory"/> makes does that, so put that factory
+    /// before the converter of FSharp.SystemTextJson.
     /// </para>
     /// <para>
     /// The model reads <paramref name="serializerOptions"/> when it is made and keeps a copy, so a change of them

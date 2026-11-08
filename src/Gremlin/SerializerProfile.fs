@@ -28,6 +28,12 @@ type internal WrittenAs =
 type internal RecordWriter =
     /// The record converter of FSharp.SystemTextJson, with the options that are common to all types.
     | Library
+    /// <summary>
+    /// A converter that tells the names that it writes the fields under, by the names of the fields, through
+    /// <see cref="T:FSharp.Azure.Cosmos.IRecordFieldNames"/>. An example is the record converter of
+    /// FSharp.Azure.Cosmos.Json. A field that the converter never writes has no name.
+    /// </summary>
+    | Described of fieldNames : IReadOnlyDictionary<string, string>
     /// The record converter of FSharp.SystemTextJson, with options of the type itself.
     | OwnOptions
     /// Another converter, or no record converter.
@@ -237,27 +243,36 @@ module internal SerializerProfile =
             && valueType.IsDefined (typeof<IJsonFSharpConverterAttribute>, false))
 
     /// <summary>
-    /// Who writes the fields of <paramref name="recordType"/>. Only the record converter that the converter of
-    /// FSharp.SystemTextJson of the gate makes writes the fields under the names of <see cref="M:FSharp.Gremlin.SerializerProfileModule.memberName(FSharp.Gremlin.SerializerProfile,System.Reflection.PropertyInfo)"/>:
-    /// a resolver or a converter of the application can write them in another way.
+    /// Who writes the fields of <paramref name="recordType"/>. A converter that tells its names writes the fields under
+    /// these names. Of the converters of FSharp.SystemTextJson, only the record converter that the converter of the
+    /// gate makes writes the fields under the names of <see cref="M:FSharp.Gremlin.SerializerProfileModule.memberName(FSharp.Gremlin.SerializerProfile,System.Reflection.PropertyInfo)"/>:
+    /// a resolver or another converter of the application can write them in another way.
     /// </summary>
     let recordWriter (profile : SerializerProfile) (recordType : Type) : RecordWriter =
-        // The serializer takes the first converter of the options that can convert the type, and the converter of the
-        // gate makes a JsonRecordConverter for each record. A converter before it can be a JsonRecordConverter that an
-        // application made with other options, which writes other names, so the class of the converter in the contract
-        // is not enough.
-        let chosen =
-            profile.Contract.Converters
-            |> Seq.tryFind _.CanConvert(recordType)
+        match typeInfoOf profile recordType with
+        | ValueNone -> RecordWriter.Other
+        | ValueSome info ->
+            // A type test from a class to an interface that the class does not implement needs an object
+            match box info.Converter with
+            // The converter of the contract writes the record, so the names that it tells are the names of the document
+            | :? IRecordFieldNames as described -> RecordWriter.Described described.FieldNames
+            | _ ->
+                // The serializer takes the first converter of the options that can convert the type, and the converter
+                // of the gate makes a JsonRecordConverter for each record. A converter before it can be a
+                // JsonRecordConverter that an application made with other options, which writes other names, so the
+                // class of the converter in the contract is not enough.
+                let chosen =
+                    profile.Contract.Converters
+                    |> Seq.tryFind _.CanConvert(recordType)
 
-        match chosen, typeInfoOf profile recordType with
-        | ValueSome converter, ValueSome info when Object.ReferenceEquals (converter, profile.Converter) ->
-            match info.OriginatingResolver with
-            | :? DefaultJsonTypeInfoResolver when hasOptionsOfItsOwn profile.Converter.Options recordType ->
-                RecordWriter.OwnOptions
-            | :? DefaultJsonTypeInfoResolver -> RecordWriter.Library
-            | _ -> RecordWriter.Other
-        | _ -> RecordWriter.Other
+                match chosen with
+                | ValueSome converter when Object.ReferenceEquals (converter, profile.Converter) ->
+                    match info.OriginatingResolver with
+                    | :? DefaultJsonTypeInfoResolver when hasOptionsOfItsOwn profile.Converter.Options recordType ->
+                        RecordWriter.OwnOptions
+                    | :? DefaultJsonTypeInfoResolver -> RecordWriter.Library
+                    | _ -> RecordWriter.Other
+                | _ -> RecordWriter.Other
 
     /// <summary>
     /// The name that FSharp.SystemTextJson writes a field of a record under: the first name of its

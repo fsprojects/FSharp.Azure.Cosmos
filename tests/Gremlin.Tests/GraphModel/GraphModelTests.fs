@@ -106,8 +106,12 @@ type GraphModelTests () =
         )
 
     [<TestMethod>]
-    member _.``the fields of a department of SkillGro have the names of the serializer and the shapes of their types`` () =
-        let model = (modelWith partitioned (Profiles.skillGro ())).VertexOf typeof<SkillGro.DepartmentVertex>
+    [<DataRow("SkillGro")>]
+    [<DataRow("SkillGro with the record converter")>]
+    member _.``the fields of a department of SkillGro have the names of the serializer and the shapes of their types``
+        (profile : string)
+        =
+        let model = (modelWith partitioned (Profiles.named profile)).VertexOf typeof<SkillGro.DepartmentVertex>
 
         CollectionAssert.AreEqual (
             [|
@@ -286,6 +290,42 @@ type GraphModelTests () =
         )
 
         Assert.AreEqual ("parentId", model.ByMember["ParentId"].Name, "ByMember should give the model of a field by its name.")
+
+    [<TestMethod>]
+    member _.``a record that the record converter writes has the fields that the converter writes`` () =
+        let model =
+            (modelWith GraphModelOptions.Default (Profiles.withRecordConverter (Profiles.camelCase ()))).VertexOf
+                typeof<Described.ConvertedVertex>
+
+        CollectionAssert.AreEqual (
+            [|
+                "PlainName as plainName: Required Scalar String"
+                "WithJsonName as jsonName: Required Scalar Int32"
+                "WithPropertyName as propertyName: Required Scalar Int32"
+                "WriteOnly as writeOnly: Required Scalar String"
+                "Note as note: ValueOption Scalar String"
+            |],
+            describeAll model.Properties,
+            "The properties should be the fields that the record converter writes, under its names: an ignored field of a value type and a field that the converter only reads are no properties."
+        )
+
+    [<TestMethod>]
+    member _.``a converter that tells its names gives the names of the id and the properties`` () =
+        let options = Profiles.fsharpDefaults ()
+        // Before the converter of FSharp.SystemTextJson, so the serializer asks it first
+        options.Converters.Insert (0, Described.TaggedVertexConverter ())
+        let model = (modelWith GraphModelOptions.Default options).VertexOf typeof<Described.TaggedVertex>
+
+        CollectionAssert.AreEqual (
+            [| "Id as id: Required Scalar String"; "Name as tag: Required Scalar String" |],
+            describeAll (
+                seq {
+                    yield! ValueOption.toArray model.Id
+                    yield! model.Properties
+                }
+            ),
+            "The model should name the id and the properties as the converter tells, also with a name that no rule gives."
+        )
 
     [<TestMethod>]
     member _.``a field with JsonIgnoreAttribute is no property`` () =
@@ -478,6 +518,32 @@ type GraphModelTests () =
             typeof<Refused.WrittenByApplication>,
             "",
             "the options write it with another converter than the record converter of FSharp.SystemTextJson"
+        )
+
+    [<TestMethod>]
+    [<DataRow(typeof<Refused.IgnoredId>, "Id", "so it cannot be ignored", DisplayName = "an ignored id")>]
+    [<DataRow(typeof<Refused.IgnoredPartitionKey>,
+              "CompanyId",
+              "the field that gives the partition key cannot be ignored",
+              DisplayName = "an ignored partition key")>]
+    member _.``VertexOf refuses a record of the record converter without a field that the graph needs``
+        (recordType : Type, field : string, reason : string)
+        =
+        let model = modelWith partitioned (Profiles.withRecordConverter (Profiles.fsharpDefaults ()))
+        ModelAssert.Refuses ((fun () -> model.VertexOf recordType |> ignore), recordType, field, reason)
+
+    [<TestMethod>]
+    member _.``VertexOf refuses a vertex property that a converter writes under other names than the meta model`` () =
+        let options = Profiles.skillGro ()
+        // Before the converter of FSharp.SystemTextJson, so the serializer asks it first
+        options.Converters.Insert (0, Described.RenamedVertexPropertyConverter ())
+        let model = modelWith GraphModelOptions.Default options
+
+        ModelAssert.Refuses (
+            (fun () -> model.VertexOf typeof<SkillGro.DepartmentVertex> |> ignore),
+            typeof<SkillGro.DepartmentVertex>,
+            "Created",
+            "under other names than the naming policy gives them"
         )
 
     [<TestMethod>]
