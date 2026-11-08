@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Azure Cosmos DB for Apache Gremlin on top of FSharp.Gremlin. It holds the connection settings, and the next steps
+    add the dialect of Cosmos DB, its status attributes and the results of the errors that a caller handles. The
+    library is built step by step. Until a query runs end to end, no package is made of it.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Gremlin</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet">
+    <PackageId>FSharp.Azure.Cosmos.Gremlin</PackageId>
+    <Title>FSharp.Azure.Cosmos.Gremlin</Title>
+    <Summary>Typed Gremlin traversals over immutable F# records for Azure Cosmos DB for Apache Gremlin</Summary>
+    <Description>Connects FSharp.Gremlin to Azure Cosmos DB for Apache Gremlin</Description>
+    <PackageTags>F#;FSharp;Cosmos;CosmosDB;Cosmos DB;Gremlin;Graph;TinkerPop</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="CosmosGremlinConnection.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gremlin\FSharp.Gremlin.fsproj" />
+  </ItemGroup>
+
+</Project>

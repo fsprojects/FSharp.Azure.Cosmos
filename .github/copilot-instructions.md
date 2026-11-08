@@ -12,6 +12,8 @@
 
 ```text
 /
+├── src/Cosmos.Gremlin/  – Azure Cosmos DB for Apache Gremlin on top of FSharp.Gremlin (FSharp.Azure.Cosmos.Gremlin)
+│   └── CosmosGremlinConnection.fs – connection settings of an account in Azure or of the emulator
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
@@ -25,10 +27,15 @@
 │   ├── CosmosResponse.fs – response type wrappers
 │   ├── TaskSeq.fs       – TaskSeq integration
 │   └── UniqueKey.fs     – unique key helpers
+├── src/Gremlin/         – Gremlin traversals over F# records, without a provider (FSharp.Gremlin)
+│   ├── Attributes.fs    – `[<Label>]` and `[<PartitionKey>]` for the records of a graph
+│   └── VertexProperty.fs – a vertex property with its meta-properties
 ├── src/Shared/          – source files that every F# project under src and tests compiles
 │   └── ValueCollections.fs – `Seq`, `List` and `Array` functions that return `voption` and struct tuples
+├── tests/Cosmos.Gremlin.Tests/ – MSTest tests of FSharp.Azure.Cosmos.Gremlin
 ├── tests/Cosmos.Tests/  – MSTest integration test project
 ├── tests/Cosmos.Tests.Infrastructure/ – shared test fixtures, emulator settings and assertion helpers
+├── tests/Gremlin.Tests/ – MSTest unit tests of FSharp.Gremlin, no emulator needed
 ├── build/               – FAKE build scripts
 └── docsSrc/             – FSharp.Formatting documentation source
 ```
