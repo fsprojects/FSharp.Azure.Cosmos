@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The converters do not use the Azure Cosmos DB SDK. Thus they are in a package of their own: a project that does
+    not reference the SDK can use them, for example a client of the API for Gremlin. FSharp.Azure.Cosmos references
+    this package.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(AssemblyBaseName).Json</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <PropertyGroup Label="NuGet">
+    <PackageId>FSharp.Azure.Cosmos.Json</PackageId>
+    <Title>FSharp.Azure.Cosmos.Json</Title>
+    <Summary>System.Text.Json converters for the values that Azure Cosmos DB stores</Summary>
+    <Description>Provides System.Text.Json converters that write a value in a form that Azure Cosmos DB sorts and compares in the correct order, for example a TimeSpan as a number of ticks</Description>
+    <PackageTags>F#;FSharp;Cosmos;CosmosDB;Cosmos DB;System.Text.Json;JSON;Converter</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <Optimize>true</Optimize>
+    <Tailcalls>true</Tailcalls>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="JsonConverters.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
