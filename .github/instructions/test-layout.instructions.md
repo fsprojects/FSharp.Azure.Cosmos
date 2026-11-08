@@ -24,7 +24,7 @@ applyTo: "tests/**/*.fs"
 | `TestInfrastructure/` | `TestInfrastructure` |
 | `Operations/` | `Builders`, `Create`, `Delete`, `Patch`, `Read`, `ReadMany`, `Replace`, `Upsert` |
 | `Extensions/` | `IterationExtensions`, `ReadExtensions` |
-| `Json/` | `JsonConverter`, `TimeSpan` |
+| `Json/` | `JsonConverter`, `RecordConverter`, `TimeSpan` |
 | root | `IcedTasksProbe`, `QuerySemantics`, `ResponseMessage`, `Validation`, `ValueCollections` (one file for each category) |
 
 Each name in the second column is the name of a category attribute without the `TestCategoryAttribute` suffix.

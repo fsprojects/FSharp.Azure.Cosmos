@@ -64,6 +64,10 @@ type ReadTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Read" |] :> IList<string>
 
+type RecordConverterTestCategoryAttribute () =
+    inherit TestCategoryBaseAttribute ()
+    override _.TestCategories = [| "Record converter" |] :> IList<string>
+
 type ReplaceTestCategoryAttribute () =
     inherit TestCategoryBaseAttribute ()
     override _.TestCategories = [| "Replace" |] :> IList<string>
