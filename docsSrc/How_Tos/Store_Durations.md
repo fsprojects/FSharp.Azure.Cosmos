@@ -14,6 +14,10 @@ after both. A query with `ORDER BY` or with `>` on such a field gives the wrong 
 `TimeSpanTicksConverter` writes the number of ticks instead. One tick is 100 nanoseconds. Cosmos DB sorts and
 compares a number in time order.
 
+The converter is in the package `FSharp.Azure.Cosmos.Json`. `FSharp.Azure.Cosmos` depends on that package, thus a
+project that references `FSharp.Azure.Cosmos` has the converter too. A project that does not use the Azure Cosmos DB
+SDK can reference `FSharp.Azure.Cosmos.Json` alone.
+
 ## Use the converter
 
 Add the converter to the options of System.Text.Json. Then give the options to the client. The camel case naming

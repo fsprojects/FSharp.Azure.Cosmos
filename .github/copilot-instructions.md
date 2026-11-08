@@ -12,6 +12,8 @@
 
 ```text
 /
+├── src/Cosmos.Json/     – System.Text.Json converters (FSharp.Azure.Cosmos.Json), no Azure Cosmos DB SDK
+│   └── JsonConverters.fs – `TimeSpanTicksConverter`, which writes a `TimeSpan` as a number of ticks
 ├── src/Cosmos/          – main library (FSharp.Azure.Cosmos)
 │   ├── SubStatusCodes.fs – documented Cosmos DB sub-status codes
 │   ├── Cosmos.fs        – core types and container extensions
