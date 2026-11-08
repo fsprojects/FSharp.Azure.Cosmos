@@ -10,7 +10,12 @@
     <File Path="README.md" />
   </Folder>
   <Project Path="build/build.fsproj" />
+  <Project Path="src/Cosmos.Gremlin/FSharp.Azure.Cosmos.Gremlin.fsproj" />
+  <Project Path="src/Cosmos.Json/FSharp.Azure.Cosmos.Json.fsproj" />
   <Project Path="src/Cosmos/FSharp.Azure.Cosmos.fsproj" />
+  <Project Path="src/Gremlin/FSharp.Gremlin.fsproj" />
+  <Project Path="tests/Cosmos.Gremlin.Tests/FSharp.Azure.Cosmos.Gremlin.Tests.fsproj" />
   <Project Path="tests/Cosmos.Tests.Infrastructure/FSharp.Azure.Cosmos.Tests.Infrastructure.fsproj" />
   <Project Path="tests/Cosmos.Tests/FSharp.Azure.Cosmos.Tests.fsproj" />
+  <Project Path="tests/Gremlin.Tests/FSharp.Gremlin.Tests.fsproj" />
 </Solution>

@@ -36,6 +36,7 @@ GitHub Actions |
 Package | Stable | Prerelease
 --- | --- | ---
 FSharp.Azure.Cosmos | [![NuGet Badge](https://img.shields.io/nuget/v/FSharp.Azure.Cosmos.svg)](https://www.nuget.org/packages/FSharp.Azure.Cosmos/) | [![NuGet Badge](https://img.shields.io/nuget/vpre/FSharp.Azure.Cosmos.svg)](https://www.nuget.org/packages/FSharp.Azure.Cosmos/)
+FSharp.Azure.Cosmos.Json | [![NuGet Badge](https://img.shields.io/nuget/v/FSharp.Azure.Cosmos.Json.svg)](https://www.nuget.org/packages/FSharp.Azure.Cosmos.Json/) | [![NuGet Badge](https://img.shields.io/nuget/vpre/FSharp.Azure.Cosmos.Json.svg)](https://www.nuget.org/packages/FSharp.Azure.Cosmos.Json/)
 
 ---
 

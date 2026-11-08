@@ -45,6 +45,7 @@
     <Compile Include="Extensions\IterationExtensionsUnitTests.fs" />
     <Compile Include="Extensions\ReadExtensionsTests.fs" />
     <Compile Include="Extensions\IterationExtensionsTests.fs" />
+    <Compile Include="Json\AllowNullFSharpRecordConverterTests.fs" />
     <Compile Include="Json\TimeSpanTicksConverterTests.fs" />
     <Compile Include="Json\TimeSpanTicksConverterIntegrationTests.fs" />
   </ItemGroup>

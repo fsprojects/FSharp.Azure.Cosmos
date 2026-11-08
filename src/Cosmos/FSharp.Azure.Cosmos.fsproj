@@ -26,7 +26,6 @@
     <Compile Include="TaskSeq.fs" />
     <Compile Include="CosmosResponse.fs" />
     <Compile Include="SubStatusCodes.fs" />
-    <Compile Include="JsonConverters.fs" />
     <Compile Include="Cosmos.fs" />
     <Compile Include="Create.fs" />
     <Compile Include="Upsert.fs" />
@@ -47,6 +46,10 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cosmos.Json\FSharp.Azure.Cosmos.Json.fsproj" />
   </ItemGroup>
 
 </Project>
